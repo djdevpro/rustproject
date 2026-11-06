@@ -295,16 +295,16 @@ fn focus_card(ui: &mut Ui, data: &Data, i: usize, selected: bool, reorder: bool,
     let painter = ui.painter().clone();
     let stroke = if selected { Stroke::new(2.0, t.accent) } else { Stroke::new(1.0, mix(t.line, t.line_strong, hover)) };
     painter.rect(rect, CornerRadius::same(theme::R_CARD), mix(t.surface, t.raised, hover * 0.6), stroke, StrokeKind::Inside);
-    let x0 = rect.left() + 14.0;
-    let inner_w = width - 28.0;
-    let mut y = rect.top() + 14.0;
+    let x0 = rect.left() + 18.0;
+    let inner_w = width - 36.0;
+    let mut y = rect.top() + 18.0;
     icons::paint(&painter, pos2(x0 + 10.0, y + 11.0), p.icon, 20.0, t.accent_ink);
     widgets::paint_text(&painter, pos2(x0 + 28.0, y + 1.0), &p.name, FontId::new(16.5, theme::bold()), t.ink_strong, inner_w - 28.0 - if reorder { 56.0 } else { 0.0 });
-    y += 30.0;
+    y += 32.0;
     // Ce qu'on vise ; à défaut, la description (jamais une étiquette vide).
     let line = if p.outcome.trim().is_empty() { p.description.clone() } else { tf("Résultat visé : {0}", &[("0", &p.outcome)]) };
     widgets::paint_text(&painter, pos2(x0, y), &line, FontId::proportional(12.5), t.muted, inner_w);
-    y += 21.0;
+    y += 22.0;
     // Pas d'état sur ces cartes : la fiche le montre, ici il encombrait.
     if p.idle_days > 0 {
         widgets::paint_text(&painter, pos2(x0, y), &idle_text(p.idle_days), FontId::proportional(12.0), t.faint, inner_w);
@@ -328,7 +328,7 @@ fn focus_card(ui: &mut Ui, data: &Data, i: usize, selected: bool, reorder: bool,
 
 /// La hauteur d'une carte en focus, et sa largeur minimale (autant de cartes que la largeur en
 /// permet, huit au plus).
-const FOCUS_CARD_H: f32 = 84.0;
+const FOCUS_CARD_H: f32 = 106.0;
 const FOCUS_CARD_MIN_W: f32 = 180.0;
 
 /// Une ligne « au fil de l'eau ».
