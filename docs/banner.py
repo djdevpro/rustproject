@@ -16,7 +16,7 @@ LUCIDE = glob.glob(os.path.expanduser("~/.cargo/registry/src/*/lucide-icons-*/lu
 BG = (17, 16, 15)
 INK = (243, 239, 232)
 AMBER = (240, 164, 67)
-FRAME = (70, 58, 44)
+FRAME = (120, 88, 50)
 
 
 def font(size, style):
@@ -31,7 +31,7 @@ img = Image.new("RGB", (W, H), BG)
 d = ImageDraw.Draw(img)
 for y in range(16, H, 28):
     for x in range(16, W, 28):
-        d.ellipse((x - 1, y - 1, x + 1, y + 1), fill=(30, 28, 26))
+        d.ellipse((x - 1.4, y - 1.4, x + 1.4, y + 1.4), fill=(52, 48, 43))
 
 # Une lueur ambre derrière la fenêtre, plus forte vers le haut.
 glow = Image.new("L", (W, H), 0)
@@ -46,17 +46,21 @@ shot = shot.resize((1020, int(shot.height * scale)), Image.LANCZOS)
 x0, y0 = W - shot.width - 42, 154
 radius = 22
 shadow = Image.new("L", (W, H), 0)
-ImageDraw.Draw(shadow).rounded_rectangle((x0 - 6, y0 + 10, x0 + shot.width + 6, H + 60), radius, fill=170)
-img.paste((0, 0, 0), (0, 0), shadow.filter(ImageFilter.GaussianBlur(26)))
+ImageDraw.Draw(shadow).rounded_rectangle((x0 - 6, y0 + 18, x0 + shot.width + 6, H + 60), radius, fill=150)
+img.paste((0, 0, 0), (0, 0), shadow.filter(ImageFilter.GaussianBlur(30)))
+# Le halo : une lueur ambre large et douce tout autour de la fenêtre…
+halo = Image.new("L", (W, H), 0)
+ImageDraw.Draw(halo).rounded_rectangle((x0 - 14, y0 - 14, x0 + shot.width + 14, H + 60), radius + 14, fill=150)
+img.paste((240, 150, 50), (0, 0), halo.filter(ImageFilter.GaussianBlur(42)))
+# … et une plus serrée, qui dessine le contour.
+rim = Image.new("L", (W, H), 0)
+ImageDraw.Draw(rim).rounded_rectangle((x0 - 3, y0 - 3, x0 + shot.width + 3, H + 60), radius + 3, outline=255, width=6)
+img.paste((255, 180, 90), (0, 0), rim.filter(ImageFilter.GaussianBlur(9)).point(lambda v: v * 0.55))
 mask = Image.new("L", shot.size, 0)
 ImageDraw.Draw(mask).rounded_rectangle((0, 0, shot.width - 1, shot.height + radius), radius, fill=255)
 img.paste(shot, (x0, y0), mask)
 d = ImageDraw.Draw(img)
 d.rounded_rectangle((x0, y0, x0 + shot.width - 1, H + radius), radius, outline=FRAME, width=2)
-# Un liseré de lumière sur le bord haut.
-edge = Image.new("L", (W, H), 0)
-ImageDraw.Draw(edge).rounded_rectangle((x0 + 40, y0 - 3, x0 + shot.width - 40, y0 + 3), 3, fill=90)
-img.paste((255, 196, 120), (0, 0), edge.filter(ImageFilter.GaussianBlur(6)))
 
 # Le texte, à gauche.
 d = ImageDraw.Draw(img)
