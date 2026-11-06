@@ -2,8 +2,6 @@
 
 Rust Project is a desktop app for Windows and Linux that keeps track of your side projects. It scans the folders you pick, recognizes the projects inside and puts them on a desk with their next steps, notes and launch buttons for VS Code, a terminal or Claude Code. It is written in Rust with egui.
 
-![Desk](docs/bureau.png)
-
 ## Features
 
 - Folder scan up to three levels deep. Parts of a project such as `frontend`, `api` or `db` stay attached to their parent.
