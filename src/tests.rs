@@ -81,6 +81,12 @@ fn galerie_et_lanceur_sur_mesure() {
 #[test]
 fn lancement_direct() {
     let mut h = harness();
+    // Un vrai dossier pour le projet ouvert (celui de la démo n'existe que sur la machine de l'auteur).
+    let dir = std::env::temp_dir().join(format!("atelier-lancement-{}", std::process::id())).join("ImmoFormation");
+    std::fs::create_dir_all(&dir).unwrap();
+    let p = h.state().st.selected.unwrap();
+    h.state_mut().data.projects[p].folders = vec![dir.display().to_string()];
+    h.run_steps(1);
     // Un lanceur part directement : pas de notification, juste la commande (et l'éclat de la tuile).
     click_now(&mut h, "VS Code");
     let line = h.state().launched.last().cloned().expect("une commande lancée");
@@ -88,10 +94,15 @@ fn lancement_direct() {
     assert!(h.state().toasts.is_empty(), "pas de notification quand tout va bien");
     assert!(h.state().st.flash.is_some());
 
-    // « Dans un terminal » : une fenêtre PowerShell placée dans le dossier du projet.
+    // « Dans un terminal » : une fenêtre PowerShell (Windows) ou le terminal du système (Linux),
+    // placée dans le dossier du projet.
     click_now(&mut h, "Claude Code");
     let line = h.state().launched.last().cloned().unwrap();
-    assert!(line.starts_with("start \"Claude Code\" /D ") && line.ends_with("powershell -NoExit -Command claude"), "{line}");
+    if cfg!(windows) {
+        assert!(line.starts_with("start \"Claude Code\" /D ") && line.ends_with("powershell -NoExit -Command claude"), "{line}");
+    } else {
+        assert!(line.starts_with("x-terminal-emulator -e sh -c 'claude;"), "{line}");
+    }
 
     // Dossier introuvable : rien n'est lancé, une notification explique pourquoi.
     let p = h.state().st.selected.unwrap();

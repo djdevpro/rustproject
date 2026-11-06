@@ -371,6 +371,10 @@ pub fn install_fonts(ctx: &egui::Context) {
             let tweak = FontTweak { coords: VariationCoords::new(coords.iter().copied()), subpixel_binning: Some(false), ..Default::default() };
             fonts.font_data.insert(name.to_owned(), FontData::from_static(bytes).tweak(tweak).into());
             stack.push(name.to_owned());
+        } else if let Some(bytes) = linux_font(name) {
+            // Sans les polices de Windows (Linux) : DejaVu, qui a aussi les flèches et symboles.
+            fonts.font_data.insert(name.to_owned(), FontData::from_static(bytes).into());
+            stack.push(name.to_owned());
         }
         stack.extend(fallback.iter().cloned());
         if cjk.is_some() {
@@ -381,6 +385,17 @@ pub fn install_fonts(ctx: &egui::Context) {
     }
     fonts.families.insert(icons(), vec!["Lucide".to_owned()]);
     ctx.set_fonts(fonts);
+}
+
+/// La police DejaVu qui remplace une face de Segoe UI ou de Cascadia, quand elles manquent.
+fn linux_font(face: &str) -> Option<&'static [u8]> {
+    const DIR: &str = "/usr/share/fonts/truetype/dejavu/";
+    let file = match face {
+        "Body-SemiBold" | "Body-Bold" => "DejaVuSans-Bold.ttf",
+        "Mono" => "DejaVuSansMono.ttf",
+        _ => "DejaVuSans.ttf",
+    };
+    system_font(&format!("{DIR}{file}"))
 }
 
 /// Lit une police de `C:\Windows\Fonts` (ou un chemin absolu) une seule fois (octets partagés en
