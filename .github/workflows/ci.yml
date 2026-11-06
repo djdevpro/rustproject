@@ -16,4 +16,5 @@ jobs:
         run: cargo build
       # Les tests du moteur. Les captures d'interface demandent un GPU et tournent en local.
       - name: Tests
-        run: cargo test -- ::tests:: --skip screens::
+        shell: bash
+        run: 'cargo test -- ::tests:: --skip screens::'

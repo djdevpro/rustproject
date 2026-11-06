@@ -71,7 +71,8 @@ jobs:
 
       # Les tests du moteur. Les captures d'interface demandent un GPU et tournent en local.
       - name: Tests
-        run: cargo test --release -- ::tests:: --skip screens::
+        shell: bash
+        run: 'cargo test --release -- ::tests:: --skip screens::'
 
       - name: Build
         env:
