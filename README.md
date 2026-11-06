@@ -11,6 +11,7 @@ Atelier is a desktop app for Windows and Linux that keeps track of your side pro
 - Fuzzy and semantic search.
 - A library with a live graph of domains and projects.
 - Updates from GitHub releases, checked at startup.
+- An interface in English, French, Spanish, German, Portuguese, Italian, Russian, Chinese, Japanese and Korean. It follows the system language.
 
 ![Map](docs/carte.png)
 
