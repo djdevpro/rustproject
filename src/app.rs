@@ -618,8 +618,11 @@ impl AtelierApp {
             Err(e) => (Data::fresh(), Some(e)),
         };
         let readable = error.is_none();
-        // La langue de l'interface : celle choisie, sinon celle du système.
-        crate::i18n::set(data.config.language.unwrap_or_else(crate::i18n::detect));
+        // La langue de l'interface : celle choisie, sinon celle du système. Pas en test : la langue
+        // est globale, et les tests (en parallèle) cherchent les libellés en français.
+        if !cfg!(test) {
+            crate::i18n::set(data.config.language.unwrap_or_else(crate::i18n::detect));
+        }
         let mut app = Self::with_data(cc, data, readable.then_some(store));
         // L'adresse du dépôt, lue dans `.git/config`, pour les projets qui ne l'ont pas encore.
         app.data.fill_remotes();
@@ -648,7 +651,9 @@ impl AtelierApp {
             Ok(None) => (Data::fresh(), Some(tf("Fixture introuvable : {path}", &[("path", &path)]))),
             Err(e) => (Data::fresh(), Some(e)),
         };
-        crate::i18n::set(data.config.language.unwrap_or_else(crate::i18n::detect));
+        if !cfg!(test) {
+            crate::i18n::set(data.config.language.unwrap_or_else(crate::i18n::detect));
+        }
         let mut app = Self::with_data(cc, data, None);
         if let Some(e) = error {
             app.toast(Icon::TriangleAlert, tr("Fixture illisible"), Some(e));
