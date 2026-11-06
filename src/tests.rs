@@ -10,7 +10,7 @@ use egui_kittest::kittest::Queryable as _;
 
 use crate::app::{AtelierApp, Modal, PanelTab, Screen, UpdatePhase};
 use crate::icons::Icon;
-use crate::model::Attention;
+use crate::model::{Attention, LauncherKind};
 
 /// Taille par défaut de la fenêtre, et taille minimale (pour traquer les effets de bord).
 const NORMAL: (f32, f32) = (1480.0, 920.0);
@@ -94,14 +94,22 @@ fn lancement_direct() {
     assert!(h.state().toasts.is_empty(), "pas de notification quand tout va bien");
     assert!(h.state().st.flash.is_some());
 
-    // « Dans un terminal » : une fenêtre PowerShell (Windows) ou le terminal du système (Linux),
-    // placée dans le dossier du projet.
+    // Claude Code : une nouvelle conversation dans Claude Desktop, sur le dossier (encodé).
     click_now(&mut h, "Claude Code");
     let line = h.state().launched.last().cloned().unwrap();
+    let url = format!("claude://code/new?folder={}", crate::model::url_encode(&dir.display().to_string()));
+    let expected = if cfg!(windows) { format!(r#"start "" "{url}""#) } else { format!(r#"xdg-open "{url}""#) };
+    assert_eq!(line, expected);
+    assert!(!url.contains(['\\', ' ']), "{url}");
+
+    // « Dans un terminal » : une fenêtre PowerShell (Windows) ou le terminal du système (Linux),
+    // placée dans le dossier du projet.
+    let reprise = crate::model::gallery().into_iter().find(|l| l.name == "Claude (reprise)").unwrap();
+    let line = crate::launch::plan(&reprise, &h.state().data.projects[h.state().st.selected.unwrap()]).unwrap().line;
     if cfg!(windows) {
-        assert!(line.starts_with("start \"Claude Code\" /D ") && line.ends_with("powershell -NoExit -Command claude"), "{line}");
+        assert!(line.starts_with("start \"Claude (reprise)\" /D ") && line.ends_with("powershell -NoExit -Command claude --continue"), "{line}");
     } else {
-        assert!(line.starts_with("x-terminal-emulator -e sh -c 'claude;"), "{line}");
+        assert!(line.starts_with("x-terminal-emulator -e sh -c 'claude --continue;"), "{line}");
     }
 
     // Dossier introuvable : rien n'est lancé, une notification explique pourquoi.
@@ -706,4 +714,24 @@ fn aucun_ecran_ne_deborde_dans_une_petite_fenetre() {
         }
     }
     assert!(problems.is_empty(), "Débordements :\n{}", problems.join("\n"));
+}
+
+/// Un fichier d'avant : le lanceur « Claude Code » d'origine (`claude` dans un terminal) passe à
+/// Claude Desktop ; un lanceur retouché à la main reste tel quel.
+#[test]
+fn ancien_lanceur_claude_code_vers_claude_desktop() {
+    let mut data = crate::model::Data::fresh();
+    let mut old = data.launchers[0].clone();
+    old.kind = LauncherKind::Command;
+    old.command = "claude".into();
+    old.in_terminal = true;
+    let mut custom = old.clone();
+    custom.command = "claude --model opus".into();
+    data.launchers = vec![old, custom];
+    data.normalize();
+    assert_eq!(data.launchers[0].kind, LauncherKind::Url);
+    assert_eq!(data.launchers[0].command, "claude://code/new?folder={dossier_url}");
+    assert!(!data.launchers[0].in_terminal);
+    assert_eq!(data.launchers[1].command, "claude --model opus");
+    assert_eq!(crate::model::url_encode(r"C:\Mes projets\é"), "C%3A%5CMes%20projets%5C%C3%A9");
 }

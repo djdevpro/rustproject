@@ -361,8 +361,9 @@ pub struct Launcher {
 }
 
 /// Les variables utilisables dans une commande, avec leur explication.
-pub const VARIABLES: [(&str, &str); 4] = [
+pub const VARIABLES: [(&str, &str); 5] = [
     ("{dossier}", "Chemin du dossier principal du projet"),
+    ("{dossier_url}", "Le même chemin, encodé pour un lien (claude://…)"),
     ("{nom}", "Nom du projet"),
     ("{remote}", "URL du dépôt Git distant (détectée)"),
     ("{port}", "Port de dev (3000 par défaut)"),
@@ -373,8 +374,20 @@ impl Launcher {
     pub fn resolve(&self, project: &Project) -> String {
         let folder = project.folders.first().map(String::as_str).unwrap_or("");
         let remote = project.remote.clone().unwrap_or_default();
-        self.command.replace("{dossier}", folder).replace("{nom}", &project.name).replace("{remote}", &remote).replace("{port}", "3000")
+        self.command
+            .replace("{dossier_url}", &url_encode(folder))
+            .replace("{dossier}", folder)
+            .replace("{nom}", &project.name)
+            .replace("{remote}", &remote)
+            .replace("{port}", "3000")
     }
+}
+
+/// Encodage d'URL : tout sauf les lettres, chiffres et `-_.~` devient `%XX`.
+pub fn url_encode(s: &str) -> String {
+    s.bytes()
+        .map(|b| if b.is_ascii_alphanumeric() || b"-_.~".contains(&b) { (b as char).to_string() } else { format!("%{b:02X}") })
+        .collect()
 }
 
 // ---- configuration -----------------------------------------------------------------------------
@@ -596,6 +609,16 @@ impl Data {
             p.favorite = p.favorite.filter(|l| *l < self.launchers.len());
         }
         self.default_launchers.retain(|l| *l < self.launchers.len());
+        // Ancien lanceur « Claude Code » resté tel quel (`claude` dans un terminal) : il ouvre
+        // désormais Claude Desktop. Un lanceur modifié à la main n'est pas touché.
+        for l in &mut self.launchers {
+            if l.name == "Claude Code" && l.kind == LauncherKind::Command && l.command.trim() == "claude" {
+                l.kind = LauncherKind::Url;
+                l.command = CLAUDE_DESKTOP.into();
+                l.in_terminal = false;
+                l.description = "Nouvelle conversation dans Claude Desktop, sur le dossier".into();
+            }
+        }
         for r in &mut self.config.roots {
             r.depth = r.depth.clamp(1, 3);
         }
@@ -726,6 +749,10 @@ fn launcher(name: &str, icon: Icon, color: u32, kind: LauncherKind, command: &st
     }
 }
 
+/// Une nouvelle conversation Claude Code dans Claude Desktop, sur le dossier du projet
+/// (Claude Desktop demande de confirmer le dossier à chaque fois).
+const CLAUDE_DESKTOP: &str = "claude://code/new?folder={dossier_url}";
+
 pub fn gallery() -> Vec<Launcher> {
     use Group as G;
     use LauncherKind as K;
@@ -736,7 +763,7 @@ pub fn gallery() -> Vec<Launcher> {
         launcher("VS Code", Icon::Code, 0x3b9cff, K::App, r#"code "{dossier}""#, false, G::Editor, "Ouvre le dossier dans Visual Studio Code"),
         launcher("Cursor", Icon::MousePointer2, 0xd6d6d6, K::App, r#"cursor "{dossier}""#, false, G::Editor, "Ouvre le dossier dans Cursor"),
         launcher("JetBrains", Icon::Braces, 0xff5c8a, K::App, r#"idea64 "{dossier}""#, false, G::Editor, "IntelliJ, Rider, WebStorm…"),
-        launcher("Claude Code", Icon::Sparkles, 0xe07a5f, K::Command, "claude", true, G::Ai, "Une session Claude Code dans le dossier"),
+        launcher("Claude Code", Icon::Sparkles, 0xe07a5f, K::Url, CLAUDE_DESKTOP, false, G::Ai, "Nouvelle conversation dans Claude Desktop, sur le dossier"),
         launcher("Claude (reprise)", Icon::History, 0xe07a5f, K::Command, "claude --continue", true, G::Ai, "Reprend la dernière conversation du projet"),
         launcher("Explorateur", Icon::FolderOpen, 0xf4c14d, K::Folder, r#"explorer "{dossier}""#, false, G::Tools, "Le dossier dans l'explorateur Windows"),
         launcher("Serveur de dev", Icon::Globe, 0x3fc1b0, K::Url, "http://localhost:{port}", false, G::Web, "Ouvre l'appli locale dans le navigateur"),

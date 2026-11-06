@@ -21,7 +21,8 @@ pub fn plan(l: &Launcher, p: &Project) -> Result<Plan, String> {
     let folder = p.folders.first().cloned().unwrap_or_default();
     let resolved = l.resolve(p);
     let dir_ok = !folder.is_empty() && Path::new(&folder).is_dir();
-    let needs_dir = l.kind != LauncherKind::Url && (l.in_terminal || l.kind == LauncherKind::Folder || l.command.contains("{dossier}"));
+    let needs_dir = l.command.contains("{dossier_url}")
+        || (l.kind != LauncherKind::Url && (l.in_terminal || l.kind == LauncherKind::Folder || l.command.contains("{dossier}")));
     if needs_dir && !dir_ok {
         return Err(if folder.is_empty() { "Ce projet n'a pas de dossier.".to_owned() } else { format!("Dossier introuvable : {folder}") });
     }
