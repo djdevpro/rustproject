@@ -1,4 +1,4 @@
-"""Bannière du README : le nom, une phrase, trois verbes, et le bureau de l'application.
+"""Bannière du README : l'icône et le nom, une phrase, trois verbes, et le bureau de l'application.
 
 Usage : python docs/banner.py docs   (après `cargo test captures_readme -- --ignored`)
 """
@@ -68,17 +68,24 @@ left = 98
 room = x0 - left - 60  # la place avant la fenêtre
 
 
-def fitted(text, size, style):
+def fitted(text, size, style, room=room):
     """La plus grande taille (jusqu'à `size`) qui tient avant la fenêtre."""
     while size > 20 and d.textlength(text, font=font(size, style)) > room:
         size -= 2
     return font(size, style)
 
 
-title = fitted("Rust Project", 120, "Bold Display")
+# L'icône devant le nom, centrée sur la hauteur des capitales.
+ICON, GAP = 138, 30
+title = fitted("Rust Project", 120, "Bold Display", room - ICON - GAP - 70)
 box = d.textbbox((left - 4, 0), "Rust Project", font=title, anchor="ls")
 top = 300  # ligne de base du titre
-d.text((left - 4, top), "Rust Project", font=title, fill=INK, anchor="ls")
+caps = d.textbbox((0, top), "R", font=title, anchor="ls")
+icon = Image.open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "icon.png")).convert("RGBa")
+icon = icon.resize((ICON, ICON), Image.LANCZOS).convert("RGBA")
+img.paste(icon, (left - round(ICON * 0.03), round((caps[1] + top) / 2 - ICON / 2)), icon)
+d = ImageDraw.Draw(img)
+d.text((left + ICON + GAP - 4, top), "Rust Project", font=title, fill=INK, anchor="ls")
 bar_y = top + box[3] + 26
 d.rectangle((left, bar_y, left + 102, bar_y + 10), fill=AMBER)
 tag = fitted("All your side projects in one place.", 46, "Semibold Display")

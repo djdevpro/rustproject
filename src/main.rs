@@ -22,6 +22,8 @@
 
 mod app;
 mod classify;
+#[cfg(any(target_os = "linux", test))]
+mod desktop;
 #[cfg(test)]
 mod fixture;
 mod github;
@@ -54,9 +56,14 @@ fn main() -> eframe::Result {
     if std::env::args().any(|a| a == "--mcp") {
         std::process::exit(mcp::serve());
     }
+    #[cfg(target_os = "linux")]
+    desktop::install();
+    // L'icône de la fenêtre (barre des tâches, Alt+Tab) ; sans elle, eframe met la sienne.
+    let icon = eframe::icon_data::from_png_bytes(include_bytes!("../assets/icon.png")).expect("icône de la fenêtre");
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Rust Project")
+            .with_icon(icon)
             .with_inner_size([1480.0, 920.0])
             .with_min_inner_size([1180.0, 720.0])
             .with_decorations(false),
