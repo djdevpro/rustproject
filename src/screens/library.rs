@@ -3,7 +3,7 @@
 
 use egui::{Align, Align2, Color32, CornerRadius, FontFamily, FontId, Frame, Id, Layout, Margin, Rect, RichText, ScrollArea, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 
-use crate::app::{Action, CfgSection, LibView, Sort, UiState, idle_text};
+use crate::app::{Action, BulkOp, CfgSection, LibView, Sort, UiState, idle_text};
 use crate::icons::{self, Icon};
 use crate::model::{Attention, Data, Status};
 use crate::theme::{self, Tokens, mix, tint};
@@ -46,7 +46,7 @@ fn in_view(archived: bool, attention: Option<Attention>, p: &crate::model::Proje
 
 /// Une entrée de la colonne qui accepte un projet déposé : on la souligne pendant le glisser.
 fn drop_highlight(ui: &Ui, t: &Tokens, resp: &egui::Response) {
-    let over = resp.dnd_hover_payload::<DraggedProject>().is_some();
+    let over = resp.dnd_hover_payload::<DraggedProjects>().is_some();
     let stroke = if over { Stroke::new(2.0, t.accent) } else { Stroke::new(1.0, tint(t.accent, 0.45)) };
     if over {
         ui.painter().rect_filled(resp.rect, CornerRadius::same(8), tint(t.accent, 0.14));
@@ -54,13 +54,43 @@ fn drop_highlight(ui: &Ui, t: &Tokens, resp: &egui::Response) {
     ui.painter().rect_stroke(resp.rect.shrink(1.0), CornerRadius::same(8), stroke, StrokeKind::Inside);
 }
 
-/// Un projet qu'on fait glisser (depuis la carte, la grille ou la liste) vers une attention.
-#[derive(Clone, Copy)]
-struct DraggedProject(usize);
+/// Les projets qu'on fait glisser (depuis la carte, la grille ou la liste) vers une attention ou
+/// un domaine : un seul, ou toute la sélection quand on tire l'un des projets sélectionnés.
+#[derive(Clone)]
+struct DraggedProjects(Vec<usize>);
+
+/// Le groupe emporté en tirant le projet `i` : la sélection s'il en fait partie, sinon lui seul.
+fn group_of(data: &Data, st: &UiState, i: usize) -> Vec<usize> {
+    let id = data.projects[i].id;
+    if st.lib_multi.len() > 1 && st.lib_multi.contains(&id) {
+        st.lib_multi.items().iter().filter_map(|id| data.index_of(*id)).collect()
+    } else {
+        vec![i]
+    }
+}
 
 /// Rend une carte de projet déplaçable (à appeler après le curseur de survol).
-fn drag_source(resp: &egui::Response, i: usize) {
-    resp.dnd_set_drag_payload(DraggedProject(i));
+fn drag_source(resp: &egui::Response, group: Vec<usize>) {
+    resp.dnd_set_drag_payload(DraggedProjects(group));
+}
+
+/// Un clic sur un projet de la grille ou de la liste : clic, Ctrl + clic, Maj + clic. Le panneau
+/// montre le dernier projet cliqué (s'il est encore sélectionné).
+fn click_project(ui: &Ui, data: &Data, st: &mut UiState, ids: &[usize], i: usize, act: &mut Vec<Action>) {
+    let mods = ui.input(|inp| inp.modifiers);
+    let order: Vec<u64> = ids.iter().map(|&k| data.projects[k].id).collect();
+    let id = data.projects[i].id;
+    // Ctrl ou Maj juste après avoir ouvert un projet : il fait partie de la sélection.
+    if (mods.command || mods.shift)
+        && st.lib_multi.is_empty()
+        && let Some(open) = st.selected.and_then(|s| data.projects.get(s))
+    {
+        st.lib_multi.click(open.id, egui::Modifiers::NONE, &order);
+    }
+    st.lib_multi.click(id, mods, &order);
+    if st.lib_multi.contains(&id) {
+        act.push(Action::Select(i));
+    }
 }
 
 pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
@@ -69,14 +99,15 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
     drag_ghost(ui, data);
 }
 
-/// Pendant un glisser-déposer : le projet suit la souris.
+/// Pendant un glisser-déposer : le projet (ou le groupe) suit la souris.
 fn drag_ghost(ui: &Ui, data: &Data) {
-    let Some(dragged) = egui::DragAndDrop::payload::<DraggedProject>(ui.ctx()) else { return };
-    let (Some(p), Some(pos)) = (data.projects.get(dragged.0), ui.ctx().pointer_interact_pos()) else { return };
+    let Some(dragged) = egui::DragAndDrop::payload::<DraggedProjects>(ui.ctx()) else { return };
+    let (Some(p), Some(pos)) = (dragged.0.first().and_then(|&i| data.projects.get(i)), ui.ctx().pointer_interact_pos()) else { return };
     let t = Tokens::get(ui.ctx());
     let painter = ui.ctx().layer_painter(egui::LayerId::new(egui::Order::Tooltip, Id::unique("library-drag-ghost")));
     let font = FontId::new(13.5, theme::semibold());
-    let galley = painter.layout_no_wrap(p.name.clone(), font, t.ink_strong);
+    let label = if dragged.0.len() > 1 { tf("{0} et {1} autres", &[("0", &p.name), ("1", &(dragged.0.len() - 1))]) } else { p.name.clone() };
+    let galley = painter.layout_no_wrap(label, font, t.ink_strong);
     let rect = Rect::from_min_size(pos + vec2(14.0, 10.0), vec2(galley.size().x + 44.0, 34.0));
     painter.rect(rect, CornerRadius::same(9), t.raised, Stroke::new(1.0, t.accent), StrokeKind::Inside);
     icons::paint(&painter, pos2(rect.left() + 19.0, rect.center().y), p.icon, 16.0, t.accent_ink);
@@ -93,9 +124,9 @@ fn side_item(ui: &mut Ui, icon: Icon, color: Color32, label: &str, count: usize,
     let fill = if selected { t.accent_soft } else { tint(t.ink, 0.05 * hover) };
     p.rect_filled(rect, CornerRadius::same(8), fill);
     icons::paint(p, pos2(rect.left() + 20.0, rect.center().y), icon, 17.0, color);
-    let fg = if selected { t.accent_ink } else { t.ink };
+    let fg = if selected { t.ink_strong } else { t.ink };
     widgets::paint_text(p, pos2(rect.left() + 40.0, rect.center().y - 9.0), label, FontId::new(14.0, theme::medium()), fg, rect.width() - 80.0);
-    p.text(pos2(rect.right() - 12.0, rect.center().y), Align2::RIGHT_CENTER, count.to_string(), FontId::new(13.0, theme::semibold()), if selected { t.accent_ink } else { t.faint });
+    p.text(pos2(rect.right() - 12.0, rect.center().y), Align2::RIGHT_CENTER, count.to_string(), FontId::new(13.0, theme::semibold()), if selected { t.ink_strong } else { t.faint });
     resp.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
@@ -104,7 +135,7 @@ fn sidebar(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
     widgets::draggable(ScrollArea::vertical()).id_salt("library-side").auto_shrink(false).show(ui, |ui| widgets::scroll_content(ui, |ui| {
         ui.spacing_mut().item_spacing.y = 2.0;
         // L'attention d'abord : c'est elle qui range le bureau. On y dépose aussi les projets.
-        let dragging = egui::DragAndDrop::has_payload_of_type::<DraggedProject>(ui.ctx());
+        let dragging = egui::DragAndDrop::has_payload_of_type::<DraggedProjects>(ui.ctx());
         widgets::caps(ui, if dragging { tr("Attention · dépose le projet ici") } else { tr("Attention") });
         ui.add_space(6.0);
         for a in Attention::ALL {
@@ -113,12 +144,9 @@ fn sidebar(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
             if dragging {
                 drop_highlight(ui, &t, &resp);
             }
-            if let Some(dropped) = resp.dnd_release_payload::<DraggedProject>() {
+            if let Some(dropped) = resp.dnd_release_payload::<DraggedProjects>() {
                 // Un projet archivé qu'on range dans une attention reprend du service.
-                if data.projects.get(dropped.0).is_some_and(|p| p.status == Status::Archived) {
-                    act.push(Action::SetStatus(dropped.0, Status::Active));
-                }
-                act.push(Action::SetAttention(dropped.0, a, true));
+                act.push(Action::Bulk(dropped.0.clone(), BulkOp::Attention(a)));
             } else if resp.clicked() {
                 st.lib_attention = if st.lib_attention == Some(a) { None } else { Some(a) };
                 st.lib_archived = false;
@@ -130,17 +158,17 @@ fn sidebar(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
         if dragging {
             drop_highlight(ui, &t, &resp);
         }
-        if let Some(dropped) = resp.dnd_release_payload::<DraggedProject>() {
-            if let Some(p) = data.projects.get(dropped.0).filter(|p| p.status != Status::Archived) {
-                act.push(Action::SetStatus(dropped.0, Status::Archived));
-                act.push(Action::Toast(Icon::ArchiveX, tf("« {0} » archivé", &[("0", &p.name)]), Some(tr("Retrouve-le dans « Archivés ».").into())));
+        if let Some(dropped) = resp.dnd_release_payload::<DraggedProjects>() {
+            let todo: Vec<usize> = dropped.0.iter().copied().filter(|&i| data.projects.get(i).is_some_and(|p| p.status != Status::Archived)).collect();
+            if !todo.is_empty() {
+                act.push(Action::Bulk(todo, BulkOp::Archive));
             }
         } else if resp.clicked() {
             st.lib_archived = !st.lib_archived;
             st.lib_attention = None;
         }
         ui.add_space(16.0);
-        widgets::caps(ui, tr("Domaines · proposés par l'IA"));
+        widgets::caps(ui, if dragging { tr("Domaines · dépose le projet ici") } else { tr("Domaines · proposés par l'IA") });
         ui.add_space(6.0);
         let (archived, attention) = (st.lib_archived, st.lib_attention);
         let in_scope = |d: Option<usize>| {
@@ -153,7 +181,13 @@ fn sidebar(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
             st.lib_domain = None;
         }
         for (i, d) in data.domains.iter().enumerate() {
-            if side_item(ui, d.icon, d.color, &d.name, in_scope(Some(i)), st.lib_domain == Some(i)).clicked() {
+            let resp = side_item(ui, d.icon, d.color, &d.name, in_scope(Some(i)), st.lib_domain == Some(i));
+            if dragging {
+                drop_highlight(ui, &t, &resp);
+            }
+            if let Some(dropped) = resp.dnd_release_payload::<DraggedProjects>() {
+                act.push(Action::Bulk(dropped.0.clone(), BulkOp::Domain(i)));
+            } else if resp.clicked() {
                 st.lib_domain = if st.lib_domain == Some(i) { None } else { Some(i) };
             }
         }
@@ -252,11 +286,65 @@ fn main(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
         st.lib_search.clear();
     }
     ui.add_space(10.0);
+    // La sélection multiple ne garde que les projets affichés (un filtre a pu en masquer).
+    let shown: Vec<u64> = ids.iter().map(|&i| data.projects[i].id).collect();
+    st.lib_multi.retain(|id| shown.contains(id));
+    if st.lib_view != LibView::Map {
+        selection_keys(ui, st, &shown);
+        if st.lib_multi.len() > 1 {
+            selection_bar(ui, data, st, act);
+            ui.add_space(10.0);
+        }
+    }
     match st.lib_view {
         LibView::Map => map(ui, data, st, act),
-        LibView::Grid => grid(ui, data, &ids, st.selected, act),
-        LibView::List => list(ui, data, &ids, st.selected, act),
+        LibView::Grid => grid(ui, data, &ids, st, act),
+        LibView::List => list(ui, data, &ids, st, act),
     }
+}
+
+/// Ctrl + A sélectionne tout ce qui est affiché, Échap vide la sélection (hors saisie de texte).
+fn selection_keys(ui: &Ui, st: &mut UiState, shown: &[u64]) {
+    if st.modal.is_some() || ui.ctx().memory(|m| m.focused().is_some()) {
+        return;
+    }
+    if ui.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::A)) {
+        st.lib_multi.set_all(shown);
+    }
+    if !st.lib_multi.is_empty() && ui.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
+        st.lib_multi.clear();
+    }
+}
+
+/// La barre de la sélection multiple : combien, et ce qu'on peut faire du groupe.
+fn selection_bar(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
+    let t = Tokens::get(ui.ctx());
+    let group: Vec<usize> = st.lib_multi.items().iter().filter_map(|id| data.index_of(*id)).collect();
+    Frame::new().fill(tint(t.accent, 0.08)).stroke(Stroke::new(1.0, tint(t.accent, 0.35))).corner_radius(10).inner_margin(Margin::symmetric(14, 8)).show(ui, |ui| {
+        ui.set_width(ui.available_width());
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 8.0;
+            icons::show(ui, Icon::SquareCheck, 17.0, t.accent_ink);
+            ui.label(RichText::new(tf("{0} projets sélectionnés", &[("0", &group.len())])).font(FontId::new(14.0, theme::semibold())).color(t.ink_strong));
+            if ui.available_width() > 620.0 {
+                ui.label(RichText::new(tr("Glisse-les vers une attention ou un domaine")).size(12.5).color(t.muted));
+            }
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                if widgets::icon_button(ui, Icon::X, tr("Vider la sélection (Échap)"), 30.0).clicked() {
+                    st.lib_multi.clear();
+                }
+                let domains: Vec<(usize, &str)> = data.domains.iter().enumerate().map(|(i, d)| (i, d.name.as_str())).collect();
+                if let Some(d) = widgets::menu_button(ui, Some(Icon::Tag), tr("Domaine"), widgets::Kind::Secondary, &domains) {
+                    act.push(Action::Bulk(group.clone(), BulkOp::Domain(d)));
+                }
+                let mut targets: Vec<(Option<Attention>, &str)> = Attention::ALL.iter().map(|a| (Some(*a), a.label())).collect();
+                targets.push((None, tr("Archiver")));
+                if let Some(target) = widgets::menu_button(ui, Some(Icon::Crosshair), tr("Attention"), widgets::Kind::Secondary, &targets) {
+                    act.push(Action::Bulk(group.clone(), target.map(BulkOp::Attention).unwrap_or(BulkOp::Archive)));
+                }
+            });
+        });
+    });
 }
 
 /// Les pastilles des filtres actifs, et « Tout effacer » à partir de deux.
@@ -308,7 +396,7 @@ fn view_switch(ui: &mut Ui, view: &mut LibView, compact: bool) {
         if selected {
             painter.rect(cell.shrink(2.0), CornerRadius::same(theme::R_CTRL - 2), t.accent_soft, Stroke::new(1.0, t.accent), StrokeKind::Inside);
         }
-        let fg = if selected { t.accent_ink } else if resp.hovered() { t.ink_strong } else { t.muted };
+        let fg = if selected || resp.hovered() { t.ink_strong } else { t.muted };
         icons::paint(&painter, cell.center(), icon, 17.0, fg);
     }
 }
@@ -333,12 +421,20 @@ fn map(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
     let all = visible(data, st, true);
     // Le nœud est déjà tenu quand il quitte la carte : on pose la charge utile directement
     // (`dnd_set_drag_payload` n'agit qu'à l'image où le glisser commence).
-    super::map::show(ui, data, st, act, &all, &|resp, i| egui::DragAndDrop::set_payload(&resp.ctx, DraggedProject(i)));
+    super::map::show(ui, data, st, act, &all, &|resp, i| egui::DragAndDrop::set_payload(&resp.ctx, DraggedProjects(vec![i])));
 }
 
 // ---- grille et liste ---------------------------------------------------------------------------
 
-fn grid(ui: &mut Ui, data: &Data, ids: &[usize], selected: Option<usize>, act: &mut Vec<Action>) {
+/// Un projet de la sélection multiple : une coche dans le coin.
+fn paint_check(painter: &egui::Painter, t: &Tokens, center: egui::Pos2) {
+    painter.circle_filled(center, 9.0, t.accent);
+    icons::paint(painter, center, Icon::Check, 12.0, t.on_accent);
+}
+
+fn grid(ui: &mut Ui, data: &Data, ids: &[usize], st: &mut UiState, act: &mut Vec<Action>) {
+    let selected = st.selected;
+    let multi = st.lib_multi.len() > 1;
     let t = Tokens::get(ui.ctx());
     widgets::draggable(ScrollArea::vertical()).id_salt("library-grid").auto_shrink(false).show(ui, |ui| {
         widgets::scroll_content(ui, |ui| {
@@ -356,7 +452,8 @@ fn grid(ui: &mut Ui, data: &Data, ids: &[usize], selected: Option<usize>, act: &
                         resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, &p.name));
                         let hover = ui.ctx().animate_bool(resp.id.with("hover"), resp.hovered());
                         let painter = ui.painter().clone();
-                        let stroke = if selected == Some(i) { Stroke::new(2.0, t.accent) } else { Stroke::new(1.0, mix(t.line, t.line_strong, hover)) };
+                        let picked = multi && st.lib_multi.contains(&p.id);
+                        let stroke = if selected == Some(i) || picked { Stroke::new(2.0, t.accent) } else { Stroke::new(1.0, mix(t.line, t.line_strong, hover)) };
                         painter.rect(rect, CornerRadius::same(theme::R_CARD), mix(t.surface, t.raised, hover * 0.6), stroke, StrokeKind::Inside);
                         let tile = Rect::from_min_size(rect.min + vec2(14.0, 14.0), vec2(36.0, 36.0));
                         painter.rect_filled(tile, CornerRadius::same(9), tint(dm.color, 0.16));
@@ -373,10 +470,13 @@ fn grid(ui: &mut Ui, data: &Data, ids: &[usize], selected: Option<usize>, act: &
                         let g = painter.layout_no_wrap(idle_text(p.idle_days), FontId::proportional(12.0), t.faint);
                         painter.galley(pos2(rect.left() + 14.0, rect.bottom() - 26.0), g, t.faint);
                         painter.text(pos2(rect.right() - 14.0, rect.bottom() - 19.0), Align2::RIGHT_CENTER, icons::ch(Icon::ChevronRight), FontId::new(16.0, theme::icons()), mix(t.faint, t.accent_ink, hover));
+                        if picked {
+                            paint_check(&painter, &t, pos2(rect.right() - 18.0, rect.top() + 18.0));
+                        }
                         let resp = resp.on_hover_cursor(egui::CursorIcon::PointingHand);
-                        drag_source(&resp, i);
+                        drag_source(&resp, group_of(data, st, i));
                         if resp.clicked() {
-                            act.push(Action::Select(i));
+                            click_project(ui, data, st, ids, i, act);
                         }
                     }
                 });
@@ -397,8 +497,10 @@ fn list_columns(width: f32) -> [(&'static str, f32); 7] {
     }
 }
 
-fn list(ui: &mut Ui, data: &Data, ids: &[usize], selected: Option<usize>, act: &mut Vec<Action>) {
+fn list(ui: &mut Ui, data: &Data, ids: &[usize], st: &mut UiState, act: &mut Vec<Action>) {
     let t = Tokens::get(ui.ctx());
+    let selected = st.selected;
+    let multi = st.lib_multi.len() > 1;
     // La même largeur pour l'en-tête et les lignes (qui laissent 16 points à la barre de défilement).
     let width = ui.available_width() - 16.0;
     let columns = list_columns(width);
@@ -421,7 +523,8 @@ fn list(ui: &mut Ui, data: &Data, ids: &[usize], selected: Option<usize>, act: &
                 let (rect, resp) = ui.allocate_exact_size(vec2(width, 46.0), Sense::click_and_drag());
                 resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, &p.name));
                 let painter = ui.painter().clone();
-                if selected == Some(i) {
+                let picked = multi && st.lib_multi.contains(&p.id);
+                if selected == Some(i) || picked {
                     painter.rect_filled(rect, CornerRadius::same(6), tint(t.accent, 0.12));
                 } else if resp.hovered() {
                     painter.rect_filled(rect, CornerRadius::same(6), tint(t.ink, 0.04));
@@ -451,10 +554,13 @@ fn list(ui: &mut Ui, data: &Data, ids: &[usize], selected: Option<usize>, act: &
                     widgets::paint_chip(&painter, &t, pos2(col(5), cy), p.attention.label(), tone);
                 }
                 painter.text(pos2(rect.right() - 14.0, cy), Align2::RIGHT_CENTER, idle_text(p.idle_days), FontId::proportional(12.5), t.faint);
+                if picked {
+                    painter.rect_filled(egui::Rect::from_min_size(rect.min + vec2(0.0, 8.0), vec2(3.0, rect.height() - 16.0)), CornerRadius::same(1), t.accent);
+                }
                 let resp = resp.on_hover_cursor(egui::CursorIcon::PointingHand);
-                drag_source(&resp, i);
+                drag_source(&resp, group_of(data, st, i));
                 if resp.clicked() {
-                    act.push(Action::Select(i));
+                    click_project(ui, data, st, ids, i, act);
                 }
             }
         });

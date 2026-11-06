@@ -169,6 +169,25 @@ pub fn chip_menu<T: Copy + PartialEq>(ui: &mut Ui, name: &str, value: T, tone: T
     picked.filter(|v| *v != value)
 }
 
+/// Un bouton qui ouvre une liste de choix (« Attention ▾ »). Renvoie le choix fait.
+pub fn menu_button<T: Copy>(ui: &mut Ui, icon: Option<Icon>, text: &str, kind: Kind, options: &[(T, &str)]) -> Option<T> {
+    let resp = button_sized(ui, icon, &format!("{text}  {}", icons::ch(Icon::ChevronDown)), kind, 32.0, None);
+    let popup_id = egui::Popup::default_response_id(&resp);
+    let mut picked = None;
+    egui::Popup::menu(&resp).gap(4.0).show(|ui| {
+        ui.set_min_width(resp.rect.width().max(190.0));
+        for (v, l) in options {
+            if ui.selectable_label(false, *l).clicked() {
+                picked = Some(*v);
+            }
+        }
+    });
+    if picked.is_some() {
+        egui::Popup::close_id(ui.ctx(), popup_id);
+    }
+    picked
+}
+
 /// Petit compteur arrondi à côté d'un titre (« 4 Focus », « 12 »).
 pub fn count_pill(ui: &mut Ui, text: &str) -> Response {
     let t = tok(ui);
@@ -375,7 +394,8 @@ pub fn dashed_button(ui: &mut Ui, icon: Icon, text: &str, size: Vec2) -> Respons
 
 // ---- navigation --------------------------------------------------------------------------------
 
-/// Entrée de la barre de navigation : icône + label, fond doux d'accent quand elle est active.
+/// Entrée de la barre de navigation : icône + label. Active : fond doux d'accent, texte au plus
+/// fort contraste (clair en thème sombre, foncé en thème clair).
 pub fn nav_item(ui: &mut Ui, icon: Option<Icon>, label: &str, selected: bool) -> Response {
     let t = tok(ui);
     let font = FontId::new(15.5, theme::semibold());
@@ -384,7 +404,7 @@ pub fn nav_item(ui: &mut Ui, icon: Option<Icon>, label: &str, selected: bool) ->
     let (rect, resp) = ui.allocate_exact_size(vec2(text_w + icon_w + 30.0, 42.0), Sense::click());
     resp.widget_info(|| WidgetInfo::selected(Role::Tab, true, selected, label));
     let hover = ui.ctx().animate_bool(resp.id.with("hover"), resp.hovered() && !selected);
-    let (fill, fg) = if selected { (t.accent_soft, t.accent_ink) } else { (tint(t.ink, 0.06 * hover), mix(t.ink, t.ink_strong, hover)) };
+    let (fill, fg) = if selected { (t.accent_soft, t.ink_strong) } else { (tint(t.ink, 0.06 * hover), mix(t.ink, t.ink_strong, hover)) };
     let p = ui.painter();
     p.rect_filled(rect, CornerRadius::same(R_CTRL), fill);
     let mut x = rect.left() + 15.0;
@@ -449,7 +469,7 @@ pub fn segmented<T: Copy + PartialEq>(ui: &mut Ui, id: &str, value: &mut T, opti
             *value = *option;
             changed = true;
         }
-        let fg = if selected { t.accent_ink } else if resp.hovered() { t.ink_strong } else { t.muted };
+        let fg = if selected || resp.hovered() { t.ink_strong } else { t.muted };
         if selected {
             p.rect(cell.shrink(2.0), CornerRadius::same(R_CTRL - 2), t.accent_soft, Stroke::new(1.0, t.accent), StrokeKind::Inside);
         }

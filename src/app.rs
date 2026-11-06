@@ -207,6 +207,8 @@ pub enum Modal {
     Update,
     /// Confirmer la suppression d'un projet (index).
     ConfirmDelete(usize),
+    /// L'assistant « Dossiers sources », pas à pas.
+    Setup(Box<crate::screens::setup::SetupState>),
 }
 
 /// L'analyse en cours (ou la dernière) des dossiers relevés par le scan.
@@ -220,6 +222,9 @@ pub struct Analysis {
     pub warnings: Vec<String>,
     pub with_ai: bool,
     pub finished: bool,
+    /// Dossiers choisis par l'utilisateur (assistant) : chacun devient une fiche, l'IA ne fait
+    /// que la remplir.
+    pub force: bool,
 }
 
 /// Le classement des projets dans l'ontologie par Ollaya.
@@ -345,8 +350,20 @@ impl Decision {
     }
 }
 
+/// Ce qu'on fait d'un coup à plusieurs projets (sélection multiple de la Bibliothèque).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum BulkOp {
+    Attention(Attention),
+    Archive,
+    Domain(usize),
+}
+
 pub enum Action {
     Select(usize),
+    /// Plusieurs projets (index) d'un coup : glisser-déposer groupé, barre de la sélection.
+    Bulk(Vec<usize>, BulkOp),
+    /// Ouvrir une adresse dans le navigateur (page GitHub d'un projet…).
+    OpenUrl(String),
     Deselect,
     Go(Screen),
     GoConfig(CfgSection),
@@ -392,14 +409,22 @@ pub enum Action {
     // ---- découverte
     PickRoot,
     RemoveRoot(usize),
-    AddCandidate(String),
-    /// Écarter un dossier des scans (copie, sauvegarde…).
-    IgnoreFolder(String),
     /// Rétablir un dossier écarté.
     RestoreFolder(usize),
     AddAllLikely,
     AnalyzeCandidates,
+    // ---- assistant « Dossiers sources »
+    OpenSetup(crate::screens::setup::Step),
+    /// Compter les projets probables d'un dossier proposé (chemin, profondeur).
+    SetupCount(String, u32),
+    SetupAddFolder,
+    /// Les dossiers cochés deviennent les dossiers sources, puis scan.
+    SetupScan,
+    /// Créer les fiches des dossiers gardés, écarter ceux décochés.
+    SetupCreate { keep: Vec<String>, ignore: Vec<String>, with_ai: bool },
     ListGithub,
+    /// Les comptes GitHub connectés à la CLI gh.
+    ListGithubAccounts,
     AddRepo(String),
     AddAllRepos,
     // ---- Ollama et recherche sémantique
@@ -456,7 +481,11 @@ pub struct UiState {
     pub scan_count: usize,
     /// Le résultat du dernier scan.
     pub scan: Option<ScanResult>,
+    /// Un scan demandé pendant qu'un autre tournait : il repart à la fin de celui-ci.
+    pub rescan: bool,
     pub analysis: Option<Analysis>,
+    /// Projets sélectionnés ensemble dans la Bibliothèque (identifiants).
+    pub lib_multi: crate::select::MultiSelect<u64>,
     pub new_exclude: String,
     pub new_note: String,
     pub new_step: String,
@@ -485,6 +514,9 @@ pub struct UiState {
     // ---- GitHub
     pub github: Option<Result<Vec<Repo>, String>>,
     pub github_loading: bool,
+    /// Comptes connectés à gh, et l'actif (`None` : pas encore demandé).
+    pub github_accounts: Option<Result<crate::github::Accounts, String>>,
+    pub github_accounts_loading: bool,
     // ---- recherche
     /// Résultats de la recherche du bureau (`None` : pas de recherche).
     pub search_hits: Option<Vec<Hit>>,
@@ -532,7 +564,9 @@ impl Default for UiState {
             scan_started: None,
             scan_count: 0,
             scan: None,
+            rescan: false,
             analysis: None,
+            lib_multi: Default::default(),
             new_exclude: String::new(),
             new_note: String::new(),
             new_step: String::new(),
@@ -553,6 +587,8 @@ impl Default for UiState {
             onto_error: None,
             github: None,
             github_loading: false,
+            github_accounts: None,
+            github_accounts_loading: false,
             search_hits: None,
             lib_hits: None,
             semantic_indexed: 0,
@@ -640,6 +676,10 @@ impl AtelierApp {
         // Premier lancement ou scan au démarrage : on relève les dossiers tout de suite.
         if app.store.is_some() && !app.data.config.roots.is_empty() && (app.data.projects.is_empty() || app.data.config.freq == model::ScanFreq::Startup) {
             app.actions.push(Action::StartScan);
+        }
+        // Tout premier lancement : l'assistant guide le choix des dossiers sources.
+        if app.store.is_some() && app.data.config.roots.is_empty() && app.data.projects.is_empty() {
+            app.actions.push(Action::OpenSetup(crate::screens::setup::Step::Where));
         }
         app
     }
@@ -790,7 +830,11 @@ impl AtelierApp {
                         (a.done, a.total, a.current) = (done, total, current);
                     }
                 }
-                JobMsg::Classified { proposal, by, warning } => {
+                JobMsg::Classified { mut proposal, by, warning } => {
+                    // Choisi dans l'assistant : une fiche, même si l'IA hésite.
+                    if self.st.analysis.as_ref().is_some_and(|a| a.force) {
+                        proposal.is_project = true;
+                    }
                     let added = proposal.is_project && classify::apply(&mut self.data, &proposal, by).is_some();
                     if let Some(a) = &mut self.st.analysis {
                         if added { a.added += 1 } else { a.skipped += 1 }
@@ -798,8 +842,13 @@ impl AtelierApp {
                     }
                 }
                 JobMsg::AnalysisDone => {
+                    let wizard = matches!(self.st.modal, Some(Modal::Setup(_)));
                     if let Some(a) = &mut self.st.analysis {
                         a.finished = true;
+                        // L'assistant montre lui-même le bilan.
+                        if wizard {
+                            continue;
+                        }
                         let (added, skipped, warnings) = (a.added, a.skipped, a.warnings.len());
                         let how = if a.with_ai { tr("par Ollama") } else { tr("par les règles locales") };
                         let detail = if warnings > 0 { tf("{skipped} dossiers écartés · {warnings} réponses de l'IA illisibles (règles utilisées)", &[("skipped", &skipped), ("warnings", &warnings)]) } else { tf("{skipped} dossiers écartés", &[("skipped", &skipped)]) };
@@ -857,6 +906,11 @@ impl AtelierApp {
                     }
                     self.st.github = Some(result);
                 }
+                JobMsg::GithubAccounts(result) => {
+                    self.st.github_accounts_loading = false;
+                    self.st.github_accounts = Some(result);
+                }
+                JobMsg::SetupCount { path, depth, likely, error } => screens::setup::counted(&mut self.st, &path, depth, likely, error),
                 JobMsg::Embedded { model, result } => {
                     self.st.semantic_busy = false;
                     match result {
@@ -964,6 +1018,12 @@ impl AtelierApp {
                 r.last_scan = now;
             }
         }
+        // Les dossiers sources ont changé pendant le scan : ce résultat est déjà dépassé.
+        if std::mem::take(&mut self.st.rescan) {
+            self.st.scan = Some(result);
+            self.actions.push(Action::StartScan);
+            return;
+        }
         // L'activité des projets suivis suit celle de leur dossier.
         for f in &result.dirs {
             if let Some(i) = self.data.find_by_folder(&f.path) {
@@ -977,6 +1037,10 @@ impl AtelierApp {
         let total = result.dirs.len();
         self.st.scan = Some(result);
         let fresh = self.candidates(false).len();
+        // L'assistant « Dossiers sources » attendait ce scan : c'est lui qui montre la suite.
+        if screens::setup::scan_finished(&mut self.st, &self.data) {
+            return;
+        }
         // Une seule notification par scan : le résultat, ou ce qui attend.
         let mut detail = tf("{likely} projets probables, dont {fresh} pas encore suivis", &[("likely", &likely), ("fresh", &fresh)]);
         match errors.as_slice() {
@@ -1288,6 +1352,96 @@ impl AtelierApp {
         true
     }
 
+    /// Écarte un dossier des scans (et de ce que le dernier scan a relevé, lui et ses sous-dossiers).
+    fn ignore_folder(&mut self, path: &str) {
+        let key = model::path_key(path);
+        if !self.data.config.ignored.iter().any(|f| model::path_key(f) == key) {
+            self.data.config.ignored.push(path.to_owned());
+        }
+        if let Some(scan) = &mut self.st.scan {
+            let below = format!("{key}\\");
+            scan.dirs.retain(|d| {
+                let k = model::path_key(&d.path);
+                k != key && !k.starts_with(&below)
+            });
+        }
+    }
+
+    /// Ouvre l'assistant « Dossiers sources » : au début, ou à l'étape « Vérifier » (après le
+    /// dernier scan, ou après un nouveau scan s'il n'y en a pas encore).
+    fn open_setup(&mut self, step: crate::screens::setup::Step) {
+        use crate::screens::setup::{SetupState, Step};
+        let mut s = SetupState::new(&self.data);
+        if step != Step::Where {
+            match &self.st.scan {
+                Some(scan) => crate::screens::setup::start_review(&mut s, &self.data, scan),
+                None => {
+                    s.step = Step::Scan;
+                    s.waiting = true;
+                    self.actions.push(Action::StartScan);
+                }
+            }
+        }
+        let counts: Vec<(String, u32)> = if s.step == Step::Where { s.folders.iter().map(|f| (f.path.clone(), f.depth)).collect() } else { Vec::new() };
+        self.st.modal = Some(Modal::Setup(Box::new(s)));
+        for (path, depth) in counts {
+            self.count_setup_folder(path, depth);
+        }
+    }
+
+    /// Compte en arrière-plan les projets probables d'un dossier proposé par l'assistant.
+    fn count_setup_folder(&mut self, path: String, depth: u32) {
+        if !self.dry_run {
+            jobs::spawn_setup_count(self.bus(), ScanOptions::from_config(&self.data.config), path, depth);
+        }
+    }
+
+    /// Une même action sur plusieurs projets, et une seule notification pour le tout.
+    fn bulk(&mut self, projects: Vec<usize>, op: BulkOp) {
+        let projects: Vec<usize> = projects.into_iter().filter(|&p| p < self.data.projects.len()).collect();
+        let Some(&first) = projects.first() else { return };
+        let name = self.data.projects[first].name.clone();
+        let n = projects.len();
+        match op {
+            BulkOp::Attention(a) => {
+                let (mut moved, mut last) = (0, name);
+                for &p in &projects {
+                    let archived = self.data.projects[p].status == Status::Archived;
+                    // Un projet archivé qu'on range dans une attention reprend du service.
+                    if self.data.projects[p].attention == a || self.change_attention(p, a, false) {
+                        if archived {
+                            self.data.projects[p].status = Status::Active;
+                        }
+                        moved += 1;
+                        last = self.data.projects[p].name.clone();
+                    }
+                }
+                let detail = (moved < n).then(|| tf("{0} laissés de côté : le focus est complet.", &[("0", &(n - moved))]));
+                match moved {
+                    0 => {}
+                    1 => self.toast(a.icon(), format!("{last} → {}", a.label()), detail),
+                    _ => self.toast(a.icon(), tf("{0} projets → {1}", &[("0", &moved), ("1", &a.label())]), detail),
+                }
+            }
+            BulkOp::Archive => {
+                for &p in &projects {
+                    self.data.projects[p].status = Status::Archived;
+                }
+                let title = if n == 1 { tf("« {0} » archivé", &[("0", &name)]) } else { tf("{0} projets archivés", &[("0", &n)]) };
+                let detail = if n == 1 { tr("Retrouve-le dans « Archivés ».") } else { tr("Retrouve-les dans « Archivés ».") };
+                self.toast(Icon::ArchiveX, title, Some(detail.into()));
+            }
+            BulkOp::Domain(d) => {
+                let Some(domain) = self.data.domains.get(d).map(|x| x.name.clone()) else { return };
+                for &p in &projects {
+                    self.data.projects[p].domain = d;
+                }
+                let title = if n == 1 { format!("{name} → {domain}") } else { tf("{0} projets → {1}", &[("0", &n), ("1", &domain)]) };
+                self.toast(Icon::Tag, title, None);
+            }
+        }
+    }
+
     fn apply_actions(&mut self, ctx: &egui::Context) {
         for action in std::mem::take(&mut self.actions) {
             match action {
@@ -1298,6 +1452,22 @@ impl AtelierApp {
                     self.st.selected = Some(p);
                 }
                 Action::Deselect => self.st.selected = None,
+                Action::Bulk(projects, op) => self.bulk(projects, op),
+                Action::OpenUrl(url) => {
+                    let plan = launch::open_url(&url);
+                    self.launched.push(plan.line.clone());
+                    if !self.dry_run {
+                        let tx = self.errors_tx.clone();
+                        let repaint = ctx.clone();
+                        let result = launch::spawn(&plan, move |err| {
+                            let _ = tx.send((tr("Le navigateur").to_owned(), err));
+                            repaint.request_repaint();
+                        });
+                        if let Err(why) = result {
+                            self.toast(Icon::TriangleAlert, tr("Impossible d'ouvrir l'adresse"), Some(why));
+                        }
+                    }
+                }
                 Action::Go(s) => self.st.screen = s,
                 Action::GoConfig(section) => {
                     self.st.screen = Screen::Config;
@@ -1506,6 +1676,7 @@ impl AtelierApp {
                 }
                 Action::StartScan => {
                     if self.st.scan_started.is_some() {
+                        self.st.rescan = true;
                         continue;
                     }
                     let opts = ScanOptions::from_config(&self.data.config);
@@ -1590,37 +1761,79 @@ impl AtelierApp {
                     if i < self.data.config.roots.len() {
                         let r = self.data.config.roots.remove(i);
                         self.toast(Icon::Trash2, tr("Dossier source retiré"), Some(tf("{0} — ses projets restent suivis.", &[("0", &r.path)])));
+                        // Les chiffres du scan ne valent plus : on relève ce qui reste.
+                        self.st.scan = None;
+                        if !self.data.config.roots.is_empty() {
+                            self.actions.push(Action::StartScan);
+                        }
                     }
                 }
-                Action::IgnoreFolder(path) => {
-                    let key = model::path_key(&path);
-                    if !self.data.config.ignored.iter().any(|f| model::path_key(f) == key) {
-                        self.data.config.ignored.push(path.clone());
+                Action::OpenSetup(step) => self.open_setup(step),
+                Action::SetupCount(path, depth) => self.count_setup_folder(path, depth),
+                Action::SetupAddFolder => {
+                    let picked = if self.dry_run { None } else { rfd::FileDialog::new().set_title(tr("Dossier qui contient des projets")).set_directory(model::default_root()).pick_folder() };
+                    if let Some(dir) = picked {
+                        let path = dir.display().to_string();
+                        let mut count = None;
+                        if let Some(Modal::Setup(s)) = &mut self.st.modal {
+                            match s.folders.iter_mut().find(|f| model::path_key(&f.path) == model::path_key(&path)) {
+                                Some(f) => f.checked = true,
+                                None => {
+                                    s.folders.push(crate::screens::setup::Folder::new(crate::screens::setup::short_name(&path), path.clone(), true, 3));
+                                    count = Some(path);
+                                }
+                            }
+                        }
+                        if let Some(path) = count {
+                            self.count_setup_folder(path, 3);
+                        }
                     }
-                    if let Some(scan) = &mut self.st.scan {
-                        let below = format!("{key}\\");
-                        scan.dirs.retain(|d| {
-                            let k = model::path_key(&d.path);
-                            k != key && !k.starts_with(&below)
-                        });
+                }
+                Action::SetupScan => {
+                    if let Some(Modal::Setup(s)) = &mut self.st.modal {
+                        let old = std::mem::take(&mut self.data.config.roots);
+                        self.data.config.roots = s
+                            .folders
+                            .iter()
+                            .filter(|f| f.checked)
+                            .map(|f| {
+                                let prev = old.iter().find(|r| model::path_key(&r.path) == model::path_key(&f.path) && r.depth == f.depth);
+                                ScanRoot { path: f.path.clone(), enabled: true, depth: f.depth, found: prev.map(|r| r.found).unwrap_or(0), last_scan: prev.map(|r| r.last_scan).unwrap_or(0) }
+                            })
+                            .collect();
+                        s.step = crate::screens::setup::Step::Scan;
+                        s.waiting = true;
+                        self.st.scan = None;
+                        self.actions.push(Action::StartScan);
                     }
-                    self.toast(Icon::EyeOff, tr("Dossier écarté des scans"), Some(path));
+                }
+                Action::SetupCreate { keep, ignore, with_ai } => {
+                    let found: Vec<Found> = self.st.scan.as_ref().map(|s| s.dirs.iter().filter(|d| keep.contains(&d.path)).cloned().collect()).unwrap_or_default();
+                    for path in &ignore {
+                        self.ignore_folder(path);
+                    }
+                    if with_ai && !found.is_empty() {
+                        let classifier = self.classifier();
+                        self.st.analysis = Some(Analysis { total: found.len(), with_ai: true, force: true, ..Default::default() });
+                        jobs::spawn_analysis(self.bus(), found, classifier);
+                    } else {
+                        let mut added = 0;
+                        for f in &found {
+                            let mut p = classify::by_rules(f);
+                            p.is_project = true;
+                            if classify::apply(&mut self.data, &p, AddedBy::Rules).is_some() {
+                                added += 1;
+                            }
+                        }
+                        if let Some(Modal::Setup(s)) = &mut self.st.modal {
+                            s.created = Some(added);
+                        }
+                    }
                 }
                 Action::RestoreFolder(i) => {
                     if i < self.data.config.ignored.len() {
                         let path = self.data.config.ignored.remove(i);
                         self.toast(Icon::Eye, tr("Dossier rétabli"), Some(tf("{path} — il réapparaîtra au prochain scan.", &[("path", &path)])));
-                    }
-                }
-                Action::AddCandidate(path) => {
-                    let found = self.st.scan.as_ref().and_then(|s| s.dirs.iter().find(|d| d.path == path).cloned());
-                    if let Some(f) = found {
-                        // Choisi à la main : il devient un projet, même sans marqueur.
-                        let mut p = classify::by_rules(&f);
-                        p.is_project = true;
-                        if let Some(i) = classify::apply(&mut self.data, &p, AddedBy::Manual) {
-                            self.toast(Icon::CirclePlus, tf("{0} ajouté", &[("0", &self.data.projects[i].name)]), Some(p.description));
-                        }
                     }
                 }
                 Action::AddAllLikely => {
@@ -1640,7 +1853,14 @@ impl AtelierApp {
                 }
                 Action::ListGithub => {
                     self.st.github_loading = true;
-                    jobs::spawn_github(self.bus());
+                    let projects = self.data.projects.iter().map(|p| (p.id, p.folders.clone())).collect();
+                    jobs::spawn_github(self.bus(), self.data.config.github_account.clone(), projects);
+                }
+                Action::ListGithubAccounts => {
+                    if !self.dry_run && !self.st.github_accounts_loading {
+                        self.st.github_accounts_loading = true;
+                        jobs::spawn_github_accounts(self.bus());
+                    }
                 }
                 Action::AddRepo(full_name) => {
                     if let Some(Ok(repos)) = &self.st.github
@@ -1767,6 +1987,7 @@ impl AtelierApp {
             Modal::AddProject(a) => screens::desk::add_project(ctx, &self.data, a, &mut self.actions),
             Modal::Update => update::modal(ctx, &self.data, &self.st, &mut self.actions),
             Modal::ConfirmDelete(p) => confirm_delete(ctx, &self.data, *p, &mut self.actions),
+            Modal::Setup(s) => screens::setup::show(ctx, &self.data, &self.st, s, &mut self.actions),
         };
         if keep {
             self.st.modal = Some(modal);

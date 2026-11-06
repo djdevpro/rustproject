@@ -157,6 +157,16 @@ fn summary(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<A
         });
         gap(ui);
     }
+    // Le dépôt (GitHub…), d'un clic dans le navigateur.
+    if let Some(url) = project.remote.as_deref().and_then(scan::web_url) {
+        widgets::info_row(ui, Icon::GitBranch, tr("Dépôt"), |ui| {
+            let shown = url.trim_start_matches("https://");
+            if widgets::link(ui, shown, Some(Icon::ExternalLink), 14.0).on_hover_text(tr("Ouvrir dans le navigateur")).clicked() {
+                act.push(Action::OpenUrl(url.clone()));
+            }
+        });
+        gap(ui);
+    }
     if !project.objective.is_empty() {
         widgets::info_row(ui, Icon::Crosshair, tr("Objectif"), |ui| {
             widgets::muted(ui, &project.objective);
@@ -303,6 +313,26 @@ fn resources(ui: &mut Ui, data: &Data, p: usize, act: &mut Vec<Action>) {
         }
     });
     ui.add_space(14.0);
+    widgets::caps(ui, tr("Dépôt"));
+    match project.remote.as_deref() {
+        None => {
+            widgets::muted(ui, tr("Aucun dépôt : ajoute son adresse dans l'onglet « Modifier »."));
+        }
+        Some(remote) => {
+            let web = scan::web_url(remote);
+            row(ui, Icon::GitBranch, remote, false, if web.is_some() { 2 } else { 1 }, |ui| {
+                if let Some(url) = &web
+                    && widgets::icon_button(ui, Icon::ExternalLink, tr("Ouvrir dans le navigateur"), 28.0).clicked()
+                {
+                    act.push(Action::OpenUrl(url.clone()));
+                }
+                if widgets::icon_button(ui, Icon::Copy, tr("Copier l'adresse"), 28.0).clicked() {
+                    act.push(Action::CopyText(remote.to_owned()));
+                }
+            });
+        }
+    }
+    ui.add_space(14.0);
     widgets::caps(ui, tr("Liens"));
     if project.links.is_empty() {
         widgets::muted(ui, tr("Aucun lien pour l'instant."));
@@ -366,6 +396,18 @@ fn edit(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<Acti
     ui.spacing_mut().item_spacing.y = 12.0;
     widgets::labeled(ui, tr("Nom du projet"), |ui| widgets::text_input(ui, &mut d.name, tr("Nom"), w));
     widgets::labeled(ui, tr("Description (une phrase)"), |ui| widgets::text_input(ui, &mut d.description, tr("Ce qu'est le projet, en une phrase"), w));
+    widgets::labeled(ui, tr("Dépôt GitHub"), |ui| {
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 6.0;
+            widgets::mono_input(ui, &mut d.remote, "https://github.com/…", w - 42.0);
+            if widgets::icon_button(ui, Icon::GitBranch, tr("Détecter depuis le dépôt Git du dossier"), theme::CONTROL_H).clicked() {
+                match scan::remote_of(&d.folders) {
+                    Some(url) => d.remote = url,
+                    None => act.push(Action::Toast(Icon::GitBranch, tr("Aucun dépôt distant").into(), Some(tr("Les dossiers du projet n'ont pas de remote Git.").into()))),
+                }
+            }
+        });
+    });
     widgets::labeled(ui, tr("Résultat recherché"), |ui| widgets::text_input(ui, &mut d.outcome, tr("Ce que tu veux avoir entre les mains"), w));
     ui.horizontal(|ui| {
         let half = (w - 12.0) / 2.0;
@@ -410,18 +452,6 @@ fn edit(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<Acti
                     d.folders.push(String::new());
                 }
             });
-        });
-    });
-    widgets::labeled(ui, tr("Dépôt GitHub"), |ui| {
-        ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 6.0;
-            widgets::mono_input(ui, &mut d.remote, "https://github.com/…", w - 42.0);
-            if widgets::icon_button(ui, Icon::GitBranch, tr("Détecter depuis le dépôt Git du dossier"), theme::CONTROL_H).clicked() {
-                match scan::remote_of(&d.folders) {
-                    Some(url) => d.remote = url,
-                    None => act.push(Action::Toast(Icon::GitBranch, tr("Aucun dépôt distant").into(), Some(tr("Les dossiers du projet n'ont pas de remote Git.").into()))),
-                }
-            }
         });
     });
     // Enregistrement automatique : ce qui diffère du projet part tout de suite.

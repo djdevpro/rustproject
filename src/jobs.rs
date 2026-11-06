@@ -25,6 +25,10 @@ pub enum JobMsg {
     PullProgress { status: String, fraction: f32 },
     PullDone(Result<String, String>),
     Github(Result<Vec<Repo>, String>),
+    /// Comptes connectés à gh, et le compte actif.
+    GithubAccounts(Result<crate::github::Accounts, String>),
+    /// Assistant « Dossiers sources » : projets probables d'un dossier proposé.
+    SetupCount { path: String, depth: u32, likely: usize, error: Option<String> },
     Embedded { model: String, result: Result<Vec<(u64, u64, Vec<f32>)>, String> },
     QueryVec { query: String, result: Result<Vec<f32>, String> },
     // ---- Ollaya et ontologie
@@ -135,8 +139,30 @@ pub fn spawn_pull(bus: Bus, url: String, model: String) {
     });
 }
 
-pub fn spawn_github(bus: Bus) {
-    std::thread::spawn(move || bus.send(JobMsg::Github(crate::github::list_repos())));
+/// Les dépôts du compte choisi (vide : le compte actif de gh), reliés aux fiches qui les contiennent.
+pub fn spawn_github(bus: Bus, account: String, projects: Vec<(u64, Vec<String>)>) {
+    std::thread::spawn(move || {
+        let result = crate::github::list_repos(Some(&account)).map(|mut repos| {
+            crate::github::link_local(&mut repos, &projects);
+            repos
+        });
+        bus.send(JobMsg::Github(result));
+    });
+}
+
+/// Les comptes connectés à gh, et l'actif.
+pub fn spawn_github_accounts(bus: Bus) {
+    std::thread::spawn(move || bus.send(JobMsg::GithubAccounts(crate::github::accounts())));
+}
+
+/// Compte les projets probables d'un dossier proposé par l'assistant (même règles que le scan).
+pub fn spawn_setup_count(bus: Bus, mut opts: ScanOptions, path: String, depth: u32) {
+    std::thread::spawn(move || {
+        opts.roots = vec![(0, path.clone(), depth)];
+        let result = scan(&opts, |_| {});
+        let likely = result.dirs.iter().filter(|d| d.likely_project && d.brick_of.is_none()).count();
+        bus.send(JobMsg::SetupCount { path, depth, likely, error: result.errors.first().cloned() });
+    });
 }
 
 /// Calcule les embeddings des projets dont le texte a changé : (id, empreinte, texte).

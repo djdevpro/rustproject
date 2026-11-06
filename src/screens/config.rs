@@ -4,6 +4,7 @@
 use egui::{Align, Color32, CornerRadius, FontFamily, FontId, Frame, Layout, Margin, RichText, ScrollArea, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 
 use crate::app::{Action, CfgSection, UiState, UpdatePhase, VERSION};
+use crate::screens::setup::Step;
 use crate::icons::{self, Icon};
 use crate::model::{AiMode, Attention, Data, ReadDepth, ScanFreq, Status, VARIABLES};
 use crate::ollama::ModelInfo;
@@ -45,10 +46,10 @@ fn nav(ui: &mut Ui, st: &mut UiState) {
         let hover = ui.ctx().animate_bool(resp.id.with("hover"), resp.hovered());
         let p = ui.painter();
         p.rect_filled(rect, CornerRadius::same(10), if selected { t.accent_soft } else { tint(t.ink, 0.05 * hover) });
-        let color = if selected { t.accent_ink } else { t.muted };
+        let color = if selected { t.ink_strong } else { t.muted };
         icons::paint(p, pos2(rect.left() + 24.0, rect.center().y), section.icon(), 19.0, color);
-        p.text(pos2(rect.left() + 46.0, rect.center().y - 9.0), egui::Align2::LEFT_CENTER, section.label(), FontId::new(14.5, theme::semibold()), if selected { t.accent_ink } else { t.ink });
-        p.text(pos2(rect.left() + 46.0, rect.center().y + 10.0), egui::Align2::LEFT_CENTER, section.hint(), FontId::proportional(12.0), t.faint);
+        p.text(pos2(rect.left() + 46.0, rect.center().y - 9.0), egui::Align2::LEFT_CENTER, section.label(), FontId::new(14.5, theme::semibold()), if selected { t.ink_strong } else { t.ink });
+        p.text(pos2(rect.left() + 46.0, rect.center().y + 10.0), egui::Align2::LEFT_CENTER, section.hint(), FontId::proportional(12.0), if selected { t.muted } else { t.faint });
         if resp.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
             st.cfg = section;
         }
@@ -122,21 +123,50 @@ fn scan_progress(ui: &mut Ui, st: &UiState) {
 fn sources(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action>) {
     let t = Tokens::get(ui.ctx());
     header(ui, tr("Dossiers sources"), tr("Les dossiers où se trouvent tes projets. Rust Project n'y lit que les noms de dossiers, les README et les manifestes, sur 1 à 3 niveaux."));
-    widgets::settings_card(ui, tr("Dossiers surveillés"), Some(tr("Autant de dossiers que tu veux ; chacun a sa profondeur (niveaux de sous-dossiers explorés).")), |ui| {
-        let n = data.config.roots.len();
-        if n == 0 {
+    // L'assistant d'abord : le chemin le plus simple, pas à pas.
+    Frame::new().fill(tint(t.accent, 0.07)).stroke(Stroke::new(1.0, tint(t.accent, 0.35))).corner_radius(12).inner_margin(Margin::same(16)).show(ui, |ui| {
+        ui.set_width(ui.available_width());
+        ui.horizontal(|ui| {
+            widgets::icon_tile(ui, Icon::WandSparkles, t.accent_ink, 40.0);
+            ui.vertical(|ui| {
+                ui.set_width((ui.available_width() - 220.0).max(160.0));
+                ui.spacing_mut().item_spacing.y = 2.0;
+                ui.label(RichText::new(tr("Assistant pas à pas")).font(FontId::new(15.0, theme::semibold())).color(t.ink_strong));
+                widgets::muted(ui, tr("Choisir les dossiers, scanner, vérifier ce qui a été trouvé, créer les fiches."));
+            });
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                if widgets::button(ui, Some(Icon::ArrowRight), tr("Lancer l'assistant"), Kind::Primary).clicked() {
+                    act.push(Action::OpenSetup(Step::Where));
+                }
+            });
+        });
+    });
+    widgets::settings_card(ui, tr("Dossiers surveillés"), Some(tr("Chacun a sa profondeur : le nombre de niveaux de sous-dossiers parcourus. Un changement relance le scan.")), |ui| {
+        if data.config.roots.is_empty() {
             widgets::muted(ui, tr("Aucun dossier pour l'instant."));
         }
         for (i, root) in data.config.roots.iter_mut().enumerate() {
             Frame::new().fill(t.bg).stroke(Stroke::new(1.0, t.line)).corner_radius(10).inner_margin(Margin::same(12)).show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 ui.horizontal(|ui| {
-                    widgets::switch(ui, &mut root.enabled, &tf("Activer {0}", &[("0", &root.path)]));
+                    if widgets::switch(ui, &mut root.enabled, &tf("Activer {0}", &[("0", &root.path)])).changed() {
+                        act.push(Action::StartScan);
+                    }
                     let w = ui.available_width() - 210.0;
-                    widgets::path_input(ui, &mut root.path, w);
+                    let resp = widgets::path_input(ui, &mut root.path, w);
+                    if resp.changed() {
+                        // Un autre chemin : les chiffres de l'ancien ne valent plus.
+                        root.found = 0;
+                        root.last_scan = 0;
+                    }
+                    // Validé (Entrée, clic ailleurs, « Parcourir… ») : on relève le nouveau dossier.
+                    if (resp.lost_focus() || (resp.changed() && !resp.has_focus())) && root.last_scan == 0 && std::path::Path::new(root.path.trim()).is_dir() {
+                        act.push(Action::StartScan);
+                    }
                     let mut depth = root.depth.clamp(1, 3);
                     if widgets::segmented(ui, &format!("depth-{i}"), &mut depth, &[(1, None, "1"), (2, None, "2"), (3, None, "3")], Some(120.0)) {
                         root.depth = depth;
+                        act.push(Action::StartScan);
                     }
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         if widgets::icon_button(ui, Icon::Trash2, tr("Retirer ce dossier source"), 32.0).clicked() {
@@ -146,13 +176,14 @@ fn sources(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action>
                 });
                 ui.horizontal(|ui| {
                     ui.add_space(48.0);
-                    let exists = std::path::Path::new(root.path.trim()).is_dir();
-                    if !exists {
+                    if !std::path::Path::new(root.path.trim()).is_dir() {
                         widgets::chip(ui, tr("dossier introuvable"), Tone::Danger);
+                    } else if root.last_scan == 0 {
+                        widgets::chip(ui, tr("pas encore scanné"), Tone::Neutral);
                     } else {
                         widgets::chip(ui, &tf("{0} dossiers relevés", &[("0", &root.found)]), if root.found > 0 { Tone::Good } else { Tone::Neutral });
+                        ui.label(RichText::new(if root.depth > 1 { tf("Dernier scan : {0} · {1} niveaux", &[("0", &crate::model::ago(root.last_scan)), ("1", &root.depth)]) } else { tf("Dernier scan : {0} · 1 niveau", &[("0", &crate::model::ago(root.last_scan))]) }).size(12.5).color(t.faint));
                     }
-                    ui.label(RichText::new(if root.depth > 1 { tf("Dernier scan : {0} · {1} niveaux", &[("0", &crate::model::ago(root.last_scan)), ("1", &root.depth)]) } else { tf("Dernier scan : {0} · 1 niveau", &[("0", &crate::model::ago(root.last_scan))]) }).size(12.5).color(t.faint));
                     if !root.enabled {
                         ui.label(RichText::new(tr("· en pause")).size(12.5).color(t.faint));
                     }
@@ -164,22 +195,20 @@ fn sources(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action>
         }
     });
 
-    // ---- Scan et classement
-    // Les briques (frontend, api…) appartiennent à leur projet : ni « non suivies », ni « nouveaux projets ».
-    let untracked: Vec<&crate::scan::Found> =
-        st.scan.as_ref().map(|s| s.dirs.iter().filter(|f| f.brick_of.is_none() && data.find_by_folder(&f.path).is_none()).collect()).unwrap_or_default();
-    let bricks = st.scan.as_ref().map(|s| s.dirs.iter().filter(|f| f.brick_of.is_some()).count()).unwrap_or(0);
-    let new_likely = untracked.iter().filter(|f| f.likely_project).count();
-    let ollama_ready = data.config.ai_mode == AiMode::Ollama && !data.config.ollama_model.is_empty();
-    widgets::settings_card(ui, tr("Scan"), Some(tr("Le scan relève les dossiers ; les projets reconnus deviennent des fiches.")), |ui| {
+    // ---- Scan : les chiffres ; le tri des nouveaux projets se fait dans l'assistant.
+    let new_likely = st.scan.as_ref().map(|s| crate::screens::setup::review_rows(data, s, false).len()).unwrap_or(0);
+    widgets::settings_card(ui, tr("Scan"), Some(tr("Le scan relève les dossiers ; tu choisis ensuite ceux qui deviennent des fiches.")), |ui| {
         if let Some(scan) = &st.scan {
+            // Les briques (frontend, api…) appartiennent à leur projet : ni « suivies », ni « nouvelles ».
+            let bricks = scan.dirs.iter().filter(|f| f.brick_of.is_some()).count();
+            let tracked = scan.dirs.iter().filter(|f| f.brick_of.is_none() && data.find_by_folder(&f.path).is_some()).count();
             ui.horizontal(|ui| {
                 let w = (ui.available_width() - 3.0 * 10.0) / 4.0;
                 ui.spacing_mut().item_spacing.x = 10.0;
                 stat(ui, Icon::FolderSearch, &scan.dirs.len().to_string(), tr("dossiers relevés"), t.info, w);
                 stat(ui, Icon::FolderGit2, &scan.likely().count().to_string(), tr("projets probables"), t.good_fg, w);
-                stat(ui, Icon::CircleCheck, &(scan.dirs.len() - untracked.len() - bricks).to_string(), tr("déjà suivis"), t.muted, w);
-                stat(ui, Icon::Sparkles, &new_likely.to_string(), tr("nouveaux probables"), t.accent_ink, w);
+                stat(ui, Icon::CircleCheck, &tracked.to_string(), tr("déjà suivis"), t.muted, w);
+                stat(ui, Icon::Sparkles, &new_likely.to_string(), tr("nouveaux à trier"), t.accent_ink, w);
             });
             if bricks > 0 {
                 ui.label(RichText::new(tf("{bricks} briques (frontend, api, db…) rattachées à leur projet parent : elles ne deviennent pas des fiches.", &[("bricks", &bricks)])).size(12.5).color(t.faint));
@@ -198,71 +227,13 @@ fn sources(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action>
             });
             let busy = st.analysis.as_ref().is_some_and(|a| !a.finished);
             ui.add_enabled_ui(new_likely > 0 && !busy, |ui| {
-                if widgets::button(ui, Some(Icon::ListPlus), &tf("Créer les {new_likely} projets reconnus", &[("new_likely", &new_likely)]), Kind::Secondary).on_hover_text(tr("Par les règles locales : marqueurs, manifestes, README.")).clicked() {
-                    act.push(Action::AddAllLikely);
-                }
-            });
-            ui.add_enabled_ui(ollama_ready && !untracked.is_empty() && !busy, |ui| {
-                let label = if ollama_ready { tf("Classer avec {0}", &[("0", &data.config.ollama_model)]) } else { tr("Classer avec l'IA").to_owned() };
-                let resp = widgets::button(ui, Some(Icon::Sparkles), &label, Kind::Secondary);
-                if resp.clicked() {
-                    act.push(Action::AnalyzeCandidates);
-                }
-                if !ollama_ready {
-                    resp.on_disabled_hover_text(tr("Choisis un modèle Ollama dans « IA & modèles »."));
+                let label = if new_likely == 1 { tr("Trier le nouveau projet").to_owned() } else { tf("Trier les {0} nouveaux projets", &[("0", &new_likely)]) };
+                if widgets::button(ui, Some(Icon::ListChecks), &label, Kind::Secondary).on_hover_text(tr("Dans l'assistant : tu coches ce qui devient une fiche.")).clicked() {
+                    act.push(Action::OpenSetup(Step::Review));
                 }
             });
         });
-        let auto_help = match data.config.ai_mode {
-            AiMode::Ollama if ollama_ready => tr("Après chaque scan, l'IA classe les nouveaux dossiers et crée les fiches."),
-            AiMode::Mcp => tr("En mode agent MCP, c'est l'agent qui crée les fiches : rien d'automatique ici."),
-            _ => tr("Après chaque scan, les dossiers avec un marqueur (.git, manifeste…) deviennent des fiches."),
-        };
-        widgets::toggle_row(ui, &mut data.config.auto_add, tr("Créer les projets automatiquement"), Some(auto_help));
     });
-
-    if st.scan.is_some() {
-        widgets::settings_card(ui, tr("Dossiers non suivis"), Some(tr("Les projets probables d'abord. Ajoute ceux que les règles ou l'IA ont laissés de côté.")), |ui| {
-            if untracked.is_empty() {
-                widgets::muted(ui, tr("Tous les dossiers relevés sont suivis."));
-            }
-            let mut rows: Vec<&&crate::scan::Found> = untracked.iter().collect();
-            rows.sort_by_key(|f| (!f.likely_project, f.depth, f.name.to_lowercase()));
-            for f in rows.iter().take(60) {
-                ui.horizontal(|ui| {
-                    icons::show(ui, if f.likely_project { Icon::FolderGit2 } else { Icon::Folder }, 18.0, if f.likely_project { t.good_fg } else { t.faint });
-                    ui.vertical(|ui| {
-                        ui.set_width(ui.available_width() - 150.0);
-                        ui.spacing_mut().item_spacing.y = 1.0;
-                        ui.horizontal(|ui| {
-                            ui.label(RichText::new(&f.name).font(FontId::new(14.0, theme::semibold())).color(t.ink));
-                            widgets::chip_sized(ui, &tf("niveau {0}", &[("0", &f.depth)]), Tone::Neutral, 11.0, 20.0);
-                            for m in f.markers.iter().take(3) {
-                                widgets::tag(ui, m);
-                            }
-                            if crate::scan::copy_like(&f.name) {
-                                widgets::chip_sized(ui, tr("copie ?"), Tone::Accent, 11.0, 20.0);
-                            }
-                        });
-                        let font = FontId::new(11.5, FontFamily::Monospace);
-                        let shown = widgets::elide_middle(ui.painter(), &f.path, &font, ui.available_width());
-                        ui.label(RichText::new(shown).font(font).color(t.faint)).on_hover_text(&f.path);
-                    });
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        if widgets::icon_button(ui, Icon::EyeOff, &tf("Écarter {0} des scans", &[("0", &f.name)]), 30.0).clicked() {
-                            act.push(Action::IgnoreFolder(f.path.clone()));
-                        }
-                        if widgets::button_sized(ui, Some(Icon::Plus), tr("Ajouter"), Kind::Secondary, 30.0, None).clicked() {
-                            act.push(Action::AddCandidate(f.path.clone()));
-                        }
-                    });
-                });
-            }
-            if rows.len() > 60 {
-                ui.label(RichText::new(tf("… et {0} autres dossiers.", &[("0", &(rows.len() - 60))])).size(12.5).color(t.faint));
-            }
-        });
-    }
 
     // ---- GitHub
     widgets::settings_card(ui, tr("GitHub"), Some(tr("Tes dépôts (les tiens, ceux de tes organisations, tes collaborations), via la CLI gh.")), |ui| {
@@ -270,6 +241,7 @@ fn sources(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action>
         if !data.config.github_enabled {
             return;
         }
+        github_account(ui, data, st, act);
         ui.horizontal(|ui| {
             ui.add_enabled_ui(!st.github_loading, |ui| {
                 if widgets::button(ui, Some(Icon::GitBranch), tr("Lister mes dépôts"), Kind::Secondary).clicked() {
@@ -332,6 +304,36 @@ fn sources(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action>
     });
 }
 
+/// Le compte GitHub dont on liste les dépôts, parmi ceux connectés à la CLI gh.
+fn github_account(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action>) {
+    let t = Tokens::get(ui.ctx());
+    match &st.github_accounts {
+        None => {
+            act.push(Action::ListGithubAccounts);
+            ui.label(RichText::new(tr("Comptes GitHub connectés…")).size(13.0).color(t.muted));
+        }
+        Some(Err(e)) => {
+            ui.label(RichText::new(e).size(13.0).color(t.danger));
+        }
+        Some(Ok((list, active))) => {
+            let active = active.clone().unwrap_or_default();
+            let default = tf("Le compte actif de gh ({0})", &[("0", &active)]);
+            let mut options: Vec<(usize, &str)> = vec![(0, default.as_str())];
+            options.extend(list.iter().enumerate().map(|(i, l)| (i + 1, l.as_str())));
+            let mut current = list.iter().position(|l| *l == data.config.github_account).map(|i| i + 1).unwrap_or(0);
+            ui.horizontal(|ui| {
+                icons::show(ui, Icon::User, 16.0, t.muted);
+                ui.label(RichText::new(tr("Compte")).size(13.5).color(t.ink));
+                if widgets::combo(ui, tr("Compte GitHub"), &mut current, &options, 280.0) {
+                    data.config.github_account = if current == 0 { String::new() } else { list[current - 1].clone() };
+                    // Un autre compte : la liste affichée n'est plus la sienne.
+                    st.github = None;
+                }
+            });
+        }
+    }
+}
+
 // ---- Découverte --------------------------------------------------------------------------------
 
 fn discovery(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action>) {
@@ -346,6 +348,16 @@ fn discovery(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Actio
             }
         });
         ui.label(RichText::new(tr("Le README est un indice faible : il signale un projet sans empêcher de regarder ses sous-dossiers (un dossier de rangement en a souvent un).")).size(12.5).color(t.faint));
+    });
+    let ollama_ready = c.ai_mode == AiMode::Ollama && !c.ollama_model.is_empty();
+    widgets::settings_card(ui, tr("Création des fiches"), None, |ui| {
+        let auto_help = match c.ai_mode {
+            AiMode::Ollama if ollama_ready => tr("Après chaque scan, l'IA classe les nouveaux dossiers et crée les fiches."),
+            AiMode::Mcp => tr("En mode agent MCP, c'est l'agent qui crée les fiches : rien d'automatique ici."),
+            _ => tr("Après chaque scan, les dossiers avec un marqueur (.git, manifeste…) deviennent des fiches."),
+        };
+        widgets::toggle_row(ui, &mut c.auto_add, tr("Créer les projets automatiquement"), Some(auto_help));
+        ui.label(RichText::new(tr("Sinon, tu tries toi-même les nouveaux projets dans l'assistant (Dossiers sources).")).size(12.5).color(t.faint));
     });
     if !c.ignored.is_empty() {
         widgets::settings_card(ui, tr("Dossiers écartés"), Some(tr("Écartés à la main ou par l'agent IA (copies, sauvegardes…) : le scan ne les relève plus.")), |ui| {

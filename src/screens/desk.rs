@@ -176,7 +176,7 @@ fn first_run(ui: &mut Ui, st: &UiState, has_roots: bool, act: &mut Vec<Action>) 
                 ui.horizontal(|ui| {
                     ui.add_space((ui.available_width() - 420.0).max(0.0) / 2.0);
                     if widgets::button(ui, Some(Icon::FolderPlus), tr("Choisir un dossier source"), Kind::Primary).clicked() {
-                        act.push(Action::PickRoot);
+                        act.push(Action::OpenSetup(crate::screens::setup::Step::Where));
                     }
                     if widgets::button(ui, Some(Icon::Plus), tr("Ajouter un projet"), Kind::Secondary).clicked() {
                         act.push(Action::OpenAddProject);

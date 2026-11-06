@@ -451,6 +451,8 @@ pub struct Config {
     /// Créer automatiquement les projets reconnus après un scan ou une analyse.
     pub auto_add: bool,
     pub github_enabled: bool,
+    /// Le compte GitHub dont on liste les dépôts (vide : le compte actif de la CLI gh).
+    pub github_account: String,
     pub ai_mode: AiMode,
     pub ollama_url: String,
     /// Modèle de langage (classement, descriptions).
@@ -497,12 +499,52 @@ pub fn default_markers() -> Vec<(String, bool)> {
         .to_vec()
 }
 
-/// Un dossier de départ pour le sélecteur : `Documents\Projet perso` s'il existe, sinon `Documents`.
+/// Un dossier de départ pour le sélecteur : le dossier Documents (ou le dossier personnel).
 /// (Ce n'est qu'un point de départ : aucun dossier source n'est ajouté sans l'utilisateur.)
 pub fn default_root() -> String {
-    let home = std::env::var("USERPROFILE").unwrap_or_else(|_| r"C:\Users\Public".into());
-    let perso = format!(r"{home}\Documents\Projet perso");
-    if std::path::Path::new(&perso).is_dir() { perso } else { format!(r"{home}\Documents") }
+    let home = home_dir();
+    let docs = std::path::Path::new(&home).join("Documents");
+    if docs.is_dir() { docs.display().to_string() } else { home }
+}
+
+/// Le dossier personnel (`USERPROFILE` sous Windows, `HOME` ailleurs).
+pub fn home_dir() -> String {
+    std::env::var(if cfg!(windows) { "USERPROFILE" } else { "HOME" }).unwrap_or_else(|_| if cfg!(windows) { r"C:\Users\Public".into() } else { "/".into() })
+}
+
+/// Les dossiers où l'on range souvent ses projets, parmi ceux qui existent : proposés par
+/// l'assistant « Dossiers sources » (rien n'est coché d'office). (nom affiché, chemin)
+pub fn suggested_roots() -> Vec<(String, String)> {
+    use crate::i18n::tr;
+    let home = std::path::PathBuf::from(home_dir());
+    let mut out: Vec<(String, std::path::PathBuf)> = vec![(tr("Documents").into(), home.join("Documents")), (tr("Bureau").into(), home.join("Desktop"))];
+    if !cfg!(windows) {
+        out.push((tr("Bureau").into(), home.join("Bureau")));
+    }
+    for name in ["source", "Projects", "Projets", "dev", "code", "git", "repos", "src", "workspace", "Developer"] {
+        out.push((name.to_owned(), home.join(name)));
+    }
+    out.push((tr("Bureau (OneDrive)").into(), home.join("OneDrive").join("Desktop")));
+    out.push((tr("Documents (OneDrive)").into(), home.join("OneDrive").join("Documents")));
+    if cfg!(windows) {
+        for p in [r"C:\dev", r"C:\Projets", r"C:\projects", r"C:\code", r"D:\dev", r"D:\Projets"] {
+            out.push((p.to_owned(), std::path::PathBuf::from(p)));
+        }
+    }
+    let mut seen = Vec::new();
+    out.into_iter()
+        .filter(|(_, p)| p.is_dir())
+        .filter_map(|(label, p)| {
+            // Le même dossier sous deux noms (Windows ignore la casse) : une seule fois.
+            let path = p.display().to_string();
+            let key = path_key(&path);
+            if seen.contains(&key) {
+                return None;
+            }
+            seen.push(key);
+            Some((label, path))
+        })
+        .collect()
 }
 
 impl Default for Config {
@@ -519,6 +561,7 @@ impl Default for Config {
             ignore_older_days: 730,
             auto_add: true,
             github_enabled: true,
+            github_account: String::new(),
             ai_mode: AiMode::Ollama,
             ollama_url: "http://localhost:11434".into(),
             ollama_model: String::new(),

@@ -52,6 +52,13 @@ pub fn plan(l: &Launcher, p: &Project) -> Result<Plan, String> {
     Ok(Plan { line, dir: dir_ok.then_some(folder) })
 }
 
+/// Ouvre une adresse web dans le navigateur (la page GitHub d'un projet…).
+pub fn open_url(url: &str) -> Plan {
+    let url = url.trim().replace('"', "%22");
+    let line = if cfg!(windows) { format!(r#"start "" "{url}""#) } else { format!(r#"xdg-open "{url}""#) };
+    Plan { line, dir: None }
+}
+
 #[cfg(windows)]
 fn shell(line: &str) -> Command {
     use std::os::windows::process::CommandExt;

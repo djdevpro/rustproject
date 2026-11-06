@@ -6,3 +6,4 @@ pub mod library;
 pub mod map;
 pub mod ontology;
 pub mod revisit;
+pub mod setup;

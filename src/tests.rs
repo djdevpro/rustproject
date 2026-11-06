@@ -735,3 +735,149 @@ fn ancien_lanceur_claude_code_vers_claude_desktop() {
     assert_eq!(data.launchers[1].command, "claude --model opus");
     assert_eq!(crate::model::url_encode(r"C:\Mes projets\é"), "C%3A%5CMes%20projets%5C%C3%A9");
 }
+
+/// La ligne de la liste (ou la carte de la grille) d'un projet : son nom existe aussi dans le
+/// panneau quand il est ouvert ; la ligne est la plus large.
+fn project_row(h: &Harness<'static, AtelierApp>, name: &str) -> egui::Rect {
+    h.query_all_by_label(name).map(|n| n.rect()).max_by(|a, b| a.width().total_cmp(&b.width())).unwrap_or_else(|| panic!("pas de ligne « {name} »"))
+}
+
+fn click_with(h: &mut Harness<'static, AtelierApp>, at: egui::Rect, modifiers: egui::Modifiers) {
+    h.event(egui::Event::PointerMoved(at.center()));
+    h.event(egui::Event::ModifiersChanged(modifiers));
+    for pressed in [true, false] {
+        h.event(egui::Event::PointerButton { pos: at.center(), button: egui::PointerButton::Primary, pressed, modifiers });
+    }
+    h.event(egui::Event::ModifiersChanged(egui::Modifiers::NONE));
+    h.run();
+}
+
+/// Ctrl + clic et Maj + clic sélectionnent plusieurs projets ; glisser l'un d'eux emporte tout le
+/// groupe vers une attention ou un domaine ; Échap vide la sélection.
+#[test]
+fn selection_multiple_et_glisser_groupe() {
+    let mut h = harness();
+    click(&mut h, "Bibliothèque");
+    click(&mut h, "Liste");
+    let names: Vec<String> = h.state().data.projects.iter().filter(|p| p.status != crate::model::Status::Archived && p.attention != Attention::Reserve).take(4).map(|p| p.name.clone()).collect();
+    let r0 = project_row(&h, &names[0]);
+    click_with(&mut h, r0, egui::Modifiers::NONE);
+    let r1 = project_row(&h, &names[1]);
+    click_with(&mut h, r1, egui::Modifiers::COMMAND);
+    let r2 = project_row(&h, &names[2]);
+    click_with(&mut h, r2, egui::Modifiers::COMMAND);
+    assert_eq!(h.state().st.lib_multi.len(), 3, "un clic, puis deux Ctrl + clic");
+    assert!(h.query_by_label("3 projets sélectionnés").is_some(), "la barre de la sélection");
+    let attention_of = |h: &Harness<'static, AtelierApp>, name: &str| h.state().data.projects.iter().find(|p| p.name == *name).unwrap().attention;
+    let from = project_row(&h, &names[1]).center();
+    let to = side_attention(&h, "En réserve");
+    drag_between(&mut h, from, to);
+    for n in &names[..3] {
+        assert_eq!(attention_of(&h, n), Attention::Reserve, "{n} a suivi le groupe");
+    }
+    assert_ne!(attention_of(&h, &names[3]), Attention::Reserve, "hors de la sélection");
+    // Le même groupe, déposé sur un domaine.
+    let domain = h.state().data.domains.len() - 1;
+    let domain_name = h.state().data.domains[domain].name.clone();
+    let from = project_row(&h, &names[0]).center();
+    let to = side_attention(&h, &domain_name);
+    drag_between(&mut h, from, to);
+    for n in &names[..3] {
+        assert_eq!(h.state().data.projects.iter().find(|p| p.name == *n).unwrap().domain, domain);
+    }
+    h.key_press(egui::Key::Escape);
+    h.run();
+    assert!(h.state().st.lib_multi.is_empty(), "Échap vide la sélection");
+}
+
+/// Premier lancement : l'assistant s'ouvre seul, sans rien cocher. Un dossier coché est scanné,
+/// les projets trouvés sont cochés à l'étape « Vérifier » ; celui qu'on décoche est écarté des
+/// prochains scans, l'autre devient une fiche.
+#[test]
+fn assistant_dossiers_sources() {
+    use crate::screens::setup::{Folder, Step};
+    let base = std::env::temp_dir().join(format!("atelier-assistant-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&base);
+    let root = base.join("projets");
+    std::fs::create_dir_all(root.join("outil")).unwrap();
+    std::fs::write(root.join("outil").join("Cargo.toml"), "[package]\nname = \"outil\"\ndescription = \"Un petit outil\"\n").unwrap();
+    std::fs::create_dir_all(root.join("site")).unwrap();
+    std::fs::write(root.join("site").join("package.json"), r#"{"name":"site"}"#).unwrap();
+    std::fs::create_dir_all(root.join("photos")).unwrap();
+    let store_path = base.join("data").join("atelier.json");
+    let mut h = Harness::builder()
+        .with_size(egui::vec2(NORMAL.0, NORMAL.1))
+        .with_max_steps(40)
+        .build_eframe(move |cc| AtelierApp::new_with_store(cc, crate::store::Store::open(&store_path)));
+    h.state_mut().dry_run = true;
+    h.run_steps(4);
+    let root_str = root.display().to_string();
+    {
+        let Some(Modal::Setup(s)) = &mut h.state_mut().st.modal else { panic!("l'assistant s'ouvre au premier lancement") };
+        assert!(s.folders.iter().all(|f| !f.checked), "rien n'est coché d'office");
+        // « Ajouter un autre dossier… » ouvre le sélecteur du système : on pose le dossier.
+        s.folders.push(Folder::new("projets".into(), root_str.clone(), true, 3));
+    }
+    h.run_steps(2);
+    h.get_by_label("Scanner ce dossier").click_accesskit();
+    let step = |h: &Harness<'static, AtelierApp>| match &h.state().st.modal {
+        Some(Modal::Setup(s)) => Some(s.step),
+        _ => None,
+    };
+    for _ in 0..400 {
+        if step(&h) == Some(Step::Review) {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        h.step();
+    }
+    assert_eq!(step(&h), Some(Step::Review), "le scan mène à « Vérifier »");
+    assert_eq!(h.state().data.config.roots.len(), 1);
+    assert!(h.state().data.projects.is_empty(), "rien n'est créé avant la validation");
+    h.run_steps(2);
+    h.get_by_label("Garder site").click_accesskit();
+    h.run_steps(2);
+    h.get_by_label("Suivant : créer 1 fiche").click_accesskit();
+    h.run_steps(2);
+    h.get_by_label("Créer la fiche").click_accesskit();
+    h.run_steps(3);
+    let names: Vec<String> = h.state().data.projects.iter().map(|p| p.name.clone()).collect();
+    assert_eq!(names, vec!["outil".to_owned()]);
+    let site = crate::model::path_key(&root.join("site").display().to_string());
+    assert!(h.state().data.config.ignored.iter().any(|p| crate::model::path_key(p) == site), "le dossier décoché est écarté");
+    assert!(h.query_by_label("1 fiche créée").is_some());
+    let _ = std::fs::remove_dir_all(&base);
+}
+
+/// Changer le chemin d'un dossier source à la main relance le scan quand on valide.
+#[test]
+fn chemin_modifie_relance_le_scan() {
+    let base = std::env::temp_dir().join(format!("atelier-chemin-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&base);
+    std::fs::create_dir_all(base.join("a")).unwrap();
+    std::fs::create_dir_all(base.join("b").join("outil")).unwrap();
+    std::fs::write(base.join("b").join("outil").join("Cargo.toml"), "[package]\nname = \"outil\"\n").unwrap();
+    let mut h = harness();
+    h.state_mut().data.config.roots = vec![crate::model::ScanRoot { path: base.join("a").display().to_string(), last_scan: 1, ..Default::default() }];
+    h.state_mut().st.screen = Screen::Config;
+    h.state_mut().st.cfg = crate::app::CfgSection::Sources;
+    h.run();
+    let field = h.query_all_by_role(egui::accesskit::Role::TextInput).next().unwrap().rect();
+    click_with(&mut h, field, egui::Modifiers::NONE);
+    h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
+    h.event(egui::Event::Text(base.join("b").display().to_string()));
+    h.run_steps(2);
+    assert_eq!(h.state().data.config.roots[0].last_scan, 0, "les chiffres de l'ancien chemin sont effacés");
+    h.key_press(egui::Key::Enter);
+    h.run_steps(2);
+    for _ in 0..300 {
+        if h.state().st.scan.is_some() && h.state().st.scan_started.is_none() {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        h.step();
+    }
+    let scan = h.state().st.scan.as_ref().expect("le scan est reparti");
+    assert!(scan.dirs.iter().any(|d| d.name == "outil"), "le nouveau dossier est relevé");
+    let _ = std::fs::remove_dir_all(&base);
+}

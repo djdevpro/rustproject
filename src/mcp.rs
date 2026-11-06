@@ -570,7 +570,8 @@ pub fn run_tool(store: &mut Store, name: &str, args: &Value) -> Result<Value, St
             Ok(json!({ "rappel": SCAN_REMINDER, "dossiers": dirs, "briques_masquees": hidden_bricks, "erreurs": result.errors, "tronque": result.truncated }))
         }
         "lister_depots_github" => {
-            let repos = crate::github::list_repos()?;
+            let mut repos = crate::github::list_repos(Some(&data.config.github_account))?;
+            crate::github::link_local(&mut repos, &data.projects.iter().map(|p| (p.id, p.folders.clone())).collect::<Vec<_>>());
             Ok(json!(repos.iter().map(|r| json!({
                 "nom": r.name, "complet": r.full_name, "description": r.description, "url": r.html_url, "langage": r.language,
                 "archive": r.archived, "prive": r.private, "fork": r.fork, "deja_suivi": crate::github::local_match(&data, r).map(|i| data.projects[i].id)

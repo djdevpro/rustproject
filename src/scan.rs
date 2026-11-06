@@ -465,9 +465,19 @@ pub fn git_remote(dir: &Path) -> Option<String> {
     web_url(url)
 }
 
-/// Le premier dépôt distant trouvé parmi les dossiers d'un projet.
+/// Le premier dépôt distant trouvé parmi les dossiers d'un projet. À défaut, celui des
+/// sous-dossiers directs du premier dossier, s'ils n'en ont qu'un (un projet dont le code est
+/// rangé un cran plus bas) ; plusieurs dépôts différents : aucun n'est choisi.
 pub fn remote_of(folders: &[String]) -> Option<String> {
-    folders.iter().filter(|f| !f.trim().is_empty()).find_map(|f| git_remote(Path::new(f.trim())))
+    let folders: Vec<&str> = folders.iter().map(|f| f.trim()).filter(|f| !f.is_empty()).collect();
+    if let Some(r) = folders.iter().find_map(|f| git_remote(Path::new(f))) {
+        return Some(r);
+    }
+    let first = folders.first()?;
+    let mut below: Vec<String> = std::fs::read_dir(first).ok()?.flatten().map(|e| e.path()).filter(|p| p.is_dir()).filter_map(|p| git_remote(&p)).collect();
+    below.sort();
+    below.dedup();
+    (below.len() == 1).then(|| below.remove(0))
 }
 
 /// Le vrai dossier Git : `.git` lui-même, ou celui qu'indique un fichier `.git` (worktree,
@@ -545,6 +555,25 @@ mod tests {
         assert_eq!(git_remote(&root).as_deref(), Some("https://github.com/moi/projet"));
         assert_eq!(remote_of(&[String::new(), root.join("frontend").display().to_string()]).as_deref(), Some("https://github.com/moi/projet"));
         assert_eq!(git_remote(&std::env::temp_dir().join("atelier-pas-de-depot-ici")), None);
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// Un projet sans dépôt à sa racine prend celui de son unique sous-dossier versionné ;
+    /// plusieurs dépôts différents dessous : aucun n'est choisi.
+    #[test]
+    fn depot_d_un_sous_dossier() {
+        let root = std::env::temp_dir().join(format!("atelier-git-dessous-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let repo = |name: &str, url: &str| {
+            std::fs::create_dir_all(root.join(name).join(".git")).unwrap();
+            std::fs::write(root.join(name).join(".git").join("config"), format!("[remote \"origin\"]\n\turl = {url}\n")).unwrap();
+        };
+        repo("code", "git@github.com:moi/site.git");
+        std::fs::create_dir_all(root.join("maquettes")).unwrap();
+        let folders = [root.display().to_string()];
+        assert_eq!(remote_of(&folders).as_deref(), Some("https://github.com/moi/site"));
+        repo("autre", "git@github.com:moi/autre.git");
+        assert_eq!(remote_of(&folders), None);
         let _ = std::fs::remove_dir_all(&root);
     }
 

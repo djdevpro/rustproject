@@ -44,6 +44,7 @@ mod release;
 mod scan;
 mod screens;
 mod search;
+mod select;
 mod store;
 mod theme;
 mod update;
