@@ -16,6 +16,10 @@
 //! - `mcp.rs`      : le serveur MCP (`rust-project --mcp`).
 //! - `launch.rs`   : lancement réel des lanceurs.
 
+// Sous Windows, la version publiée s'ouvre sans console ; `--mcp` garde l'entrée et la sortie
+// standard que lui passe le client. Les builds de développement gardent la console pour les logs.
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 mod app;
 mod classify;
 #[cfg(test)]
