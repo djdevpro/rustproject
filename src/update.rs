@@ -109,7 +109,7 @@ pub fn modal(ctx: &egui::Context, data: &Data, st: &UiState, act: &mut Vec<Actio
                     if dev {
                         ui.label(RichText::new("Version de développement, compilée sur place. Les mises à jour s'installent sur l'exécutable d'une release.").size(12.5).color(t.faint));
                     } else if r.asset.is_none() {
-                        ui.label(RichText::new("Cette version n'a pas encore de fichier pour Windows.").size(12.5).color(t.faint));
+                        ui.label(RichText::new("Cette version n'a pas de fichier pour cette plateforme.").size(12.5).color(t.faint));
                     }
                 }
             }

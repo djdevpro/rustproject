@@ -28,14 +28,25 @@ pub fn plan(l: &Launcher, p: &Project) -> Result<Plan, String> {
     if resolved.trim().is_empty() {
         return Err("La commande du lanceur est vide.".to_owned());
     }
-    let line = match l.kind {
-        // `start "" "<adresse>"` ouvre le programme associé (navigateur, obsidian://…).
-        LauncherKind::Url => format!(r#"start "" "{resolved}""#),
-        LauncherKind::Command if l.in_terminal => {
-            let title = l.name.replace('"', "");
-            format!(r#"start "{title}" /D "{folder}" powershell -NoExit -Command {resolved}"#)
+    let line = if cfg!(windows) {
+        match l.kind {
+            // `start "" "<adresse>"` ouvre le programme associé (navigateur, obsidian://…).
+            LauncherKind::Url => format!(r#"start "" "{resolved}""#),
+            LauncherKind::Command if l.in_terminal => {
+                let title = l.name.replace('"', "");
+                format!(r#"start "{title}" /D "{folder}" powershell -NoExit -Command {resolved}"#)
+            }
+            _ => resolved,
         }
-        _ => resolved,
+    } else {
+        // Linux : `xdg-open` pour les adresses et les dossiers, le terminal du système pour les
+        // commandes (il s'ouvre dans le dossier du projet, qui est le dossier de travail).
+        match l.kind {
+            LauncherKind::Url => format!(r#"xdg-open "{resolved}""#),
+            LauncherKind::Folder => format!(r#"xdg-open "{folder}""#),
+            LauncherKind::Command if l.in_terminal => format!(r#"x-terminal-emulator -e sh -c '{}; exec "${{SHELL:-sh}}"'"#, resolved.replace('\'', r"'\''")),
+            _ => resolved,
+        }
     };
     Ok(Plan { line, dir: dir_ok.then_some(folder) })
 }

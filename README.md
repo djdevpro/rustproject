@@ -1,6 +1,6 @@
 ![Atelier](docs/banner.png)
 
-Atelier is a Windows desktop app that keeps track of your side projects. It scans the folders you pick, recognizes the projects inside and puts them on a desk with their next steps, notes and launch buttons for VS Code, a terminal or Claude Code. It is written in Rust with egui.
+Atelier is a desktop app for Windows and Linux that keeps track of your side projects. It scans the folders you pick, recognizes the projects inside and puts them on a desk with their next steps, notes and launch buttons for VS Code, a terminal or Claude Code. It is written in Rust with egui.
 
 ![Desk](docs/bureau.png)
 
@@ -16,7 +16,7 @@ Atelier is a Windows desktop app that keeps track of your side projects. It scan
 
 ## Install
 
-Download `atelier-<version>-windows-x64.exe` from the [releases page](https://github.com/djdevpro/rustproject/releases) and run it. Atelier updates itself after that.
+Download the file for your system from the [releases page](https://github.com/djdevpro/rustproject/releases), `atelier-<version>-windows-x64.exe` for Windows or `atelier-<version>-linux-x64` for Linux, and run it. On Linux, make it executable first with `chmod +x`. Atelier updates itself after that.
 
 ## Build
 

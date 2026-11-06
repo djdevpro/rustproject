@@ -27,9 +27,12 @@ pub const VERSION: &str = match option_env!("ATELIER_VERSION") {
     None => env!("CARGO_PKG_VERSION"),
 };
 
-/// Le nom du fichier Windows d'une version, tel que la CI le publie.
+/// La fin du nom de fichier publié pour cette plateforme.
+pub const PLATFORM: &str = if cfg!(windows) { "windows-x64.exe" } else { "linux-x64" };
+
+/// Le nom du fichier d'une version pour cette plateforme, tel que la CI le publie.
 pub fn asset_name(version: &str) -> String {
-    format!("atelier-{version}-windows-x64.exe")
+    format!("atelier-{version}-{PLATFORM}")
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -151,7 +154,7 @@ pub fn parse_release(v: &Value) -> Option<Release> {
     parse_version(&version)?;
     let wanted = asset_name(&version);
     let assets = v["assets"].as_array().cloned().unwrap_or_default();
-    let asset = assets.iter().find(|a| a["name"].as_str() == Some(wanted.as_str())).or_else(|| assets.iter().find(|a| a["name"].as_str().is_some_and(|n| n.ends_with("-windows-x64.exe")))).map(|a| Asset {
+    let asset = assets.iter().find(|a| a["name"].as_str() == Some(wanted.as_str())).or_else(|| assets.iter().find(|a| a["name"].as_str().is_some_and(|n| n.ends_with(&format!("-{PLATFORM}"))))).map(|a| Asset {
         name: a["name"].as_str().unwrap_or_default().to_owned(),
         url: a["browser_download_url"].as_str().unwrap_or_default().to_owned(),
         size: a["size"].as_u64().unwrap_or(0),
@@ -216,7 +219,7 @@ fn fetch(api: &str, beta: bool, etag: Option<&str>) -> Result<Fetch, String> {
 
 /// Télécharge le fichier de la release, vérifie son empreinte, et le range dans `dir`.
 fn download(release: &Release, dir: &Path, mut progress: impl FnMut(u64, u64)) -> Result<PathBuf, String> {
-    let asset = release.asset.as_ref().ok_or("Cette version n'a pas de fichier pour Windows")?;
+    let asset = release.asset.as_ref().ok_or("Cette version n'a pas de fichier pour cette plateforme")?;
     let expected = match (&asset.sha256, &release.sums) {
         (Some(h), _) => Some(h.clone()),
         (None, Some(url)) => {
@@ -267,7 +270,7 @@ pub fn is_dev_build() -> bool {
 }
 
 fn old_exe(exe: &Path) -> PathBuf {
-    exe.with_extension("exe.old")
+    PathBuf::from(format!("{}.old", exe.display()))
 }
 
 /// Met le nouvel exécutable à la place de celui qui tourne (il reste utilisable jusqu'à la fin).
@@ -282,6 +285,11 @@ pub fn install(new_exe: &Path) -> Result<(), String> {
     if let Err(e) = std::fs::copy(new_exe, &exe) {
         let _ = std::fs::rename(&old, &exe);
         return Err(format!("Installation impossible : {e}"));
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&exe, std::fs::Permissions::from_mode(0o755));
     }
     Ok(())
 }
@@ -445,7 +453,7 @@ mod tests {
         assert_eq!(r.notes, ["Carte en graphe animé", "Glisser un projet vers une attention"]);
         assert_eq!(r.published, "4 nov. 2026");
         let a = r.asset.unwrap();
-        assert_eq!((a.name.as_str(), a.size, a.sha256.as_deref()), ("atelier-0.2.0-windows-x64.exe", 19_300_000, Some("abcdef")));
+        assert_eq!((a.name.clone(), a.size, a.sha256.as_deref()), (asset_name("0.2.0"), 19_300_000, Some("abcdef")));
         assert!(r.sums.is_some());
         assert!(parse_release(&json!({ "tag_name": "v0.3.0", "draft": true })).is_none(), "un brouillon n'est pas une version");
     }

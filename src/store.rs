@@ -22,7 +22,12 @@ impl Store {
         if let Ok(p) = std::env::var("ATELIER_DATA") {
             return PathBuf::from(p);
         }
-        let base = std::env::var("APPDATA").map(PathBuf::from).unwrap_or_else(|_| std::env::temp_dir());
+        // Windows : %APPDATA%. Linux : $XDG_DATA_HOME, sinon ~/.local/share.
+        let base = std::env::var("APPDATA")
+            .map(PathBuf::from)
+            .or_else(|_| std::env::var("XDG_DATA_HOME").map(PathBuf::from))
+            .or_else(|_| std::env::var("HOME").map(|h| PathBuf::from(h).join(".local").join("share")))
+            .unwrap_or_else(|_| std::env::temp_dir());
         base.join("Atelier").join("atelier.json")
     }
 
