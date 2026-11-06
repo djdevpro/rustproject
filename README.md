@@ -38,3 +38,7 @@ claude mcp add rust-project -- "C:\path\to\rust-project.exe" --mcp
 ## Release
 
 Open the Actions tab, run the Release workflow and pick patch, minor or major. The notes come from the commit messages since the last version, unless you type your own. Users see them in the update window.
+
+## License
+
+Rust Project is available under the [MIT license](LICENSE-MIT) or the [Apache License 2.0](LICENSE-APACHE), at your option.
