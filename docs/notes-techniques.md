@@ -1,4 +1,4 @@
-# Atelier — gestionnaire de projets personnels
+# Rust Project — gestionnaire de projets personnels
 
 Application de bureau en Rust (egui 0.37). Elle découvre tes projets dans tes dossiers, les fait
 classer par une IA (Ollama, ou un agent via MCP), et les range sur un bureau avec étapes, notes et
@@ -12,9 +12,9 @@ cargo test                     # tous les tests : moteur + interface (sans GPU)
 
 ## Où sont les données
 
-- `%APPDATA%\Atelier\atelier.json` : projets, étapes, notes, réglages. Écrit à chaque changement,
+- `%APPDATA%\Rust Project\atelier.json` : projets, étapes, notes, réglages. Écrit à chaque changement,
   de façon atomique (fichier temporaire puis renommage). Variable `ATELIER_DATA` pour en changer.
-- `%APPDATA%\Atelier\embeddings.json` : l'index de la recherche sémantique.
+- `%APPDATA%\Rust Project\embeddings.json` : l'index de la recherche sémantique.
 - L'interface relit le fichier chaque seconde : ce que l'agent MCP écrit apparaît tout seul.
 - Configuration › Données : bascule vers des données de démonstration (rien n'est enregistré).
 
@@ -38,7 +38,7 @@ cargo test                     # tous les tests : moteur + interface (sans GPU)
      technos). Une réponse illisible retombe sur les règles.
    - **Agent MCP** : l'agent (Claude Code…) appelle `scanner_dossiers`, décide, puis
      `ajouter_projet`, en suivant la méthode que le serveur lui donne (voir plus bas). Rien
-     d'automatique côté Atelier.
+     d'automatique côté Rust Project.
    - **Sans IA** : un dossier avec un marqueur devient un projet, décrit par son manifeste ou la
      première phrase de son README.
    En mode Ollama sans modèle choisi, rien n'est créé automatiquement : l'accueil propose le choix.
@@ -88,7 +88,7 @@ concept « Immobilier » (synonyme, ou sens proche), puis les projets qui y sont
 ## Serveur MCP
 
 ```bash
-claude mcp add atelier -- "C:\chemin\vers\atelier.exe" --mcp
+claude mcp add rust-project -- "C:\chemin\vers\rust-project.exe" --mcp
 ```
 
 Le chemin exact et la configuration JSON pour d'autres clients sont dans Configuration › IA (mode
@@ -103,8 +103,8 @@ Le rappel est aussi glissé dans la réponse de `scanner_dossiers`, au moment o�
 
 **Deux commandes prêtes** (prompts MCP ; dans Claude Code, tape `/` puis le nom) :
 
-- `/mcp__atelier__ranger_mes_projets` : découvrir les projets et créer les fiches, méthode complète.
-- `/mcp__atelier__nettoyer_mes_fiches` : repérer les fiches qui sont des briques ou des copies
+- `/mcp__rust-project__ranger_mes_projets` : découvrir les projets et créer les fiches, méthode complète.
+- `/mcp__rust-project__nettoyer_mes_fiches` : repérer les fiches qui sont des briques ou des copies
   (`reperer_briques`) et les fusionner dans leur projet (`fusionner_projets`).
 
 Outils : `lister_dossiers_sources`, `scanner_dossiers`, `lister_depots_github`, `lister_domaines`,

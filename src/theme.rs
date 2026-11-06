@@ -1,4 +1,4 @@
-//! Le thème d'Atelier : des design tokens (couleurs nommées par rôle), une couleur d'accent au
+//! Le thème de Rust Project : des design tokens (couleurs nommées par rôle), une couleur d'accent au
 //! choix, des polices, et les `Visuals` d'egui réécrits à partir de tout ça.
 //!
 //! Aucun widget ne code une couleur en dur : tous lisent `Tokens::get(ctx)`.

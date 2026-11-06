@@ -1,4 +1,4 @@
-//! L'enregistrement : un fichier JSON lisible (`%APPDATA%\Atelier\atelier.json`), écrit de façon
+//! L'enregistrement : un fichier JSON lisible (`%APPDATA%\Rust Project\rust-project.json`), écrit de façon
 //! atomique (fichier temporaire, puis renommage). L'interface et le serveur MCP partagent ce
 //! fichier : chacun relit ce que l'autre a écrit.
 
@@ -10,6 +10,24 @@ use serde::{Deserialize, Serialize};
 
 use crate::model::Data;
 
+/// L'ancien nom de l'application (Atelier) : au premier lancement de Rust Project, ses données
+/// (`atelier.json`, `embeddings.json`) sont copiées dans le nouveau dossier. L'ancien dossier
+/// reste en place, comme sauvegarde.
+fn migrate_from_atelier(old_dir: &Path, path: &Path) {
+    let old = old_dir.join("atelier.json");
+    if path.exists() || !old.exists() {
+        return;
+    }
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let _ = std::fs::copy(&old, path);
+    let embeddings = old_dir.join("embeddings.json");
+    if embeddings.exists() {
+        let _ = std::fs::copy(embeddings, path.with_file_name("embeddings.json"));
+    }
+}
+
 pub struct Store {
     path: PathBuf,
     /// Date de modification du fichier quand on l'a lu ou écrit pour la dernière fois.
@@ -17,7 +35,7 @@ pub struct Store {
 }
 
 impl Store {
-    /// `ATELIER_DATA` s'il est défini (tests, plusieurs bases), sinon `%APPDATA%\Atelier\atelier.json`.
+    /// `ATELIER_DATA` s'il est défini (tests, plusieurs bases), sinon `%APPDATA%\Rust Project\rust-project.json`.
     pub fn default_path() -> PathBuf {
         if let Ok(p) = std::env::var("ATELIER_DATA") {
             return PathBuf::from(p);
@@ -28,7 +46,10 @@ impl Store {
             .or_else(|_| std::env::var("XDG_DATA_HOME").map(PathBuf::from))
             .or_else(|_| std::env::var("HOME").map(|h| PathBuf::from(h).join(".local").join("share")))
             .unwrap_or_else(|_| std::env::temp_dir());
-        base.join("Atelier").join("atelier.json")
+        let dir = base.join("Rust Project");
+        let path = dir.join("rust-project.json");
+        migrate_from_atelier(&base.join("Atelier"), &path);
+        path
     }
 
     pub fn open(path: impl Into<PathBuf>) -> Self {
@@ -124,6 +145,28 @@ pub fn text_hash(text: &str) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Les données d'Atelier passent dans le dossier de Rust Project, une seule fois, sans rien
+    /// écraser, et l'ancien dossier reste en place.
+    #[test]
+    fn reprise_des_donnees_d_atelier() {
+        let base = std::env::temp_dir().join(format!("rust-project-migration-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        let old = base.join("Atelier");
+        std::fs::create_dir_all(&old).unwrap();
+        std::fs::write(old.join("atelier.json"), "{\"projects\":[]}").unwrap();
+        std::fs::write(old.join("embeddings.json"), "{}").unwrap();
+        let path = base.join("Rust Project").join("rust-project.json");
+        migrate_from_atelier(&old, &path);
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "{\"projects\":[]}");
+        assert!(path.with_file_name("embeddings.json").exists());
+        assert!(old.join("atelier.json").exists(), "l'ancien fichier reste en sauvegarde");
+        // Une seconde fois : le nouveau fichier n'est jamais écrasé.
+        std::fs::write(&path, "nouveau").unwrap();
+        migrate_from_atelier(&old, &path);
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "nouveau");
+        let _ = std::fs::remove_dir_all(&base);
+    }
 
     #[test]
     fn aller_retour_et_detection_des_changements() {

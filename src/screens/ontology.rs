@@ -74,7 +74,7 @@ fn overview(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action
         }
         ui.horizontal(|ui| {
             crate::icons::show(ui, Icon::Lightbulb, 15.0, t.faint);
-            ui.label(RichText::new(tr("Avec un agent MCP : « Propose une ontologie pour mes projets avec Atelier » (prompt concevoir_ontologie).")).size(12.5).color(t.muted));
+            ui.label(RichText::new(tr("Avec un agent MCP : « Propose une ontologie pour mes projets avec Rust Project » (prompt concevoir_ontologie).")).size(12.5).color(t.muted));
         });
     });
 }

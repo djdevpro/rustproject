@@ -1,4 +1,4 @@
-//! Atelier — gestionnaire de projets personnels, en egui.
+//! Rust Project — gestionnaire de projets personnels, en egui.
 //!
 //! Interface :
 //! - `theme.rs`, `icons.rs`, `widgets.rs` : apparence et boîte à widgets.
@@ -7,13 +7,13 @@
 //!
 //! Moteur :
 //! - `model.rs`    : projets, taxonomie, lanceurs, configuration (sérialisables).
-//! - `store.rs`    : le fichier `atelier.json` et l'index sémantique.
+//! - `store.rs`    : le fichier `rust-project.json` et l'index sémantique.
 //! - `scan.rs`     : les dossiers des dossiers sources, sur 1 à 3 niveaux.
 //! - `classify.rs` : projet ou pas, et la fiche (règles locales ou Ollama).
 //! - `ollama.rs`, `github.rs` : les services externes.
 //! - `search.rs`   : recherche floue et sémantique.
 //! - `jobs.rs`     : les tâches de fond.
-//! - `mcp.rs`      : le serveur MCP (`atelier --mcp`).
+//! - `mcp.rs`      : le serveur MCP (`rust-project --mcp`).
 //! - `launch.rs`   : lancement réel des lanceurs.
 
 mod app;
@@ -46,23 +46,23 @@ mod widgets;
 mod tests;
 
 fn main() -> eframe::Result {
-    // `atelier --mcp` : serveur MCP sur l'entrée et la sortie standard, sans interface.
+    // `rust-project --mcp` : serveur MCP sur l'entrée et la sortie standard, sans interface.
     if std::env::args().any(|a| a == "--mcp") {
         std::process::exit(mcp::serve());
     }
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("Atelier")
+            .with_title("Rust Project")
             .with_inner_size([1480.0, 920.0])
             .with_min_inner_size([1180.0, 720.0])
             .with_decorations(false),
         ..Default::default()
     };
-    // `atelier --fixture fixtures/demo-en.json` : des projets fictifs, rien n'est enregistré.
+    // `rust-project --fixture fixtures/demo-en.json` : des projets fictifs, rien n'est enregistré.
     let args: Vec<String> = std::env::args().collect();
     let fixture = args.iter().position(|a| a == "--fixture").and_then(|i| args.get(i + 1)).cloned();
     eframe::run_native(
-        "atelier",
+        "rust-project",
         options,
         Box::new(move |cc| {
             Ok(Box::new(match fixture {

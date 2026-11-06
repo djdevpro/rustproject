@@ -1,11 +1,11 @@
-//! Le serveur MCP : `atelier --mcp` parle le Model Context Protocol (JSON-RPC 2.0, une ligne par
+//! Le serveur MCP : `rust-project --mcp` parle le Model Context Protocol (JSON-RPC 2.0, une ligne par
 //! message, sur l'entrée et la sortie standard). Un agent IA (Claude Code…) peut ainsi lister les
 //! dossiers sources, scanner, puis créer, modifier ou supprimer des projets.
 //!
-//! Chaque outil relit `atelier.json`, applique sa modification et l'enregistre : l'interface, si
+//! Chaque outil relit `rust-project.json`, applique sa modification et l'enregistre : l'interface, si
 //! elle est ouverte, voit le changement et se recharge.
 //!
-//! À déclarer dans Claude Code : `claude mcp add atelier -- "<chemin>\atelier.exe" --mcp`
+//! À déclarer dans Claude Code : `claude mcp add rust-project -- "<chemin>\rust-project.exe" --mcp`
 
 use std::io::{BufRead, Write};
 
@@ -21,9 +21,9 @@ use crate::store::Store;
 const PROTOCOLS: [&str; 3] = ["2025-06-18", "2025-03-26", "2024-11-05"];
 
 /// Les consignes du serveur : le client MCP (Claude Code, Claude Desktop…) les ajoute au prompt
-/// système de l'agent dès la connexion. C'est ici qu'on lui apprend à se servir d'Atelier.
+/// système de l'agent dès la connexion. C'est ici qu'on lui apprend à se servir de Rust Project.
 const INSTRUCTIONS: &str = "\
-Atelier est le gestionnaire de projets personnels de l'utilisateur (une application de bureau). Ces outils lisent et \
+Rust Project est le gestionnaire de projets personnels de l'utilisateur (une application de bureau). Ces outils lisent et \
 écrivent sa base ; l'interface se met à jour seule. Ton rôle : une liste de projets JUSTE, un projet = une fiche.
 
 RÈGLE 1 — UN PROJET, PAS SES BRIQUES. Les sous-dossiers frontend, backend, api, server, client, web, app, mobile, admin, \
@@ -37,7 +37,7 @@ RÈGLE 3 — UNE COPIE N'EST PAS UN PROJET (« - Copie », « -save », « -sauv
 site-deploy-64a6597) : rattache-la au projet d'origine ou écarte-la (`ignorer_dossier`).
 RÈGLE 4 — DESCRIPTION : UNE phrase, 15 mots au plus, qui dit à quoi sert le projet (pas sa stack). Réutilise les \
 domaines existants plutôt que d'en créer.
-RÈGLE 5 — Les dossiers sources sont choisis par l'utilisateur dans Atelier, jamais par toi. Ne supprime aucune fiche \
+RÈGLE 5 — Les dossiers sources sont choisis par l'utilisateur dans Rust Project, jamais par toi. Ne supprime aucune fiche \
 sans son accord ; dans le doute (projet ou brique ?), lis le README et les sous-dossiers, puis demande.
 
 MÉTHODE : `lister_domaines` et `lister_projets` (l'existant) → `scanner_dossiers` (candidats non suivis ; briques \
@@ -58,7 +58,7 @@ const SCAN_REMINDER: &str = "Une fiche par PROJET. Les briques (frontend, api, d
 une phrase de 15 mots au plus.";
 
 const PROMPT_RANGER: &str = "\
-Range mes projets dans Atelier{portee}.
+Range mes projets dans Rust Project{portee}.
 
 1. Appelle `lister_domaines` et `lister_projets` pour connaître l'existant (ne crée rien en double).
 2. Appelle `scanner_dossiers`. Chaque dossier arrive avec ses indices : marqueurs (.git, package.json, CLAUDE.md, \
@@ -81,7 +81,7 @@ dossier local qui est un vrai projet (pas un fork) peut avoir sa propre fiche.
 6. Termine par un bilan : fiches créées (nom → domaine), briques rattachées, dossiers écartés et pourquoi, questions.";
 
 const PROMPT_ONTOLOGIE: &str = "\
-Conçois une ontologie COMPLÈTE pour ranger tous mes projets dans Atelier.
+Conçois une ontologie COMPLÈTE pour ranger tous mes projets dans Rust Project.
 
 1. `lire_ontologie` (l'existant : les concepts « manuel » viennent de moi, garde-les) puis `lister_projets` (TOUS les \
 projets : nom, description, type, technos, dossiers ; un nom de dossier dit souvent ce que la fiche ne dit pas, ex. \
@@ -99,7 +99,7 @@ nom court, une DÉFINITION d'une phrase qui permette de décider oui ou non (c'e
 classement (`classer_projets`) : ne le lance pas sans mon accord.";
 
 const PROMPT_NETTOYER: &str = "\
-Fais le ménage dans mes fiches Atelier : beaucoup ont été créées automatiquement, et certaines ne sont pas de vrais \
+Fais le ménage dans mes fiches Rust Project : beaucoup ont été créées automatiquement, et certaines ne sont pas de vrais \
 projets mais des briques (app, db, site… d'un même projet) ou des copies.
 
 1. Appelle `reperer_briques` : il regroupe les fiches suspectes par dossier parent, avec des indices (nom de brique, \
@@ -114,7 +114,7 @@ dossier parent et une description d'une phrase), puis `fusionner_projets` (id = 
 4. Les fusions, tu peux les faire. Les suppressions, demande-moi d'abord.
 5. Termine par un bilan : fusions faites, fiches laissées telles quelles, questions.";
 
-/// Les prompts MCP : des commandes prêtes (dans Claude Code : `/mcp__atelier__ranger_mes_projets`).
+/// Les prompts MCP : des commandes prêtes (dans Claude Code : `/mcp__rust-project__ranger_mes_projets`).
 fn prompts() -> Value {
     json!([
         {
@@ -157,7 +157,7 @@ pub fn serve() -> i32 {
     let mut store = Store::open(Store::default_path());
     let stdin = std::io::stdin();
     let mut stdout = std::io::stdout();
-    eprintln!("atelier mcp · données : {}", store.path().display());
+    eprintln!("rust-project mcp · données : {}", store.path().display());
     for line in stdin.lock().lines() {
         let Ok(line) = line else { break };
         if line.trim().is_empty() {
@@ -206,7 +206,7 @@ fn initialize(params: &Value) -> Value {
     json!({
         "protocolVersion": version,
         "capabilities": { "tools": { "listChanged": false }, "prompts": { "listChanged": false } },
-        "serverInfo": { "name": "atelier", "version": env!("CARGO_PKG_VERSION") },
+        "serverInfo": { "name": "rust-project", "version": env!("CARGO_PKG_VERSION") },
         "instructions": INSTRUCTIONS
     })
 }
@@ -244,7 +244,7 @@ fn tools() -> Vec<Value> {
     update_fields["dossier"] = s("Nouveau dossier principal (les dossiers rattachés sont gardés)");
     update_fields["dossiers"] = list("Remplace TOUS les dossiers du projet (le premier est le dossier principal)");
     vec![
-        tool("lister_dossiers_sources", "Les dossiers où se trouvent les projets (choisis par l'utilisateur dans Atelier), leur profondeur de scan (1 à 3) et les dossiers écartés.", json!({}), &[]),
+        tool("lister_dossiers_sources", "Les dossiers où se trouvent les projets (choisis par l'utilisateur dans Rust Project), leur profondeur de scan (1 à 3) et les dossiers écartés.", json!({}), &[]),
         tool(
             "scanner_dossiers",
             "Liste les dossiers des dossiers sources sur 1 à 3 niveaux, avec leurs indices : marqueurs, sous-dossiers, début du README, technos, parent, briques repérées, copie probable. Les dossiers déjà suivis et les briques sont masqués par défaut. Ne crée rien.",
@@ -353,7 +353,7 @@ fn tools() -> Vec<Value> {
         tool(
             "classer_projets",
             "Range des projets dans l'ontologie avec un modèle de décision Ollaya (une question oui/non par concept ; à partir de 0,5 le projet est rattaché). Sans `ids` : les projets jamais classés ou classés avec une ancienne ontologie, 40 au plus par appel (rappelle jusqu'à ce qu'il n'en reste plus).",
-            json!({ "ids": { "type": "array", "items": { "type": "integer" }, "description": "Les projets à classer (facultatif)" }, "modele": s("Modèle Ollaya (par défaut : celui choisi dans Atelier)") }),
+            json!({ "ids": { "type": "array", "items": { "type": "integer" }, "description": "Les projets à classer (facultatif)" }, "modele": s("Modèle Ollaya (par défaut : celui choisi dans Rust Project)") }),
             &[],
         ),
     ]
@@ -534,11 +534,11 @@ pub fn run_tool(store: &mut Store, name: &str, args: &Value) -> Result<Value, St
         "lister_dossiers_sources" => Ok(json!({
             "sources": data.config.roots.iter().map(|r| json!({ "chemin": r.path, "profondeur": r.depth, "actif": r.enabled })).collect::<Vec<_>>(),
             "ecartes": data.config.ignored,
-            "note": "Seul l'utilisateur ajoute ou retire des dossiers sources, dans Atelier."
+            "note": "Seul l'utilisateur ajoute ou retire des dossiers sources, dans Rust Project."
         })),
         "scanner_dossiers" => {
             if data.config.roots.is_empty() {
-                return Err("Aucun dossier source : l'utilisateur doit en choisir un dans Atelier (Configuration → Sources).".into());
+                return Err("Aucun dossier source : l'utilisateur doit en choisir un dans Rust Project (Configuration → Sources).".into());
             }
             let include = args["inclure_suivis"].as_bool().unwrap_or(false);
             let include_bricks = args["inclure_briques"].as_bool().unwrap_or(false);
@@ -837,7 +837,7 @@ pub fn run_tool(store: &mut Store, name: &str, args: &Value) -> Result<Value, St
         "classer_projets" => {
             let model = args["modele"].as_str().map(str::trim).filter(|m| !m.is_empty()).map(str::to_owned).unwrap_or_else(|| data.config.ollaya_model.clone());
             if model.is_empty() {
-                return Err("Aucun modèle de décision : l'utilisateur en choisit un dans Atelier (Configuration › IA & modèles › Ollaya), ou passe « modele ».".into());
+                return Err("Aucun modèle de décision : l'utilisateur en choisit un dans Rust Project (Configuration › IA & modèles › Ollaya), ou passe « modele ».".into());
             }
             if data.ontology.concepts.is_empty() {
                 return Err("L'ontologie est vide : propose-la d'abord (`definir_ontologie`).".into());
@@ -890,7 +890,7 @@ mod tests {
         let mut store = temp_store("init");
         let r = call(&mut store, 1, "initialize", json!({ "protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": { "name": "test" } }));
         assert_eq!(r["result"]["protocolVersion"], "2025-06-18");
-        assert_eq!(r["result"]["serverInfo"]["name"], "atelier");
+        assert_eq!(r["result"]["serverInfo"]["name"], "rust-project");
         assert!(handle_line(&mut store, r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#).is_none(), "pas de réponse à une notification");
         let tools = call(&mut store, 2, "tools/list", json!({}));
         let names: Vec<&str> = tools["result"]["tools"].as_array().unwrap().iter().map(|t| t["name"].as_str().unwrap()).collect();

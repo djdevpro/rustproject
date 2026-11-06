@@ -1,4 +1,4 @@
-//! Les versions d'Atelier, publiées comme releases GitHub : vérifier, télécharger, installer.
+//! Les versions de Rust Project, publiées comme releases GitHub : vérifier, télécharger, installer.
 //!
 //! Même principe que le lanceur d'ArtCraft :
 //! - la release est la source de vérité (`releases/latest`, ou la liste pour le canal bêta),
@@ -6,8 +6,8 @@
 //! - ses notes sont les nouveautés affichées dans la fenêtre de mise à jour ;
 //! - chaque fichier a son empreinte SHA-256 (champ `digest` de GitHub, sinon `SHA256SUMS.txt`),
 //!   vérifiée avant l'installation ;
-//! - l'installation renomme l'exécutable en cours (`atelier.exe.old`), met le nouveau à sa
-//!   place, puis Atelier redémarre ; l'ancien est effacé au lancement suivant.
+//! - l'installation renomme l'exécutable en cours (`rust-project.exe.old`), met le nouveau à sa
+//!   place, puis Rust Project redémarre ; l'ancien est effacé au lancement suivant.
 
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -32,7 +32,7 @@ pub const PLATFORM: &str = if cfg!(windows) { "windows-x64.exe" } else { "linux-
 
 /// Le nom du fichier d'une version pour cette plateforme, tel que la CI le publie.
 pub fn asset_name(version: &str) -> String {
-    format!("atelier-{version}-{PLATFORM}")
+    format!("rust-project-{version}-{PLATFORM}")
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -188,7 +188,7 @@ fn agent(timeout: Duration) -> ureq::Agent {
     ureq::Agent::config_builder().timeout_global(Some(timeout)).http_status_as_error(false).build().into()
 }
 
-const USER_AGENT: &str = concat!("atelier/", env!("CARGO_PKG_VERSION"));
+const USER_AGENT: &str = concat!("rust-project/", env!("CARGO_PKG_VERSION"));
 
 enum Fetch {
     NotModified,
@@ -276,7 +276,7 @@ fn old_exe(exe: &Path) -> PathBuf {
 /// Met le nouvel exécutable à la place de celui qui tourne (il reste utilisable jusqu'à la fin).
 pub fn install(new_exe: &Path) -> Result<(), String> {
     if is_dev_build() {
-        return Err("Version de développement : installe Atelier depuis une release pour les mises à jour".into());
+        return Err("Version de développement : installe Rust Project depuis une release pour les mises à jour".into());
     }
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     let old = old_exe(&exe);
@@ -427,11 +427,11 @@ mod tests {
 
     fn release_json(tag: &str) -> Value {
         json!({
-            "tag_name": tag, "name": format!("Atelier {}", tag.trim_start_matches('v')), "draft": false, "prerelease": false,
+            "tag_name": tag, "name": format!("Rust Project {}", tag.trim_start_matches('v')), "draft": false, "prerelease": false,
             "published_at": "2026-11-04T10:00:00Z", "html_url": format!("https://github.com/{REPO}/releases/tag/{tag}"),
             "body": "- Carte en graphe animé\n- Glisser un projet vers une attention\n\n**Full Changelog**: https://github.com/x/y/compare/v0.1.0...v0.2.0",
             "assets": [
-                { "name": asset_name(tag.trim_start_matches('v')), "size": 19_300_000, "browser_download_url": "https://example.invalid/atelier.exe", "digest": "sha256:ABCDEF" },
+                { "name": asset_name(tag.trim_start_matches('v')), "size": 19_300_000, "browser_download_url": "https://example.invalid/rust-project.exe", "digest": "sha256:ABCDEF" },
                 { "name": "SHA256SUMS.txt", "size": 120, "browser_download_url": "https://example.invalid/SHA256SUMS.txt" }
             ]
         })
@@ -495,7 +495,7 @@ mod tests {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let base = format!("http://{}", listener.local_addr().unwrap());
         let release = json!({
-            "tag_name": "v999.0.0", "name": "Atelier 999.0.0", "draft": false, "prerelease": false, "published_at": "2026-11-04T10:00:00Z",
+            "tag_name": "v999.0.0", "name": "Rust Project 999.0.0", "draft": false, "prerelease": false, "published_at": "2026-11-04T10:00:00Z",
             "html_url": "https://example.invalid", "body": "- Une nouveauté",
             "assets": [{ "name": asset_name("999.0.0"), "size": payload.len(), "browser_download_url": format!("{base}/fichier"), "digest": format!("sha256:{digest}") }]
         })

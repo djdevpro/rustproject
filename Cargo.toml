@@ -1,5 +1,5 @@
 [package]
-name = "atelier"
+name = "rust-project"
 version = "0.1.0"
 edition = "2024"
 description = "Gestionnaire de projets personnels en Rust et egui"

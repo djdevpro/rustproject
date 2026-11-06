@@ -587,7 +587,7 @@ pub struct AtelierApp {
     /// Les erreurs des programmes lancés arrivent ici, depuis leur fil d'exécution.
     errors_tx: Sender<(String, String)>,
     errors_rx: Receiver<(String, String)>,
-    /// Le fichier `atelier.json` (`None` en démonstration : rien n'est enregistré).
+    /// Le fichier `rust-project.json` (`None` en démonstration : rien n'est enregistré).
     pub store: Option<Store>,
     /// Le dernier contenu enregistré (on n'écrit que s'il change).
     saved_json: String,
@@ -604,7 +604,7 @@ pub struct AtelierApp {
 }
 
 impl AtelierApp {
-    /// L'application réelle : le fichier `atelier.json` (créé s'il n'existe pas).
+    /// L'application réelle : le fichier `rust-project.json` (créé s'il n'existe pas).
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         Self::new_with_store(cc, Store::open(Store::default_path()))
     }
@@ -631,7 +631,7 @@ impl AtelierApp {
         }
         if std::env::args().any(|a| a == launch::AFTER_UPDATE) {
             crate::release::cleanup_after_update();
-            app.toast(Icon::PackageCheck, tf("Atelier {VERSION} est installé", &[(tr("VERSION"), &VERSION)]), None);
+            app.toast(Icon::PackageCheck, tf("Rust Project {VERSION} est installé", &[("VERSION", &VERSION)]), None);
         }
         // Une seule question à GitHub au démarrage : y a-t-il une version plus récente ?
         if app.data.config.update_auto {
@@ -1126,7 +1126,7 @@ impl AtelierApp {
         let screen = self.st.screen;
         ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
             ui.add_space(24.0);
-            ui.label(RichText::new(tr("Atelier")).font(FontId::new(30.0, theme::bold())).color(t.ink_strong));
+            ui.label(RichText::new(tr("Rust Project")).font(FontId::new(30.0, theme::bold())).color(t.ink_strong));
             ui.add_space(14.0);
             widgets::vsep(ui, 30.0);
             ui.add_space(14.0);
@@ -1156,7 +1156,7 @@ impl AtelierApp {
                     UpdatePhase::Downloading => (tr("Téléchargement de la mise à jour…").to_owned(), false),
                     UpdatePhase::Checking => (tr("Recherche d'une nouvelle version…").to_owned(), false),
                     UpdatePhase::Failed => (tr("Vérification des mises à jour impossible").to_owned(), false),
-                    _ => (tf("Atelier {VERSION}", &[(tr("VERSION"), &VERSION)]), false),
+                    _ => (tf("Rust Project {VERSION}", &[("VERSION", &VERSION)]), false),
                 };
                 let resp = widgets::icon_button_tip(ui, Icon::CircleArrowUp, tr("Mise à jour"), &tip, 34.0);
                 if pending {
@@ -1895,7 +1895,7 @@ fn confirm_delete(ctx: &egui::Context, data: &Data, p: usize, act: &mut Vec<Acti
             widgets::title(ui, &tf("Supprimer « {0} » ?", &[("0", &project.name)]), 20.0);
         });
         ui.add_space(8.0);
-        widgets::muted(ui, tr("La fiche, ses étapes et ses notes disparaissent d'Atelier. Le dossier sur le disque n'est pas touché ; un prochain scan pourra le proposer à nouveau."));
+        widgets::muted(ui, tr("La fiche, ses étapes et ses notes disparaissent de Rust Project. Le dossier sur le disque n'est pas touché ; un prochain scan pourra le proposer à nouveau."));
         ui.add_space(14.0);
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             if widgets::button(ui, Some(Icon::Trash2), tr("Supprimer"), Kind::Danger).clicked() {

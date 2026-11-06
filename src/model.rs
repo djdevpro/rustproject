@@ -1,5 +1,5 @@
 //! Le modèle : projets, taxonomie, lanceurs et configuration. Tout est sérialisable : c'est le
-//! contenu du fichier `atelier.json` (voir `store.rs`). Le jeu de démonstration sert aux tests.
+//! contenu du fichier `rust-project.json` (voir `store.rs`). Le jeu de démonstration sert aux tests.
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -409,9 +409,9 @@ pub enum ScanFreq {
 /// Comment l'IA classe les dossiers.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AiMode {
-    /// Atelier interroge un serveur Ollama (API HTTP).
+    /// Rust Project interroge un serveur Ollama (API HTTP).
     Ollama,
-    /// Un agent externe (Claude Code…) pilote Atelier par le protocole MCP.
+    /// Un agent externe (Claude Code…) pilote Rust Project par le protocole MCP.
     Mcp,
     /// Pas d'IA : règles locales seulement.
     Off,
@@ -534,7 +534,7 @@ impl Default for Config {
 
 // ---- données -----------------------------------------------------------------------------------
 
-/// Tout ce que l'interface affiche, et ce qui est enregistré dans `atelier.json`.
+/// Tout ce que l'interface affiche, et ce qui est enregistré dans `rust-project.json`.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Data {
     #[serde(default)]

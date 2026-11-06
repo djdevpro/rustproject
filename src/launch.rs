@@ -93,7 +93,7 @@ pub fn spawn(plan: &Plan, on_error: impl FnOnce(String) + Send + 'static) -> Res
 /// Argument passé à l'instance relancée : elle sait qu'elle sort d'une mise à jour.
 pub const AFTER_UPDATE: &str = "--apres-mise-a-jour";
 
-/// Relance Atelier (le même exécutable), pour appliquer une mise à jour.
+/// Relance Rust Project (le même exécutable), pour appliquer une mise à jour.
 pub fn restart() -> Result<(), String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     Command::new(exe).arg(AFTER_UPDATE).spawn().map(|_| ()).map_err(|e| format!("Redémarrage impossible : {e}"))

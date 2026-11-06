@@ -1,4 +1,7 @@
-"""Bannière du README : le nom, une phrase, et la carte en graphe (capture de la fixture)."""
+"""Bannière du README : le nom, une phrase, et la carte en graphe (capture de la fixture).
+
+Usage : python docs/banner.py docs   (après `cargo test captures_readme -- --ignored`)
+"""
 import sys
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
@@ -59,10 +62,10 @@ img.paste(Image.new("RGB", grad.size, BG), (x0 - 2, y0 - 2), grad)
 # Le texte.
 d = ImageDraw.Draw(img)
 left = 96
-d.rounded_rectangle((left, 118, left + 150, 148), 15, fill=(46, 33, 16), outline=(120, 82, 34))
-d.text((left + 75, 133), "Rust and egui", font=font(17, "Semibold Text"), fill=AMBER, anchor="mm")
-d.text((left - 4, 168), "Atelier", font=font(118, "Bold Display"), fill=INK)
-d.rectangle((left, 318, left + 64, 323), fill=AMBER)
+d.rounded_rectangle((left, 128, left + 190, 158), 15, fill=(46, 33, 16), outline=(120, 82, 34))
+d.text((left + 95, 143), "Windows and Linux", font=font(17, "Semibold Text"), fill=AMBER, anchor="mm")
+d.text((left - 3, 178), "Rust Project", font=font(92, "Bold Display"), fill=INK)
+d.rectangle((left, 306, left + 64, 311), fill=AMBER)
 d.text((left, 348), "All your side projects in one place.", font=font(34, "Semibold Display"), fill=INK)
 d.text((left, 398), "It finds them on your disk, sorts them", font=font(25, "Regular"), fill=MUTED)
 d.text((left, 430), "and opens them in one click.", font=font(25, "Regular"), fill=MUTED)

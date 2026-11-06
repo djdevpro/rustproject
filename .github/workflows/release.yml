@@ -14,6 +14,10 @@ on:
         description: Points de version séparés par des points-virgules (vide pour reprendre les messages des commits)
         type: string
         required: false
+      dry_run:
+        description: Essai à blanc (tout sauf la publication, les fichiers restent dans le run)
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -66,7 +70,7 @@ jobs:
           [ -s notes.md ] || echo "- Corrections" > notes.md
           cat notes.md
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: notes
           path: notes.md
@@ -77,10 +81,10 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            binary: target/release/atelier.exe
+            binary: target/release/rust-project.exe
             suffix: windows-x64.exe
           - os: ubuntu-22.04
-            binary: target/release/atelier
+            binary: target/release/rust-project
             suffix: linux-x64
     runs-on: ${{ matrix.os }}
     steps:
@@ -88,7 +92,7 @@ jobs:
 
       - name: Linux dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libgtk-3-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libwayland-dev fonts-dejavu-core
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libgtk-3-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libwayland-dev fonts-dejavu-core xvfb libgl1-mesa-dri
 
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
@@ -102,28 +106,53 @@ jobs:
           ATELIER_VERSION: ${{ needs.version.outputs.version }}
         run: cargo build --release
 
+      # Le binaire démarre vraiment : bibliothèques présentes, serveur MCP, puis la fenêtre.
+      - name: Smoke test
+        shell: bash
+        env:
+          ATELIER_DATA: ${{ runner.temp }}/smoke/rust-project.json
+        run: |
+          set -o pipefail
+          bin="${{ matrix.binary }}"
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            ldd "$bin" | tee ldd.txt
+            if grep -q "not found" ldd.txt; then echo "Bibliothèque système manquante"; exit 1; fi
+          fi
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}' | "$bin" --mcp | tee mcp.txt
+          grep -q '"name":"rust-project"' mcp.txt
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            # Sous un écran virtuel : toujours en vie après 20 s (124 = arrêté par timeout).
+            set +e
+            xvfb-run -a -s "-screen 0 1600x1000x24" timeout 20 "$bin" --fixture fixtures/demo-en.json
+            code=$?
+            set -e
+            echo "code de sortie $code"
+            [ "$code" -eq 124 ]
+          fi
+
       - name: Package
         shell: bash
         run: |
           mkdir dist
-          cp "${{ matrix.binary }}" "dist/atelier-${{ needs.version.outputs.version }}-${{ matrix.suffix }}"
+          cp "${{ matrix.binary }}" "dist/rust-project-${{ needs.version.outputs.version }}-${{ matrix.suffix }}"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
-          name: atelier-${{ matrix.suffix }}
+          name: rust-project-${{ matrix.suffix }}
           path: dist/*
 
   publish:
     needs: [version, build]
+    if: ${{ !inputs.dry_run }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
-          pattern: atelier-*
+          pattern: rust-project-*
           path: dist
           merge-multiple: true
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: notes
 
@@ -134,4 +163,4 @@ jobs:
           v=${{ needs.version.outputs.version }}
           chmod +x dist/*-linux-x64
           (cd dist && sha256sum -- * > SHA256SUMS.txt && cat SHA256SUMS.txt)
-          gh release create "v$v" dist/* --repo "${{ github.repository }}" --title "Atelier $v" --notes-file notes.md --target "${{ github.sha }}"
+          gh release create "v$v" dist/* --repo "${{ github.repository }}" --title "Rust Project $v" --notes-file notes.md --target "${{ github.sha }}"

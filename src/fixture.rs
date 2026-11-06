@@ -1,8 +1,8 @@
 //! La fixture anglaise : 30 projets fictifs, une taxonomie et une ontologie en anglais, pour
-//! tester Atelier et faire les captures du README.
+//! tester Rust Project et faire les captures du README.
 //!
 //! Le fichier `fixtures/demo-en.json` est écrit par `UPDATE_FIXTURES=1 cargo test fixture`, et
-//! l'application l'ouvre sans rien enregistrer avec `atelier --fixture fixtures/demo-en.json`.
+//! l'application l'ouvre sans rien enregistrer avec `rust-project --fixture fixtures/demo-en.json`.
 
 use egui::Color32;
 

@@ -1,4 +1,4 @@
-//! Les dépôts GitHub, via la CLI `gh` (déjà authentifiée : pas de jeton à saisir dans Atelier).
+//! Les dépôts GitHub, via la CLI `gh` (déjà authentifiée : pas de jeton à saisir dans Rust Project).
 //! On liste tous les dépôts accessibles : les siens, ceux des organisations, les collaborations.
 
 use std::process::Command;

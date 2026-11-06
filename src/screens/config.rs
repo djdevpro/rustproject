@@ -121,7 +121,7 @@ fn scan_progress(ui: &mut Ui, st: &UiState) {
 
 fn sources(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action>) {
     let t = Tokens::get(ui.ctx());
-    header(ui, tr("Dossiers sources"), tr("Les dossiers où se trouvent tes projets. Atelier n'y lit que les noms de dossiers, les README et les manifestes, sur 1 à 3 niveaux."));
+    header(ui, tr("Dossiers sources"), tr("Les dossiers où se trouvent tes projets. Rust Project n'y lit que les noms de dossiers, les README et les manifestes, sur 1 à 3 niveaux."));
     widgets::settings_card(ui, tr("Dossiers surveillés"), Some(tr("Autant de dossiers que tu veux ; chacun a sa profondeur (niveaux de sous-dossiers explorés).")), |ui| {
         let n = data.config.roots.len();
         if n == 0 {
@@ -455,8 +455,8 @@ fn ai(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action>) {
         let options = [(AiMode::Ollama, Some(Icon::Cpu), tr("Ollama (API)")), (AiMode::Mcp, Some(Icon::Network), tr("Agent MCP")), (AiMode::Off, Some(Icon::CircleOff), tr("Sans IA"))];
         widgets::segmented(ui, "ai-mode", &mut data.config.ai_mode, &options, Some(ui.available_width().min(560.0)));
         let explain = match data.config.ai_mode {
-            AiMode::Ollama => tr("Atelier envoie à un modèle local (Ollama) un résumé de chaque dossier : nom, marqueurs, début du README. Rien ne sort de ta machine."),
-            AiMode::Mcp => tr("Un agent IA (Claude Code…) se connecte à Atelier par le protocole MCP : il scanne, décide et crée les fiches lui-même."),
+            AiMode::Ollama => tr("Rust Project envoie à un modèle local (Ollama) un résumé de chaque dossier : nom, marqueurs, début du README. Rien ne sort de ta machine."),
+            AiMode::Mcp => tr("Un agent IA (Claude Code…) se connecte à Rust Project par le protocole MCP : il scanne, décide et crée les fiches lui-même."),
             AiMode::Off => tr("Pas d'IA : les dossiers avec un marqueur (.git, Cargo.toml, package.json…) deviennent des projets, décrits par leur manifeste ou leur README."),
         };
         ui.label(RichText::new(explain).size(13.0).color(t.muted));
@@ -724,8 +724,8 @@ fn semantic_card(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<A
 
 fn mcp_card(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action>) {
     let t = Tokens::get(ui.ctx());
-    let exe = std::env::current_exe().map(|p| p.display().to_string()).unwrap_or_else(|_| "atelier.exe".into());
-    widgets::settings_card(ui, tr("Agent MCP"), Some(tr("Atelier est aussi un serveur MCP : `atelier --mcp`. L'agent lit et écrit le même fichier que cette fenêtre, qui se met à jour toute seule.")), |ui| {
+    let exe = std::env::current_exe().map(|p| p.display().to_string()).unwrap_or_else(|_| "rust-project.exe".into());
+    widgets::settings_card(ui, tr("Agent MCP"), Some(tr("Rust Project est aussi un serveur MCP : `rust-project --mcp`. L'agent lit et écrit le même fichier que cette fenêtre, qui se met à jour toute seule.")), |ui| {
         let code = |ui: &mut Ui, label: &str, text: String, act: &mut Vec<Action>| {
             widgets::field_label(ui, label);
             ui.horizontal_top(|ui| {
@@ -739,8 +739,8 @@ fn mcp_card(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action
                 }
             });
         };
-        code(ui, "Dans Claude Code", format!(r#"claude mcp add atelier -- "{exe}" --mcp"#), act);
-        let json = format!(r#"{{ "mcpServers": {{ "atelier": {{ "command": "{}", "args": ["--mcp"] }} }} }}"#, exe.replace('\\', "\\\\"));
+        code(ui, "Dans Claude Code", format!(r#"claude mcp add rust-project -- "{exe}" --mcp"#), act);
+        let json = format!(r#"{{ "mcpServers": {{ "rust-project": {{ "command": "{}", "args": ["--mcp"] }} }} }}"#, exe.replace('\\', "\\\\"));
         code(ui, tr("Autres clients (configuration JSON)"), json, act);
         widgets::field_label(ui, tr("Outils proposés à l'agent"));
         ui.horizontal_wrapped(|ui| {
@@ -751,7 +751,7 @@ fn mcp_card(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action
         });
         ui.horizontal(|ui| {
             icons::show(ui, Icon::Lightbulb, 15.0, t.faint);
-            ui.label(RichText::new(tr("Puis demande à l'agent : « Range mes projets avec Atelier ».")).size(12.5).color(t.muted));
+            ui.label(RichText::new(tr("Puis demande à l'agent : « Range mes projets avec Rust Project ».")).size(12.5).color(t.muted));
         });
         if let Some(path) = &st.store_path {
             ui.label(RichText::new(tf("Fichier partagé : {path}", &[("path", &path)])).size(12.0).color(t.faint));
@@ -904,7 +904,7 @@ fn attention(ui: &mut Ui, data: &mut Data) {
         }
     });
     widgets::settings_card(ui, tr("Projets du moment"), Some(tr("Par défaut, autant de projets en focus que tu veux : la rangée du bureau défile.")), |ui| {
-        widgets::toggle_row(ui, &mut c.limit_focus, tr("Limiter le nombre de projets en focus"), Some(tr("Au-delà, Atelier te demande quel projet libérer avant d'en ajouter un.")));
+        widgets::toggle_row(ui, &mut c.limit_focus, tr("Limiter le nombre de projets en focus"), Some(tr("Au-delà, Rust Project te demande quel projet libérer avant d'en ajouter un.")));
         ui.add_enabled_ui(c.limit_focus, |ui| {
             ui.horizontal(|ui| {
                 widgets::named(ui.add(egui::Slider::new(&mut c.focus_limit, 1..=8).show_value(false).trailing_fill(true)), egui::Role::Slider, tr("Limite du focus"));
@@ -950,7 +950,7 @@ fn appearance(ui: &mut Ui, data: &mut Data, act: &mut Vec<Action>) {
     let t = Tokens::get(ui.ctx());
     let c = &mut data.config;
     header(ui, tr("Apparence"), tr("Le thème suit les maquettes ; l'accent et la densité sont à ton goût."));
-    widgets::settings_card(ui, tr("Langue"), Some(tr("La langue de l'interface. En automatique, Atelier suit celle du système.")), |ui| {
+    widgets::settings_card(ui, tr("Langue"), Some(tr("La langue de l'interface. En automatique, Rust Project suit celle du système.")), |ui| {
         let auto = tf("Automatique ({0})", &[("0", &crate::i18n::detect().native())]);
         let mut options: Vec<(Option<crate::i18n::Lang>, &str)> = vec![(None, auto.as_str())];
         options.extend(crate::i18n::Lang::ALL.map(|l| (Some(l), l.native())));
@@ -1002,10 +1002,10 @@ fn appearance(ui: &mut Ui, data: &mut Data, act: &mut Vec<Action>) {
 fn data_section(ui: &mut Ui, data: &mut Data, st: &UiState, act: &mut Vec<Action>) {
     let t = Tokens::get(ui.ctx());
     header(ui, tr("Données"), tr("Tout reste en local, dans un seul fichier lisible."));
-    widgets::settings_card(ui, tr("Mises à jour"), Some(tr("Atelier évolue par versions : on télécharge, puis on redémarre pour appliquer.")), |ui| {
+    widgets::settings_card(ui, tr("Mises à jour"), Some(tr("Rust Project évolue par versions : on télécharge, puis on redémarre pour appliquer.")), |ui| {
         ui.horizontal(|ui| {
             icons::show(ui, Icon::PackageCheck, 18.0, t.muted);
-            ui.label(RichText::new(tf("Version installée : {VERSION}", &[(tr("VERSION"), &VERSION)])).font(FontId::new(14.0, theme::semibold())).color(t.ink));
+            ui.label(RichText::new(tf("Version installée : {VERSION}", &[("VERSION", &VERSION)])).font(FontId::new(14.0, theme::semibold())).color(t.ink));
             let latest = st.updater.release.as_ref().map(|r| r.version.clone()).unwrap_or_default();
             let (label, tone) = match st.updater.phase {
                 UpdatePhase::Available => (tf("{latest} disponible", &[("latest", &latest)]), Tone::Accent),
@@ -1058,7 +1058,7 @@ fn data_section(ui: &mut Ui, data: &mut Data, st: &UiState, act: &mut Vec<Action
     });
     widgets::settings_card(ui, tr("Données de démonstration"), Some(tr("Des projets fictifs, pour découvrir l'interface. Ton fichier n'est pas touché.")), |ui| {
         let mut demo = st.store_path.is_none();
-        if widgets::toggle_row(ui, &mut demo, tr("Afficher les données de démonstration"), Some(tr("Désactivé, Atelier revient à ton fichier et à tes vrais projets."))).changed() {
+        if widgets::toggle_row(ui, &mut demo, tr("Afficher les données de démonstration"), Some(tr("Désactivé, Rust Project revient à ton fichier et à tes vrais projets."))).changed() {
             act.push(Action::SetDemo(demo));
         }
     });

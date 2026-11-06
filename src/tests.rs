@@ -287,7 +287,7 @@ fn mise_a_jour() {
     // Une version plus récente, telle que GitHub la décrirait (aucun réseau en test).
     let release = crate::release::Release {
         version: "9.9.0".into(),
-        name: "Atelier 9.9.0".into(),
+        name: "Rust Project 9.9.0".into(),
         notes: vec!["Carte en graphe animé".into(), "Glisser un projet vers une attention".into(), "Mise à jour depuis les releases GitHub".into()],
         published: "4 nov. 2026".into(),
         page: "https://github.com/djdevpro/rustproject/releases/tag/v9.9.0".into(),

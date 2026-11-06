@@ -171,7 +171,7 @@ fn first_run(ui: &mut Ui, st: &UiState, has_roots: bool, act: &mut Vec<Action>) 
                 // Rien n'est choisi à la place de l'utilisateur : c'est lui qui désigne ses dossiers.
                 widgets::title(ui, tr("Où sont tes projets ?"), 26.0);
                 ui.add_space(4.0);
-                widgets::muted(ui, tr("Choisis le ou les dossiers qui contiennent tes projets. Atelier les parcourt sur 1 à 3 niveaux, puis l'IA (ou les règles) en fait des fiches."));
+                widgets::muted(ui, tr("Choisis le ou les dossiers qui contiennent tes projets. Rust Project les parcourt sur 1 à 3 niveaux, puis l'IA (ou les règles) en fait des fiches."));
                 ui.add_space(16.0);
                 ui.horizontal(|ui| {
                     ui.add_space((ui.available_width() - 420.0).max(0.0) / 2.0);
@@ -214,7 +214,7 @@ fn first_run(ui: &mut Ui, st: &UiState, has_roots: bool, act: &mut Vec<Action>) 
                 });
                 return;
             } else {
-                widgets::muted(ui, tr("Atelier parcourt tes dossiers sources (3 niveaux) et crée une fiche pour chaque projet reconnu."));
+                widgets::muted(ui, tr("Rust Project parcourt tes dossiers sources (3 niveaux) et crée une fiche pour chaque projet reconnu."));
             }
             ui.add_space(16.0);
             ui.horizontal(|ui| {

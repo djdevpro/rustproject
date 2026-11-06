@@ -2,16 +2,19 @@
 //!
 //! Le texte source est le français, écrit tel quel dans le code : `tr("Mon bureau")` renvoie sa
 //! traduction dans la langue courante, `tf("{n} projets", &[("n", &n)])` remplace en plus les
-//! paramètres nommés. Toutes les traductions sont dans `locales/ui.tsv` : une ligne par texte, une
-//! colonne par langue (fr, en, es…). Une cellule vide retombe sur l'anglais, puis sur le français.
+//! paramètres nommés.
+//!
+//! Un fichier par langue, `locales/<code>.json` : le texte français (exactement comme dans le code)
+//! associé à sa traduction. Ajouter un texte, c'est ajouter la même clé dans chaque fichier ; un
+//! test dit lequel en manque. Une traduction absente retombe sur l'anglais, puis sur le français.
 //!
 //! La langue est celle du système, sauf choix contraire dans Configuration › Apparence. Elle est
 //! posée au démarrage réel de l'application ; sinon (tests, serveur MCP) c'est le français.
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU8, Ordering};
 use std::fmt::Display;
 use std::sync::OnceLock;
+use std::sync::atomic::{AtomicU8, Ordering};
 
 use serde::{Deserialize, Serialize};
 
@@ -30,7 +33,6 @@ pub enum Lang {
 }
 
 impl Lang {
-    /// Dans l'ordre des colonnes de `locales/ui.tsv`.
     pub const ALL: [Self; 10] = [Self::Fr, Self::En, Self::Es, Self::De, Self::Pt, Self::It, Self::Ru, Self::Zh, Self::Ja, Self::Ko];
 
     pub fn code(self) -> &'static str {
@@ -46,6 +48,22 @@ impl Lang {
     pub fn from_locale(locale: &str) -> Option<Self> {
         let code = locale.split(['-', '_', '.']).next()?.to_lowercase();
         Self::ALL.into_iter().find(|l| l.code() == code)
+    }
+
+    /// Le contenu de `locales/<code>.json` (rien pour le français, la langue du code).
+    fn file(self) -> &'static str {
+        match self {
+            Self::Fr => "{}",
+            Self::En => include_str!("../locales/en.json"),
+            Self::Es => include_str!("../locales/es.json"),
+            Self::De => include_str!("../locales/de.json"),
+            Self::Pt => include_str!("../locales/pt.json"),
+            Self::It => include_str!("../locales/it.json"),
+            Self::Ru => include_str!("../locales/ru.json"),
+            Self::Zh => include_str!("../locales/zh.json"),
+            Self::Ja => include_str!("../locales/ja.json"),
+            Self::Ko => include_str!("../locales/ko.json"),
+        }
     }
 }
 
@@ -64,23 +82,12 @@ pub fn current() -> Lang {
     Lang::ALL[usize::from(CURRENT.load(Ordering::Relaxed)).min(Lang::ALL.len() - 1)]
 }
 
-const TABLE: &str = include_str!("../locales/ui.tsv");
+type Table = HashMap<String, String>;
 
-/// Texte français → traductions (une par langue, dans l'ordre de `Lang::ALL`). Dans le fichier,
-/// un retour à la ligne s'écrit `\n` (deux caractères).
-fn table() -> &'static HashMap<String, Vec<String>> {
-    static MAP: OnceLock<HashMap<String, Vec<String>>> = OnceLock::new();
-    MAP.get_or_init(|| {
-        TABLE
-            .lines()
-            .skip(1)
-            .filter(|l| !l.trim().is_empty())
-            .map(|l| {
-                let cells: Vec<String> = l.split('\t').map(|c| c.replace("\\n", "\n")).collect();
-                (cells[0].clone(), cells)
-            })
-            .collect()
-    })
+/// Les traductions d'une langue, lues à la première utilisation.
+fn table(lang: Lang) -> &'static Table {
+    static TABLES: [OnceLock<Table>; 10] = [const { OnceLock::new() }; 10];
+    TABLES[lang as usize].get_or_init(|| serde_json::from_str(lang.file()).unwrap_or_else(|e| panic!("locales/{}.json illisible : {e}", lang.code())))
 }
 
 /// La traduction d'un texte dans `lang` (anglais, puis français, si elle manque).
@@ -88,9 +95,8 @@ pub fn translate(fr: &str, lang: Lang) -> Option<&'static str> {
     if lang == Lang::Fr {
         return None;
     }
-    let row = table().get(fr)?;
-    let cell = |l: Lang| row.get(l as usize).map(String::as_str).filter(|c| !c.is_empty());
-    cell(lang).or_else(|| cell(Lang::En))
+    let get = |l: Lang| table(l).get(fr).map(String::as_str).filter(|t| !t.is_empty());
+    get(lang).or_else(|| get(Lang::En))
 }
 
 /// Le texte dans la langue courante.
@@ -124,35 +130,32 @@ mod tests {
         // Sans changer la langue globale : les autres tests tournent en même temps, en français.
         assert_eq!(translate("Mon bureau", Lang::En), Some("My desk"));
         assert_eq!(translate("Mon bureau", Lang::Fr), None);
-        assert_eq!(translate("un texte absent de la table", Lang::De), None);
+        assert_eq!(translate("un texte absent des fichiers", Lang::De), None);
         assert_eq!(tr("Mon bureau"), "Mon bureau");
         assert_eq!(tf("{n} projets", &[("n", &3)]), "3 projets");
     }
 
-    /// Chaque ligne a une colonne par langue, et les mêmes paramètres partout.
+    fn params(s: &str) -> Vec<String> {
+        let mut v: Vec<String> = s.split('{').skip(1).filter_map(|p| p.split_once('}').map(|(n, _)| n.to_owned())).collect();
+        v.sort();
+        v
+    }
+
+    /// Chaque fichier se lit, n'a pas de traduction vide, et garde les paramètres du français.
     #[test]
-    fn table_complete_et_coherente() {
-        let header: Vec<&str> = TABLE.lines().next().unwrap().split('\t').collect();
-        assert_eq!(header, Lang::ALL.map(Lang::code));
-        let params = |s: &str| {
-            let mut v: Vec<String> = s.split('{').skip(1).filter_map(|p| p.split_once('}').map(|(n, _)| n.to_owned())).collect();
-            v.sort();
-            v
-        };
-        for (n, line) in TABLE.lines().enumerate().skip(1).filter(|(_, l)| !l.trim().is_empty()) {
-            let cells: Vec<&str> = line.split('\t').collect();
-            assert_eq!(cells.len(), Lang::ALL.len(), "ligne {} : {} colonnes", n + 1, cells.len());
-            for (l, cell) in cells.iter().enumerate().skip(1) {
-                assert!(!cell.is_empty(), "ligne {} : traduction {} manquante", n + 1, Lang::ALL[l].code());
-                assert_eq!(params(cell), params(cells[0]), "ligne {} ({}) : paramètres différents", n + 1, Lang::ALL[l].code());
+    fn fichiers_de_langue_coherents() {
+        for lang in Lang::ALL.into_iter().skip(1) {
+            for (fr, text) in table(lang) {
+                assert!(!text.trim().is_empty(), "locales/{}.json : traduction vide pour « {fr} »", lang.code());
+                assert_eq!(params(text), params(fr), "locales/{}.json : paramètres différents pour « {fr} »", lang.code());
             }
         }
     }
 
-    /// Chaque texte passé à `tr(…)` ou `tf(…)` dans le code a sa ligne dans la table.
+    /// Chaque texte passé à `tr(…)` ou `tf(…)` dans le code est traduit dans chaque langue.
     #[test]
     fn tous_les_textes_sont_traduits() {
-        let mut missing = Vec::new();
+        let mut keys = Vec::new();
         let mut files = vec![std::path::PathBuf::from("src")];
         while let Some(p) = files.pop() {
             if p.is_dir() {
@@ -171,13 +174,20 @@ mod tests {
                     }
                     let rest = &src[i + start.len()..];
                     let Some(end) = rest.find('"') else { continue };
-                    let key = rest[..end].replace("\\\"", "\"").replace("\\n", "\n");
-                    if !table().contains_key(key.as_str()) {
-                        missing.push(format!("{} : {key}", p.display()));
-                    }
+                    keys.push((p.display().to_string(), rest[..end].replace("\\\"", "\"").replace("\\n", "\n")));
                 }
             }
         }
-        assert!(missing.is_empty(), "{} textes sans traduction :\n{}", missing.len(), missing.join("\n"));
+        let mut missing = Vec::new();
+        for lang in Lang::ALL.into_iter().skip(1) {
+            for (file, key) in &keys {
+                if !table(lang).contains_key(key) {
+                    missing.push(format!("locales/{}.json : « {key} » ({file})", lang.code()));
+                }
+            }
+        }
+        missing.sort();
+        missing.dedup();
+        assert!(missing.is_empty(), "{} traductions manquantes :\n{}", missing.len(), missing.join("\n"));
     }
 }

@@ -25,8 +25,8 @@ pub fn modal(ctx: &egui::Context, data: &Data, st: &UiState, act: &mut Vec<Actio
             widgets::icon_tile(ui, Icon::CircleArrowUp, t.accent_ink, 44.0);
             ui.vertical(|ui| {
                 ui.spacing_mut().item_spacing.y = 2.0;
-                widgets::title(ui, tr("Mise à jour d'Atelier"), 22.0);
-                ui.label(RichText::new(tf("Version installée : {VERSION}", &[(tr("VERSION"), &VERSION)])).size(13.5).color(t.muted));
+                widgets::title(ui, tr("Mise à jour de Rust Project"), 22.0);
+                ui.label(RichText::new(tf("Version installée : {VERSION}", &[("VERSION", &VERSION)])).size(13.5).color(t.muted));
             });
             ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
                 if widgets::icon_button(ui, Icon::X, tr("Fermer"), 34.0).clicked() {
@@ -46,7 +46,7 @@ pub fn modal(ctx: &egui::Context, data: &Data, st: &UiState, act: &mut Vec<Actio
                     }
                     UpdatePhase::UpToDate => {
                         icons::show(ui, Icon::CircleCheck, 20.0, t.good_fg);
-                        ui.label(RichText::new(tf("Atelier {VERSION} est à jour.", &[(tr("VERSION"), &VERSION)])).size(15.0).color(t.ink));
+                        ui.label(RichText::new(tf("Rust Project {VERSION} est à jour.", &[("VERSION", &VERSION)])).size(15.0).color(t.ink));
                     }
                     _ => {
                         icons::show(ui, Icon::Info, 20.0, t.muted);
@@ -120,7 +120,7 @@ pub fn modal(ctx: &egui::Context, data: &Data, st: &UiState, act: &mut Vec<Actio
                     icons::show(ui, Icon::PackageCheck, 22.0, t.good_fg);
                     ui.label(RichText::new(tf("La version {version} est prête.", &[("version", &version)])).font(FontId::new(15.5, theme::semibold())).color(t.ink_strong));
                 });
-                ui.label(RichText::new(tr("Atelier va se fermer et se rouvrir pour l'appliquer. Tes projets et réglages sont conservés.")).size(13.5).color(t.muted));
+                ui.label(RichText::new(tr("Rust Project va se fermer et se rouvrir pour l'appliquer. Tes projets et réglages sont conservés.")).size(13.5).color(t.muted));
                 ui.add_space(12.0);
                 ui.horizontal(|ui| {
                     if widgets::button(ui, Some(Icon::RotateCw), tr("Redémarrer maintenant"), Kind::Primary).clicked() {

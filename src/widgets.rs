@@ -1,4 +1,4 @@
-//! La boîte à widgets d'Atelier. Chaque widget suit le même schéma : réserver un rectangle,
+//! La boîte à widgets de Rust Project. Chaque widget suit le même schéma : réserver un rectangle,
 //! lire l'interaction, peindre avec les tokens, et se décrire (`widget_info`) pour les lecteurs
 //! d'écran et les tests.
 
@@ -252,7 +252,7 @@ pub fn icon_button(ui: &mut Ui, icon: Icon, tip: &str, size: f32) -> Response {
     icon_button_tip(ui, icon, tip, tip, size)
 }
 
-/// Comme `icon_button`, avec une bulle différente du nom accessible (un état : « Atelier à
+/// Comme `icon_button`, avec une bulle différente du nom accessible (un état : « Rust Project à
 /// jour »…). Une seule bulle au survol.
 pub fn icon_button_tip(ui: &mut Ui, icon: Icon, name: &str, tip: &str, size: f32) -> Response {
     let t = tok(ui);
