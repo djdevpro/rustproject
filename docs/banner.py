@@ -59,8 +59,8 @@ img.paste(Image.new("RGB", grad.size, BG), (x0 - 2, y0 - 2), grad)
 # Le texte.
 d = ImageDraw.Draw(img)
 left = 96
-d.rounded_rectangle((left, 118, left + 132, 148), 15, fill=(46, 33, 16), outline=(120, 82, 34))
-d.text((left + 66, 133), "Rust · egui", font=font(17, "Semibold Text"), fill=AMBER, anchor="mm")
+d.rounded_rectangle((left, 118, left + 150, 148), 15, fill=(46, 33, 16), outline=(120, 82, 34))
+d.text((left + 75, 133), "Rust and egui", font=font(17, "Semibold Text"), fill=AMBER, anchor="mm")
 d.text((left - 4, 168), "Atelier", font=font(118, "Bold Display"), fill=INK)
 d.rectangle((left, 318, left + 64, 323), fill=AMBER)
 d.text((left, 348), "All your side projects in one place.", font=font(34, "Semibold Display"), fill=INK)
