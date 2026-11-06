@@ -8,6 +8,7 @@ use crate::icons::{self, Icon};
 use crate::model::{Attention, Data, Status};
 use crate::theme::{self, Tokens, mix, tint};
 use crate::widgets::{self, Kind, Tone};
+use crate::i18n::{tf, tr};
 
 const FLOW_PREVIEW: usize = 6;
 
@@ -28,9 +29,9 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
     // Barre d'outils : recherche et ajout.
     ui.horizontal(|ui| {
         let w = ui.available_width() - 214.0;
-        widgets::icon_input(ui, &mut st.search, Icon::Search, "Rechercher un projet…", w, 46.0);
+        widgets::icon_input(ui, &mut st.search, Icon::Search, tr("Rechercher un projet…"), w, 46.0);
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            if widgets::button_sized(ui, Some(Icon::Plus), "Ajouter un projet", Kind::Primary, 46.0, Some(200.0)).clicked() {
+            if widgets::button_sized(ui, Some(Icon::Plus), tr("Ajouter un projet"), Kind::Primary, 46.0, Some(200.0)).clicked() {
                 act.push(Action::OpenAddProject);
             }
         });
@@ -54,9 +55,9 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
         // ---- Mes projets du moment : une rangée qui défile à l'horizontale.
         let focus: Vec<usize> = data.focus().into_iter().filter(|&i| st.passes(i)).collect();
         ui.horizontal(|ui| {
-            widgets::section_header(ui, "Mes projets du moment", None);
+            widgets::section_header(ui, tr("Mes projets du moment"), None);
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                let (icon, label) = if st.reorder { (Icon::Check, "Terminer") } else { (Icon::ArrowLeftRight, "Réorganiser") };
+                let (icon, label) = if st.reorder { (Icon::Check, tr("Terminer")) } else { (Icon::ArrowLeftRight, tr("Réorganiser")) };
                 if widgets::button(ui, Some(icon), label, Kind::Ghost).clicked() {
                     st.reorder = !st.reorder;
                 }
@@ -70,7 +71,7 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
         if focus.is_empty() {
             widgets::card(&t).show(ui, |ui| {
                 ui.set_width(ui.available_width());
-                let text = "Aucun projet en focus. Choisis-en un au fil de l'eau ou dans la bibliothèque.";
+                let text = tr("Aucun projet en focus. Choisis-en un au fil de l'eau ou dans la bibliothèque.");
                 widgets::muted(ui, text);
             });
         } else {
@@ -94,9 +95,9 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
             .filter(|&i| data.projects[i].attention == Attention::Flow && data.projects[i].status != Status::Archived && st.passes(i))
             .collect();
         ui.horizontal(|ui| {
-            widgets::section_header(ui, "Au fil de l'eau", Some(&data.count(Attention::Flow).to_string()));
+            widgets::section_header(ui, tr("Au fil de l'eau"), Some(&data.count(Attention::Flow).to_string()));
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if widgets::link(ui, "Tout voir dans la bibliothèque", Some(Icon::ArrowRight), 14.0).clicked() {
+                if widgets::link(ui, tr("Tout voir dans la bibliothèque"), Some(Icon::ArrowRight), 14.0).clicked() {
                     act.push(Action::Library(Some(Attention::Flow)));
                 }
             });
@@ -114,11 +115,11 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
             }
             if flow.is_empty() {
                 ui.add_space(12.0);
-                ui.vertical_centered(|ui| widgets::muted(ui, "Rien au fil de l'eau pour cette recherche."));
+                ui.vertical_centered(|ui| widgets::muted(ui, tr("Rien au fil de l'eau pour cette recherche.")));
                 ui.add_space(12.0);
             }
             if flow.len() > shown || (st.flow_expanded && flow.len() > FLOW_PREVIEW) {
-                let label = if st.flow_expanded { "Réduire".to_owned() } else { format!("Afficher les {} autres", flow.len() - shown) };
+                let label = if st.flow_expanded { tr("Réduire").to_owned() } else { tf("Afficher les {0} autres", &[("0", &(flow.len() - shown))]) };
                 ui.add_space(4.0);
                 ui.vertical_centered(|ui| {
                     if widgets::button(ui, Some(if st.flow_expanded { Icon::ChevronUp } else { Icon::ChevronDown }), &label, Kind::Ghost).clicked() {
@@ -132,9 +133,9 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
         // ---- À redécouvrir
         ui.add_space(14.0);
         ui.horizontal(|ui| {
-            widgets::section_header(ui, "À redécouvrir", None);
+            widgets::section_header(ui, tr("À redécouvrir"), None);
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if widgets::link(ui, "Ouvrir la revue", Some(Icon::ArrowRight), 14.0).clicked() {
+                if widgets::link(ui, tr("Ouvrir la revue"), Some(Icon::ArrowRight), 14.0).clicked() {
                     act.push(Action::Go(Screen::Revisit));
                 }
             });
@@ -146,7 +147,7 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
                     ui.set_width(ui.available_width());
                     ui.horizontal(|ui| {
                         icons::show(ui, Icon::CircleCheck, 22.0, t.good_fg);
-                        let text = if data.count(Attention::Reserve) == 0 { "Aucun projet en réserve : rien à redécouvrir pour l'instant." } else { "Revue du jour terminée. Rendez-vous demain pour un autre projet." };
+                        let text = if data.count(Attention::Reserve) == 0 { tr("Aucun projet en réserve : rien à redécouvrir pour l'instant.") } else { tr("Revue du jour terminée. Rendez-vous demain pour un autre projet.") };
                         widgets::muted(ui, text);
                     });
                 });
@@ -168,63 +169,63 @@ fn first_run(ui: &mut Ui, st: &UiState, has_roots: bool, act: &mut Vec<Action>) 
             ui.add_space(8.0);
             if !has_roots && st.scan_started.is_none() {
                 // Rien n'est choisi à la place de l'utilisateur : c'est lui qui désigne ses dossiers.
-                widgets::title(ui, "Où sont tes projets ?", 26.0);
+                widgets::title(ui, tr("Où sont tes projets ?"), 26.0);
                 ui.add_space(4.0);
-                widgets::muted(ui, "Choisis le ou les dossiers qui contiennent tes projets. Atelier les parcourt sur 1 à 3 niveaux, puis l'IA (ou les règles) en fait des fiches.");
+                widgets::muted(ui, tr("Choisis le ou les dossiers qui contiennent tes projets. Atelier les parcourt sur 1 à 3 niveaux, puis l'IA (ou les règles) en fait des fiches."));
                 ui.add_space(16.0);
                 ui.horizontal(|ui| {
                     ui.add_space((ui.available_width() - 420.0).max(0.0) / 2.0);
-                    if widgets::button(ui, Some(Icon::FolderPlus), "Choisir un dossier source", Kind::Primary).clicked() {
+                    if widgets::button(ui, Some(Icon::FolderPlus), tr("Choisir un dossier source"), Kind::Primary).clicked() {
                         act.push(Action::PickRoot);
                     }
-                    if widgets::button(ui, Some(Icon::Plus), "Ajouter un projet", Kind::Secondary).clicked() {
+                    if widgets::button(ui, Some(Icon::Plus), tr("Ajouter un projet"), Kind::Secondary).clicked() {
                         act.push(Action::OpenAddProject);
                     }
                 });
                 return;
             }
-            widgets::title(ui, "Tes projets arrivent", 26.0);
+            widgets::title(ui, tr("Tes projets arrivent"), 26.0);
             ui.add_space(4.0);
             if let Some(started) = st.scan_started {
                 let _ = started;
                 ui.horizontal(|ui| {
                     ui.add_space((ui.available_width() - 320.0).max(0.0) / 2.0);
                     ui.add(egui::Spinner::new().size(16.0).color(t.accent));
-                    ui.label(RichText::new(format!("Scan en cours… {} dossiers relevés", st.scan_count)).size(15.0).color(t.muted));
+                    ui.label(RichText::new(tf("Scan en cours… {0} dossiers relevés", &[("0", &st.scan_count)])).size(15.0).color(t.muted));
                 });
             } else if let Some(a) = st.analysis.as_ref().filter(|a| !a.finished) {
-                ui.label(RichText::new(format!("Classement {}/{} · {}", a.done, a.total, a.current)).size(15.0).color(t.muted));
+                ui.label(RichText::new(tf("Classement {0}/{1} · {2}", &[("0", &a.done), ("1", &a.total), ("2", &a.current)])).size(15.0).color(t.muted));
             } else if let Some(scan) = &st.scan {
                 // Le scan est fait : c'est à l'utilisateur de choisir qui trie (IA ou règles).
                 let likely = scan.likely().count();
-                ui.label(RichText::new(format!("{} dossiers relevés, dont {likely} projets probables. Qui fait le tri ?", scan.dirs.len())).size(15.0).color(t.muted));
+                ui.label(RichText::new(tf("{0} dossiers relevés, dont {likely} projets probables. Qui fait le tri ?", &[("0", &scan.dirs.len()), ("likely", &likely)])).size(15.0).color(t.muted));
                 ui.add_space(16.0);
                 ui.horizontal(|ui| {
                     ui.add_space((ui.available_width() - 640.0).max(0.0) / 2.0);
-                    if widgets::button(ui, Some(Icon::Cpu), "Choisir un modèle Ollama", Kind::Primary).clicked() {
+                    if widgets::button(ui, Some(Icon::Cpu), tr("Choisir un modèle Ollama"), Kind::Primary).clicked() {
                         act.push(Action::GoConfig(CfgSection::Ai));
                     }
-                    if widgets::button(ui, Some(Icon::Network), "Passer par un agent MCP", Kind::Secondary).clicked() {
+                    if widgets::button(ui, Some(Icon::Network), tr("Passer par un agent MCP"), Kind::Secondary).clicked() {
                         act.push(Action::GoConfig(CfgSection::Ai));
                     }
-                    if widgets::button(ui, Some(Icon::ListPlus), &format!("Créer les {likely} fiches (règles)"), Kind::Secondary).on_hover_text("Sans IA : chaque dossier avec un marqueur devient un projet.").clicked() {
+                    if widgets::button(ui, Some(Icon::ListPlus), &tf("Créer les {likely} fiches (règles)", &[("likely", &likely)]), Kind::Secondary).on_hover_text(tr("Sans IA : chaque dossier avec un marqueur devient un projet.")).clicked() {
                         act.push(Action::AddAllLikely);
                     }
                 });
                 return;
             } else {
-                widgets::muted(ui, "Atelier parcourt tes dossiers sources (3 niveaux) et crée une fiche pour chaque projet reconnu.");
+                widgets::muted(ui, tr("Atelier parcourt tes dossiers sources (3 niveaux) et crée une fiche pour chaque projet reconnu."));
             }
             ui.add_space(16.0);
             ui.horizontal(|ui| {
                 ui.add_space((ui.available_width() - 560.0).max(0.0) / 2.0);
-                if widgets::button(ui, Some(Icon::RefreshCw), "Scanner mes dossiers", Kind::Primary).clicked() {
+                if widgets::button(ui, Some(Icon::RefreshCw), tr("Scanner mes dossiers"), Kind::Primary).clicked() {
                     act.push(Action::StartScan);
                 }
-                if widgets::button(ui, Some(Icon::FolderTree), "Dossiers sources", Kind::Secondary).clicked() {
+                if widgets::button(ui, Some(Icon::FolderTree), tr("Dossiers sources"), Kind::Secondary).clicked() {
                     act.push(Action::GoConfig(CfgSection::Sources));
                 }
-                if widgets::button(ui, Some(Icon::Plus), "Ajouter un projet", Kind::Secondary).clicked() {
+                if widgets::button(ui, Some(Icon::Plus), tr("Ajouter un projet"), Kind::Secondary).clicked() {
                     act.push(Action::OpenAddProject);
                 }
             });
@@ -236,14 +237,14 @@ fn first_run(ui: &mut Ui, st: &UiState, has_roots: bool, act: &mut Vec<Action>) 
 fn search_results(ui: &mut Ui, data: &Data, st: &UiState, hits: &[crate::search::Hit], act: &mut Vec<Action>) {
     let t = Tokens::get(ui.ctx());
     ui.horizontal(|ui| {
-        widgets::section_header(ui, "Résultats", Some(&hits.len().to_string()));
+        widgets::section_header(ui, tr("Résultats"), Some(&hits.len().to_string()));
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             let (text, tone) = if st.query_semantic {
-                ("Recherche sémantique active", Tone::Good)
+                (tr("Recherche sémantique active"), Tone::Good)
             } else if data.config.ollama_embed_model.is_empty() {
-                ("Recherche floue · choisis un modèle d'embeddings pour chercher par le sens", Tone::Neutral)
+                (tr("Recherche floue · choisis un modèle d'embeddings pour chercher par le sens"), Tone::Neutral)
             } else {
-                ("Recherche floue · le sens arrive…", Tone::Neutral)
+                (tr("Recherche floue · le sens arrive…"), Tone::Neutral)
             };
             widgets::chip(ui, text, tone);
         });
@@ -251,7 +252,7 @@ fn search_results(ui: &mut Ui, data: &Data, st: &UiState, hits: &[crate::search:
     if hits.is_empty() {
         widgets::card(&t).show(ui, |ui| {
             ui.set_width(ui.available_width());
-            widgets::muted(ui, "Aucun projet ne correspond. Essaie un autre mot : la recherche tolère les fautes de frappe.");
+            widgets::muted(ui, tr("Aucun projet ne correspond. Essaie un autre mot : la recherche tolère les fautes de frappe."));
         });
         return;
     }
@@ -270,8 +271,8 @@ fn search_results(ui: &mut Ui, data: &Data, st: &UiState, hits: &[crate::search:
                     // « ≈ sens proche » : trouvé par le sens, pas par les mots ; « via Immobilier » :
                     // par un concept de l'ontologie auquel le projet est rattaché.
                     let why = match hit.via.and_then(|c| data.ontology.concept(c)) {
-                        Some(c) => Some(format!("via {}", c.name)),
-                        None => hit.semantic_only.then(|| "≈ sens proche".to_owned()),
+                        Some(c) => Some(tf("via {0}", &[("0", &c.name)])),
+                        None => hit.semantic_only.then(|| tr("≈ sens proche").to_owned()),
                     };
                     if let Some(why) = why {
                         let pos = pos2(before.x + 22.0 + 42.0, before.y + 47.0);
@@ -299,7 +300,7 @@ fn focus_card(ui: &mut Ui, data: &Data, i: usize, selected: bool, reorder: bool,
     icons::paint(&painter, pos2(x0 + 13.0, y + 13.0), p.icon, 26.0, t.accent_ink);
     widgets::paint_text(&painter, pos2(x0 + 38.0, y + 1.0), &p.name, FontId::new(19.5, theme::bold()), t.ink_strong, inner_w - 38.0 - if reorder { 56.0 } else { 0.0 });
     y += 38.0;
-    widgets::paint_text(&painter, pos2(x0, y), &format!("Résultat visé : {}", p.outcome), FontId::proportional(13.5), t.muted, inner_w);
+    widgets::paint_text(&painter, pos2(x0, y), &tf("Résultat visé : {0}", &[("0", &p.outcome)]), FontId::proportional(13.5), t.muted, inner_w);
     y += 30.0;
     let w = widgets::paint_chip(&painter, &t, pos2(x0, y + 12.0), p.status.label(), widgets::status_tone(p.status));
     if p.idle_days > 0 {
@@ -323,11 +324,11 @@ fn focus_card(ui: &mut Ui, data: &Data, i: usize, selected: bool, reorder: bool,
     let by = rect.bottom() - 28.0;
     let color = mix(t.muted, t.accent_ink, hover.max(if selected { 1.0 } else { 0.0 }));
     icons::paint(&painter, pos2(x0 + 8.0, by + 9.0), Icon::ArrowRight, 16.0, color);
-    let g = painter.layout_no_wrap("Détails".to_owned(), FontId::new(14.0, theme::semibold()), color);
+    let g = painter.layout_no_wrap(tr("Détails").to_owned(), FontId::new(14.0, theme::semibold()), color);
     painter.galley(pos2(x0 + 24.0, by + 9.0 - g.size().y / 2.0), g, color);
     // Mode « Réorganiser » : flèches pour déplacer la carte.
     if reorder {
-        for (k, (icon, delta, tip)) in [(Icon::ChevronLeft, -1, "Vers la gauche"), (Icon::ChevronRight, 1, "Vers la droite")].into_iter().enumerate() {
+        for (k, (icon, delta, tip)) in [(Icon::ChevronLeft, -1, tr("Vers la gauche")), (Icon::ChevronRight, 1, tr("Vers la droite"))].into_iter().enumerate() {
             let r = Rect::from_min_size(pos2(rect.right() - 64.0 + 30.0 * k as f32, rect.top() + 14.0), vec2(28.0, 28.0));
             let b = ui.interact(r, Id::unique(("focus-move", i, k)), Sense::click()).on_hover_text(tip);
             painter.rect(r, CornerRadius::same(7), if b.hovered() { t.raised } else { t.input }, Stroke::new(1.0, t.line_strong), StrokeKind::Inside);
@@ -394,7 +395,7 @@ fn flow_row(ui: &mut Ui, data: &Data, i: usize, selected: bool, act: &mut Vec<Ac
             // Fiche neuve : pas encore de prochaine action, on montre sa description.
             job.append(&p.description, 0.0, f(egui::FontFamily::Proportional, t.muted));
         } else {
-            job.append("Prochaine action : ", 0.0, f(theme::semibold(), t.ink));
+            job.append(tr("Prochaine action : "), 0.0, f(theme::semibold(), t.ink));
             job.append(&p.next_action, 0.0, f(egui::FontFamily::Proportional, t.muted));
         }
         job.wrap.max_width = max_w;
@@ -408,7 +409,7 @@ fn flow_row(ui: &mut Ui, data: &Data, i: usize, selected: bool, act: &mut Vec<Ac
     let bh = ui.ctx().animate_bool(b.id.with("hover"), b.hovered());
     painter.rect(button, CornerRadius::same(8), tint(t.ink, 0.06 * bh), Stroke::new(1.0, mix(t.line_strong, t.faint, bh)), StrokeKind::Inside);
     icons::paint(&painter, pos2(button.left() + 20.0, cy), Icon::ArrowRight, 15.0, t.ink);
-    let g = painter.layout_no_wrap("Détails".to_owned(), FontId::new(13.5, theme::semibold()), t.ink);
+    let g = painter.layout_no_wrap(tr("Détails").to_owned(), FontId::new(13.5, theme::semibold()), t.ink);
     painter.galley(pos2(button.left() + 34.0, cy - g.size().y / 2.0), g, t.ink);
     if b.clicked() || resp.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
         act.push(Action::Select(i));
@@ -425,10 +426,10 @@ fn rediscover_card(ui: &mut Ui, data: &Data, i: usize, act: &mut Vec<Action>) {
         let one_line = ui.available_width() >= 1000.0;
         let buttons = |ui: &mut Ui, act: &mut Vec<Action>| {
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if widgets::button(ui, Some(Icon::RotateCcw), "Passer en revue", Kind::Primary).clicked() {
+                if widgets::button(ui, Some(Icon::RotateCcw), tr("Passer en revue"), Kind::Primary).clicked() {
                     act.push(Action::Go(Screen::Revisit));
                 }
-                if widgets::button(ui, None, "Voir le résumé", Kind::Secondary).clicked() {
+                if widgets::button(ui, None, tr("Voir le résumé"), Kind::Secondary).clicked() {
                     act.push(Action::Select(i));
                 }
             });
@@ -438,8 +439,8 @@ fn rediscover_card(ui: &mut Ui, data: &Data, i: usize, act: &mut Vec<Action>) {
             ui.allocate_ui(vec2(width.max(60.0), 40.0), |ui| {
                 ui.vertical(|ui| {
                     ui.spacing_mut().item_spacing.y = 0.0;
-                    ui.add(egui::Label::new(RichText::new("Revue choisie aujourd'hui").size(14.5).color(t.ink)).truncate());
-                    ui.add(egui::Label::new(RichText::new(format!("Inactif depuis {} jours · {}", p.idle_days, p.kind)).size(12.5).color(t.faint)).truncate());
+                    ui.add(egui::Label::new(RichText::new(tr("Revue choisie aujourd'hui")).size(14.5).color(t.ink)).truncate());
+                    ui.add(egui::Label::new(RichText::new(tf("Inactif depuis {0} jours · {1}", &[("0", &p.idle_days), ("1", &p.kind)])).size(12.5).color(t.faint)).truncate());
                 });
             });
         };
@@ -480,19 +481,19 @@ pub fn add_project(ctx: &egui::Context, data: &Data, a: &mut AddProjectState, ac
         ui.horizontal_top(|ui| {
             ui.vertical(|ui| {
                 ui.spacing_mut().item_spacing.y = 2.0;
-                widgets::title(ui, "Ajouter un projet", 24.0);
-                let how = if data.config.ai_mode == crate::model::AiMode::Ollama && !data.config.ollama_model.is_empty() { format!("Ollama ({})", data.config.ollama_model) } else { "les règles locales".to_owned() };
-                widgets::muted(ui, &format!("Choisis un dossier : il est analysé par {how}, puis tu valides la fiche."));
+                widgets::title(ui, tr("Ajouter un projet"), 24.0);
+                let how = if data.config.ai_mode == crate::model::AiMode::Ollama && !data.config.ollama_model.is_empty() { tf("Ollama ({0})", &[("0", &data.config.ollama_model)]) } else { tr("les règles locales").to_owned() };
+                widgets::muted(ui, &tf("Choisis un dossier : il est analysé par {how}, puis tu valides la fiche.", &[("how", &how)]));
             });
             ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
-                if widgets::icon_button(ui, Icon::X, "Fermer", 34.0).clicked() {
+                if widgets::icon_button(ui, Icon::X, tr("Fermer"), 34.0).clicked() {
                     open = false;
                 }
             });
         });
         ui.add_space(14.0);
         let w = ui.available_width();
-        let path_resp = widgets::labeled(ui, "Dossier du projet", |ui| widgets::path_input(ui, &mut a.path, w));
+        let path_resp = widgets::labeled(ui, tr("Dossier du projet"), |ui| widgets::path_input(ui, &mut a.path, w));
         if path_resp.changed() {
             // Un autre dossier : l'analyse précédente ne vaut plus.
             a.proposal = None;
@@ -502,18 +503,18 @@ pub fn add_project(ctx: &egui::Context, data: &Data, a: &mut AddProjectState, ac
         if a.analyzing {
             ui.horizontal(|ui| {
                 ui.add(egui::Spinner::new().size(16.0).color(t.accent));
-                ui.label(RichText::new("Analyse du dossier…").color(t.muted));
+                ui.label(RichText::new(tr("Analyse du dossier…")).color(t.muted));
             });
         } else if a.proposal.is_none() {
             ui.horizontal(|ui| {
                 let ready = std::path::Path::new(a.path.trim()).is_dir();
-                if ui.add_enabled_ui(ready, |ui| widgets::button(ui, Some(Icon::ScanSearch), "Analyser le dossier", Kind::Primary)).inner.clicked() {
+                if ui.add_enabled_ui(ready, |ui| widgets::button(ui, Some(Icon::ScanSearch), tr("Analyser le dossier"), Kind::Primary)).inner.clicked() {
                     a.analyzing = true;
                     a.error = None;
                     act.push(Action::AnalyzeFolder(a.path.trim().to_owned()));
                 }
                 if !ready && !a.path.trim().is_empty() {
-                    ui.label(RichText::new("Ce dossier n'existe pas.").size(13.0).color(t.faint));
+                    ui.label(RichText::new(tr("Ce dossier n'existe pas.")).size(13.0).color(t.faint));
                 }
             });
         }
@@ -534,20 +535,20 @@ pub fn add_project(ctx: &egui::Context, data: &Data, a: &mut AddProjectState, ac
                     }
                 });
                 let iw = ui.available_width();
-                widgets::labeled(ui, "Nom", |ui| widgets::text_input(ui, &mut p.name, "Nom du projet", iw));
-                widgets::labeled(ui, "Description (une phrase)", |ui| widgets::text_input(ui, &mut p.description, "Ce qu'est le projet, en une phrase", iw));
+                widgets::labeled(ui, tr("Nom"), |ui| widgets::text_input(ui, &mut p.name, tr("Nom du projet"), iw));
+                widgets::labeled(ui, tr("Description (une phrase)"), |ui| widgets::text_input(ui, &mut p.description, tr("Ce qu'est le projet, en une phrase"), iw));
                 ui.horizontal(|ui| {
                     let half = (iw - 12.0) / 2.0;
                     ui.vertical(|ui| {
                         ui.set_width(half);
-                        widgets::labeled(ui, "Domaine", |ui| widgets::text_input(ui, &mut p.domain, "ex. Formation", half - 4.0));
+                        widgets::labeled(ui, tr("Domaine"), |ui| widgets::text_input(ui, &mut p.domain, tr("ex. Formation"), half - 4.0));
                     });
                     ui.vertical(|ui| {
                         ui.set_width(half);
-                        widgets::labeled(ui, "Type", |ui| widgets::text_input(ui, &mut p.kind, "ex. Application web", half - 4.0));
+                        widgets::labeled(ui, tr("Type"), |ui| widgets::text_input(ui, &mut p.kind, tr("ex. Application web"), half - 4.0));
                     });
                 });
-                widgets::labeled(ui, "Attention", |ui| {
+                widgets::labeled(ui, tr("Attention"), |ui| {
                     let options: Vec<(Attention, Option<Icon>, &str)> = Attention::ALL.iter().map(|x| (*x, Some(x.icon()), x.label())).collect();
                     widgets::segmented(ui, "add-attention", &mut a.attention, &options, Some(iw));
                 });
@@ -556,12 +557,12 @@ pub fn add_project(ctx: &egui::Context, data: &Data, a: &mut AddProjectState, ac
         ui.add_space(10.0);
         ui.horizontal(|ui| {
             icons::show(ui, Icon::Lightbulb, 15.0, t.faint);
-            ui.label(RichText::new("Les projets rangés dans tes dossiers sources sont découverts tout seuls à chaque scan.").size(12.5).color(t.faint));
+            ui.label(RichText::new(tr("Les projets rangés dans tes dossiers sources sont découverts tout seuls à chaque scan.")).size(12.5).color(t.faint));
         });
         ui.add_space(6.0);
         widgets::separator(ui);
         let ready = a.proposal.as_ref().is_some_and(|p| !p.name.trim().is_empty());
-        let (cancel, ok) = footer_buttons(ui, "Ajouter le projet", ready);
+        let (cancel, ok) = footer_buttons(ui, tr("Ajouter le projet"), ready);
         if cancel {
             open = false;
         }

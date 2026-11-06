@@ -9,6 +9,7 @@ use crate::model::{Attention, Data};
 use crate::screens::desk::rediscover_queue;
 use crate::theme::{self, Tokens, tint};
 use crate::widgets::{self, Kind, Tone};
+use crate::i18n::{tf, tr};
 
 pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
     let t = Tokens::get(ui.ctx());
@@ -20,14 +21,14 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
     ui.horizontal(|ui| {
         ui.vertical(|ui| {
             ui.spacing_mut().item_spacing.y = 2.0;
-            widgets::title(ui, "À revisiter", 30.0);
-            widgets::muted(ui, "Un projet en réserve à la fois : on le relit, on décide de son sort. Rien ne dort sans qu'on l'ait choisi.");
+            widgets::title(ui, tr("À revisiter"), 30.0);
+            widgets::muted(ui, tr("Un projet en réserve à la fois : on le relit, on décide de son sort. Rien ne dort sans qu'on l'ait choisi."));
         });
         ui.add_space((ui.available_width() - 230.0).max(0.0));
         ui.scope(|ui| {
             ui.vertical(|ui| {
                 ui.set_width(220.0);
-                ui.label(RichText::new(format!("Revue du jour · {}/{}", done_today.min(per_day), per_day)).font(FontId::new(14.0, theme::semibold())).color(t.ink));
+                ui.label(RichText::new(tf("Revue du jour · {0}/{1}", &[("0", &done_today.min(per_day)), ("1", &per_day)])).font(FontId::new(14.0, theme::semibold())).color(t.ink));
                 widgets::progress(ui, done_today as f32 / per_day.max(1) as f32, t.accent, 220.0, 6.0);
             });
         });
@@ -47,8 +48,8 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
                         ui.add_space(40.0);
                         ui.vertical_centered(|ui| {
                             icons::show(ui, Icon::CircleCheck, 44.0, t.good_fg);
-                            widgets::title(ui, "Rien à revisiter", 22.0);
-                            widgets::muted(ui, "Toute la réserve a été passée en revue. Elle se remplira à nouveau toute seule.");
+                            widgets::title(ui, tr("Rien à revisiter"), 22.0);
+                            widgets::muted(ui, tr("Toute la réserve a été passée en revue. Elle se remplira à nouveau toute seule."));
                         });
                         ui.add_space(40.0);
                     });
@@ -90,9 +91,9 @@ fn review_card(ui: &mut Ui, data: &Data, p: usize, act: &mut Vec<Action>) {
                     ui.vertical(|ui| {
                         ui.horizontal(|ui| {
                             icons::show(ui, Icon::Hourglass, 18.0, t.accent_ink);
-                            ui.label(RichText::new(format!("Inactif depuis {} jours", project.idle_days)).font(FontId::new(15.0, theme::semibold())).color(t.accent_ink));
+                            ui.label(RichText::new(tf("Inactif depuis {0} jours", &[("0", &project.idle_days)])).font(FontId::new(15.0, theme::semibold())).color(t.accent_ink));
                         });
-                        ui.label(RichText::new(format!("Dernière activité {}", idle_text(project.idle_days))).size(12.5).color(t.faint));
+                        ui.label(RichText::new(tf("Dernière activité {0}", &[("0", &idle_text(project.idle_days))])).size(12.5).color(t.faint));
                     });
                 });
             });
@@ -105,13 +106,13 @@ fn review_card(ui: &mut Ui, data: &Data, p: usize, act: &mut Vec<Action>) {
                 ui.vertical(|ui| {
                     ui.set_width(half);
                     ui.spacing_mut().item_spacing.y = 14.0;
-                    widgets::info_row(ui, Icon::Crosshair, "Objectif", |ui| {
+                    widgets::info_row(ui, Icon::Crosshair, tr("Objectif"), |ui| {
                         widgets::muted(ui, &project.objective);
                     });
-                    widgets::info_row(ui, Icon::FileText, "Dernier point", |ui| {
+                    widgets::info_row(ui, Icon::FileText, tr("Dernier point"), |ui| {
                         widgets::muted(ui, &project.last_point);
                     });
-                    widgets::info_row(ui, Icon::Zap, "Prochaine action", |ui| {
+                    widgets::info_row(ui, Icon::Zap, tr("Prochaine action"), |ui| {
                         ui.label(RichText::new(&project.next_action).size(14.5).color(t.ink));
                     });
                 });
@@ -121,28 +122,28 @@ fn review_card(ui: &mut Ui, data: &Data, p: usize, act: &mut Vec<Action>) {
                     ui.spacing_mut().item_spacing.y = 8.0;
                     ui.horizontal(|ui| {
                         icons::show(ui, Icon::Sparkles, 17.0, domain.color);
-                        ui.label(RichText::new("Ce que l'IA en retient").font(FontId::new(15.0, theme::bold())).color(t.ink_strong));
+                        ui.label(RichText::new(tr("Ce que l'IA en retient")).font(FontId::new(15.0, theme::bold())).color(t.ink_strong));
                     });
                     let (done, total) = project.steps_done();
                     let bullets = [
-                        format!("Projet {} en {}, rangé dans « {} ».", project.kind.to_lowercase(), project.stack.join(" + "), domain.name),
-                        format!("Dernier commit {} : « {} » était en cours.", idle_text(project.idle_days), project.next_action.trim_end_matches('.')),
-                        format!("{done} étape(s) faite(s) sur {total}. {}", if done == 0 { "Rien n'est entamé : la reprise sera légère." } else { "Le plus dur est derrière." }),
+                        tf("Projet {0} en {1}, rangé dans « {2} ».", &[("0", &project.kind.to_lowercase()), ("1", &project.stack.join(" + ")), ("2", &domain.name)]),
+                        tf("Dernier commit {0} : « {1} » était en cours.", &[("0", &idle_text(project.idle_days)), ("1", &project.next_action.trim_end_matches('.'))]),
+                        tf("{done} étape(s) faite(s) sur {total}. {0}", &[("done", &done), ("total", &total), ("0", &(if done == 0 { tr("Rien n'est entamé : la reprise sera légère.") } else { tr("Le plus dur est derrière.") }))]),
                         if project.idle_days > 180 {
-                            "Suggestion : l'archiver si l'idée ne te parle plus, sinon le passer au fil de l'eau.".to_owned()
+                            tr("Suggestion : l'archiver si l'idée ne te parle plus, sinon le passer au fil de l'eau.").to_owned()
                         } else {
-                            "Suggestion : le passer au fil de l'eau, une petite session suffit pour relancer.".to_owned()
+                            tr("Suggestion : le passer au fil de l'eau, une petite session suffit pour relancer.").to_owned()
                         },
                     ];
                     for b in bullets {
-                        ui.label(RichText::new(format!("•  {b}")).size(13.5).color(t.ink));
+                        ui.label(RichText::new(tf("•  {b}", &[("b", &b)])).size(13.5).color(t.ink));
                     }
                 }));
             });
             ui.add_space(18.0);
             // Relire vite : les lanceurs du projet en petit.
             ui.horizontal(|ui| {
-                ui.label(RichText::new("Ouvrir pour relire").size(13.5).color(t.muted));
+                ui.label(RichText::new(tr("Ouvrir pour relire")).size(13.5).color(t.muted));
                 for id in data.launchers_of(p) {
                     let l = &data.launchers[id];
                     let (rect, resp) = ui.allocate_exact_size(vec2(36.0, 36.0), Sense::click());
@@ -157,32 +158,32 @@ fn review_card(ui: &mut Ui, data: &Data, p: usize, act: &mut Vec<Action>) {
             ui.add_space(20.0);
             widgets::separator(ui);
             ui.add_space(16.0);
-            widgets::caps(ui, "Ta décision");
+            widgets::caps(ui, tr("Ta décision"));
             ui.add_space(8.0);
             let focus_full = data.config.limit_focus && data.count(Attention::Focus) >= data.config.focus_limit;
             ui.horizontal_wrapped(|ui| {
                 ui.spacing_mut().item_spacing = vec2(8.0, 8.0);
-                let focus = ui.add_enabled_ui(!focus_full, |ui| widgets::button_sized(ui, Some(Icon::Crosshair), "Remettre en focus", Kind::Primary, 42.0, None)).inner;
-                let focus = if focus_full { focus.on_disabled_hover_text(format!("Focus complet ({}/{}) : libère d'abord une place.", data.count(Attention::Focus), data.config.focus_limit)) } else { focus };
+                let focus = ui.add_enabled_ui(!focus_full, |ui| widgets::button_sized(ui, Some(Icon::Crosshair), tr("Remettre en focus"), Kind::Primary, 42.0, None)).inner;
+                let focus = if focus_full { focus.on_disabled_hover_text(tf("Focus complet ({0}/{1}) : libère d'abord une place.", &[("0", &data.count(Attention::Focus)), ("1", &data.config.focus_limit)])) } else { focus };
                 if focus.clicked() {
                     act.push(Action::Decide(p, Decision::Focus));
                 }
                 let kind = if focus_full { Kind::Primary } else { Kind::Secondary };
-                if widgets::button_sized(ui, Some(Icon::Waves), "Au fil de l'eau", kind, 42.0, None).clicked() {
+                if widgets::button_sized(ui, Some(Icon::Waves), tr("Au fil de l'eau"), kind, 42.0, None).clicked() {
                     act.push(Action::Decide(p, Decision::Flow));
                 }
-                if widgets::button_sized(ui, Some(Icon::Clock), "Garder en réserve", Kind::Secondary, 42.0, None).clicked() {
+                if widgets::button_sized(ui, Some(Icon::Clock), tr("Garder en réserve"), Kind::Secondary, 42.0, None).clicked() {
                     act.push(Action::Decide(p, Decision::Keep));
                 }
-                if widgets::button_sized(ui, Some(Icon::Archive), "Archiver", Kind::Danger, 42.0, None).clicked() {
+                if widgets::button_sized(ui, Some(Icon::Archive), tr("Archiver"), Kind::Danger, 42.0, None).clicked() {
                     act.push(Action::Decide(p, Decision::Archive));
                 }
-                if widgets::button_sized(ui, Some(Icon::ArrowRight), "Plus tard", Kind::Ghost, 42.0, None).clicked() {
+                if widgets::button_sized(ui, Some(Icon::ArrowRight), tr("Plus tard"), Kind::Ghost, 42.0, None).clicked() {
                     act.push(Action::Decide(p, Decision::Later));
                 }
             });
             if focus_full {
-                ui.label(RichText::new(format!("Le focus est plein ({}/{}) : « Au fil de l'eau » est proposé à la place.", data.count(Attention::Focus), data.config.focus_limit)).size(12.5).color(t.faint));
+                ui.label(RichText::new(tf("Le focus est plein ({0}/{1}) : « Au fil de l'eau » est proposé à la place.", &[("0", &data.count(Attention::Focus)), ("1", &data.config.focus_limit)])).size(12.5).color(t.faint));
             }
         });
     });
@@ -193,10 +194,10 @@ fn side(ui: &mut Ui, data: &Data, st: &mut UiState, queue: &[usize], current: Op
     widgets::card(&t).show(ui, |ui| {
         ui.set_width(ui.available_width());
         ui.horizontal(|ui| {
-            ui.label(RichText::new("File d'attente").font(FontId::new(17.0, theme::bold())).color(t.ink_strong));
+            ui.label(RichText::new(tr("File d'attente")).font(FontId::new(17.0, theme::bold())).color(t.ink_strong));
             widgets::count_pill(ui, &queue.len().to_string());
         });
-        widgets::muted(ui, "Les plus endormis d'abord.");
+        widgets::muted(ui, tr("Les plus endormis d'abord."));
         ui.add_space(4.0);
         let max_idle = queue.iter().map(|&i| data.projects[i].idle_days).max().unwrap_or(1).max(1) as f32;
         widgets::draggable(ScrollArea::vertical()).id_salt("revisit-queue").max_height(330.0).auto_shrink([false, true]).show(ui, |ui| {
@@ -227,9 +228,9 @@ fn side(ui: &mut Ui, data: &Data, st: &mut UiState, queue: &[usize], current: Op
     ui.add_space(12.0);
     widgets::card(&t).show(ui, |ui| {
         ui.set_width(ui.available_width());
-        ui.label(RichText::new("Décisions récentes").font(FontId::new(17.0, theme::bold())).color(t.ink_strong));
+        ui.label(RichText::new(tr("Décisions récentes")).font(FontId::new(17.0, theme::bold())).color(t.ink_strong));
         if st.decisions.is_empty() {
-            widgets::muted(ui, "Aucune décision pour l'instant.");
+            widgets::muted(ui, tr("Aucune décision pour l'instant."));
         }
         for (i, d) in st.decisions.iter().rev().take(6) {
             ui.horizontal(|ui| {
@@ -252,10 +253,10 @@ fn side(ui: &mut Ui, data: &Data, st: &mut UiState, queue: &[usize], current: Op
         ui.set_width(ui.available_width());
         ui.horizontal(|ui| {
             icons::show(ui, Icon::Calendar, 17.0, t.muted);
-            ui.label(RichText::new(format!("{} projet(s) par jour", data.config.reviews_per_day)).font(FontId::new(14.5, theme::semibold())).color(t.ink));
+            ui.label(RichText::new(tf("{0} projet(s) par jour", &[("0", &data.config.reviews_per_day)])).font(FontId::new(14.5, theme::semibold())).color(t.ink));
         });
-        widgets::muted(ui, "Le rythme de la revue et la mise en réserve automatique se règlent dans la configuration.");
-        if widgets::link(ui, "États & attention", Some(Icon::ArrowRight), 13.5).clicked() {
+        widgets::muted(ui, tr("Le rythme de la revue et la mise en réserve automatique se règlent dans la configuration."));
+        if widgets::link(ui, tr("États & attention"), Some(Icon::ArrowRight), 13.5).clicked() {
             act.push(Action::GoConfig(CfgSection::Attention));
         }
     });

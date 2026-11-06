@@ -20,6 +20,7 @@ use crate::icons::{self, Icon};
 use crate::model::{Attention, Data, Status};
 use crate::theme::{self, Tokens, mix, tint};
 use crate::widgets;
+use crate::i18n::{tf, tr};
 
 fn smoothstep(a: f32, b: f32, x: f32) -> f32 {
     let t = ((x - a) / (b - a)).clamp(0.0, 1.0);
@@ -38,7 +39,7 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>, v
     let ctx = ui.ctx().clone();
     let size = vec2(ui.available_width(), (ui.available_height() - 4.0).max(380.0));
     let (area, bg) = ui.allocate_exact_size(size, Sense::click_and_drag());
-    bg.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Canvas, true, "Carte des projets"));
+    bg.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Canvas, true, tr("Carte des projets")));
     let painter = ui.painter_at(area);
     painter.rect(area, CornerRadius::same(theme::R_CARD), t.surface, Stroke::new(1.0, t.line), StrokeKind::Inside);
 
@@ -66,7 +67,7 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>, v
     }
     dot_grid(&painter, &t, area, g.center, g.zoom);
     if g.sim.nodes.is_empty() {
-        painter.text(area.center(), Align2::CENTER_CENTER, "Aucun projet avec ces filtres", FontId::proportional(15.0), t.muted);
+        painter.text(area.center(), Align2::CENTER_CENTER, tr("Aucun projet avec ces filtres"), FontId::proportional(15.0), t.muted);
         return;
     }
 
@@ -118,7 +119,7 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>, v
             continue;
         }
         let resp = ui.interact(hit, Id::unique(("graph-node", key)), Sense::click_and_drag());
-        let name = if hub { format!("Domaine {}", data.domains[index].name) } else { data.projects[index].name.clone() };
+        let name = if hub { tf("Domaine {0}", &[("0", &data.domains[index].name)]) } else { data.projects[index].name.clone() };
         resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, &name));
         if resp.hovered() {
             hovered = Some(k);
@@ -357,27 +358,27 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>, v
     }
 
     // ---- habillage : aide, légende, commandes
-    let hint = painter.layout_no_wrap("Glisse pour te déplacer · molette pour zoomer · clique un domaine pour le filtrer".into(), FontId::proportional(12.0), t.faint);
+    let hint = painter.layout_no_wrap(tr("Glisse pour te déplacer · molette pour zoomer · clique un domaine pour le filtrer").into(), FontId::proportional(12.0), t.faint);
     if area.left() + 16.0 + hint.size().x < area.right() - 16.0 - 4.0 * 36.0 - 150.0 {
         painter.galley(area.left_top() + vec2(16.0, 16.0), hint, t.faint);
     }
     let projects = nodes.iter().filter(|n| !n.is_hub()).count();
     legend(&painter, &t, area);
     let bar = Rect::from_min_size(pos2(area.right() - 16.0 - 4.0 * 36.0, area.top() + 10.0), vec2(4.0 * 36.0, 34.0));
-    painter.text(pos2(bar.left() - 10.0, bar.center().y), Align2::RIGHT_CENTER, format!("{projects} projets · {} liens", g.sim.edges.len()), FontId::proportional(12.0), t.faint);
+    painter.text(pos2(bar.left() - 10.0, bar.center().y), Align2::RIGHT_CENTER, tf("{projects} projets · {0} liens", &[("projects", &projects), ("0", &g.sim.edges.len())]), FontId::proportional(12.0), t.faint);
     let mut tools = ui.new_child(UiBuilder::new().max_rect(bar).layout(Layout::right_to_left(Align::Center)));
     tools.spacing_mut().item_spacing.x = 4.0;
-    if widgets::icon_button(&mut tools, Icon::Maximize, "Recentrer la carte", 32.0).clicked() {
+    if widgets::icon_button(&mut tools, Icon::Maximize, tr("Recentrer la carte"), 32.0).clicked() {
         g.auto_fit = true;
     }
-    if widgets::icon_button(&mut tools, Icon::Wind, "Secouer le graphe", 32.0).clicked() {
+    if widgets::icon_button(&mut tools, Icon::Wind, tr("Secouer le graphe"), 32.0).clicked() {
         g.sim.shake();
     }
-    if widgets::icon_button(&mut tools, Icon::Minus, "Zoom arrière", 32.0).clicked() {
+    if widgets::icon_button(&mut tools, Icon::Minus, tr("Zoom arrière"), 32.0).clicked() {
         g.zoom_at(Vec2::ZERO, 0.8);
         g.auto_fit = false;
     }
-    if widgets::icon_button(&mut tools, Icon::Plus, "Zoom avant", 32.0).clicked() {
+    if widgets::icon_button(&mut tools, Icon::Plus, tr("Zoom avant"), 32.0).clicked() {
         g.zoom_at(Vec2::ZERO, 1.25);
         g.auto_fit = false;
     }
@@ -424,12 +425,12 @@ fn legend(p: &egui::Painter, t: &Tokens, area: Rect) {
         p.galley(pos2(x + 22.0, y - g.size().y / 2.0), g.clone(), t.faint);
         x += 34.0 + g.size().x;
     };
-    item(&|c| { p.circle_filled(c, 7.0, t.muted); }, "actif cette semaine");
-    item(&|c| { p.circle_filled(c, 4.5, t.muted); }, "plus ancien");
+    item(&|c| { p.circle_filled(c, 7.0, t.muted); }, tr("actif cette semaine"));
+    item(&|c| { p.circle_filled(c, 4.5, t.muted); }, tr("plus ancien"));
     item(&|c| { p.circle_stroke(c, 6.5, Stroke::new(2.0, t.accent)); }, "focus");
-    item(&|c| { p.circle_filled(c, 5.5, tint(t.muted, 0.42)); }, "en réserve");
-    item(&|c| { p.extend(Shape::dashed_line(&[c - vec2(8.0, 0.0), c + vec2(8.0, 0.0)], Stroke::new(1.2, tint(t.ink, 0.5)), 4.0, 3.0)); }, "rangés ensemble");
-    item(&|c| { p.extend(Shape::dashed_line(&[c - vec2(8.0, 0.0), c + vec2(8.0, 0.0)], Stroke::new(1.2, tint(t.accent, 0.8)), 4.0, 3.0)); }, "technos communes (au survol)");
+    item(&|c| { p.circle_filled(c, 5.5, tint(t.muted, 0.42)); }, tr("en réserve"));
+    item(&|c| { p.extend(Shape::dashed_line(&[c - vec2(8.0, 0.0), c + vec2(8.0, 0.0)], Stroke::new(1.2, tint(t.ink, 0.5)), 4.0, 3.0)); }, tr("rangés ensemble"));
+    item(&|c| { p.extend(Shape::dashed_line(&[c - vec2(8.0, 0.0), c + vec2(8.0, 0.0)], Stroke::new(1.2, tint(t.accent, 0.8)), 4.0, 3.0)); }, tr("technos communes (au survol)"));
 }
 
 #[cfg(test)]
@@ -458,7 +459,6 @@ mod tests {
         // Survoler un domaine allume ses projets.
         h.get_by_label("Domaine Outils de dev").hover();
         h.run();
-        h.snapshot("35_carte_survol_domaine");
         // Un clic sur un domaine le filtre : la caméra se rapproche.
         let zoom_before = h.state().st.graph.zoom;
         h.get_by_label("Domaine Outils de dev").click_accesskit();
@@ -466,7 +466,6 @@ mod tests {
         let outils = h.state().data.domains.iter().position(|d| d.name == "Outils de dev");
         assert_eq!(h.state().st.lib_domain, outils);
         assert!(h.state().st.graph.zoom > zoom_before, "zoom sur le domaine");
-        h.snapshot("36_carte_domaine_filtre");
         // Un clic sur un projet l'ouvre.
         h.get_by_label("BunFlow").click_accesskit();
         h.run();

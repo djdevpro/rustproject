@@ -22,6 +22,7 @@ mod classify;
 mod fixture;
 mod github;
 mod graph;
+mod i18n;
 mod icons;
 mod jobs;
 mod launch;

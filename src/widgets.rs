@@ -10,6 +10,7 @@ use egui::{
 use crate::icons::{self, Icon};
 use crate::model::{Attention, Launcher, Status};
 use crate::theme::{self, R_CARD, R_CHIP, R_CTRL, Tokens, mix, tint};
+use crate::i18n::{tf, tr};
 
 fn tok(ui: &Ui) -> Tokens {
     Tokens::get(ui.ctx())
@@ -276,7 +277,7 @@ pub fn icon_picker(ui: &mut Ui, name: &str, value: &mut Icon) -> bool {
     let stroke = if open { Stroke::new(1.0, t.accent) } else { Stroke::new(1.0, mix(t.line, t.line_strong, hover)) };
     ui.painter().rect(rect, CornerRadius::same(R_CTRL), t.input, stroke, StrokeKind::Inside);
     icons::paint(ui.painter(), rect.center(), *value, 19.0, t.accent_ink);
-    let resp = resp.on_hover_text("Changer l'icône").on_hover_cursor(CursorIcon::PointingHand);
+    let resp = resp.on_hover_text(tr("Changer l'icône")).on_hover_cursor(CursorIcon::PointingHand);
 
     let query_id = resp.id.with("icon-query");
     if !open {
@@ -287,7 +288,7 @@ pub fn icon_picker(ui: &mut Ui, name: &str, value: &mut Icon) -> bool {
     egui::Popup::from_toggle_button_response(&resp).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).width(296.0).gap(6.0).show(|ui| {
         ui.set_width(296.0);
         let mut query: String = ui.data(|d| d.get_temp(query_id)).unwrap_or_default();
-        let search = icon_input(ui, &mut query, Icon::Search, "Rechercher une icône…", ui.available_width(), size);
+        let search = icon_input(ui, &mut query, Icon::Search, tr("Rechercher une icône…"), ui.available_width(), size);
         if opening {
             search.request_focus();
         }
@@ -298,7 +299,7 @@ pub fn icon_picker(ui: &mut Ui, name: &str, value: &mut Icon) -> bool {
         }
         ui.add_space(4.0);
         if found.is_empty() {
-            ui.label(egui::RichText::new(format!("Aucune icône pour « {} ».", query.trim())).size(13.0).color(t.muted));
+            ui.label(egui::RichText::new(tf("Aucune icône pour « {0} ».", &[("0", &query.trim())])).size(13.0).color(t.muted));
         }
         egui::ScrollArea::vertical().max_height(236.0).auto_shrink([false, true]).show(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
@@ -583,8 +584,8 @@ pub fn path_input(ui: &mut Ui, value: &mut String, width: f32) -> Response {
         ui.spacing_mut().item_spacing.x = 6.0;
         let mut resp = mono_input(ui, value, r"C:\chemin\du\dossier", width - 42.0);
         // « Parcourir… » ouvre le sélecteur de dossier de Windows, à partir du chemin saisi.
-        if icon_button(ui, Icon::FolderOpen, "Parcourir…", theme::CONTROL_H).clicked() {
-            let mut dialog = rfd::FileDialog::new().set_title("Choisir un dossier");
+        if icon_button(ui, Icon::FolderOpen, tr("Parcourir…"), theme::CONTROL_H).clicked() {
+            let mut dialog = rfd::FileDialog::new().set_title(tr("Choisir un dossier"));
             let current = std::path::Path::new(value.trim());
             if let Some(dir) = [Some(current), current.parent()].into_iter().flatten().find(|d| d.is_dir()) {
                 dialog = dialog.set_directory(dir);
@@ -774,7 +775,7 @@ pub fn add_tile(ui: &mut Ui, label: &str) -> Response {
     let points = [r.left_top(), r.right_top(), r.right_bottom(), r.left_bottom(), r.left_top()];
     p.extend(Shape::dashed_line(&points, Stroke::new(1.0, mix(t.line_strong, t.accent, hover)), 4.0, 3.0));
     icons::paint(p, pos2(rect.center().x, rect.top() + 24.0), Icon::Plus, 20.0, color);
-    p.text(pos2(rect.center().x, rect.bottom() - 13.0), Align2::CENTER_CENTER, "Ajouter", FontId::new(11.0, theme::medium()), color);
+    p.text(pos2(rect.center().x, rect.bottom() - 13.0), Align2::CENTER_CENTER, tr("Ajouter"), FontId::new(11.0, theme::medium()), color);
     resp.on_hover_text(label).on_hover_cursor(CursorIcon::PointingHand)
 }
 
@@ -863,13 +864,13 @@ pub fn window_buttons(ui: &mut Ui, height: f32) {
         icons::paint(ui.painter(), rect.center(), icon, 16.0, fg);
         resp.clicked()
     };
-    if button(ui, Icon::X, "Fermer la fenêtre", true) {
+    if button(ui, Icon::X, tr("Fermer la fenêtre"), true) {
         ui.ctx().send_viewport_cmd(ViewportCommand::Close);
     }
-    if button(ui, if maximized { Icon::Copy } else { Icon::Square }, if maximized { "Restaurer" } else { "Agrandir" }, false) {
+    if button(ui, if maximized { Icon::Copy } else { Icon::Square }, if maximized { tr("Restaurer") } else { tr("Agrandir") }, false) {
         ui.ctx().send_viewport_cmd(ViewportCommand::Maximized(!maximized));
     }
-    if button(ui, Icon::Minus, "Réduire", false) {
+    if button(ui, Icon::Minus, tr("Réduire"), false) {
         ui.ctx().send_viewport_cmd(ViewportCommand::Minimized(true));
     }
 }

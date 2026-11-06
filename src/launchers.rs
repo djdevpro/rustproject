@@ -8,6 +8,7 @@ use crate::icons::{self, Icon};
 use crate::model::{Data, Group, LauncherKind, Project, VARIABLES};
 use crate::theme::{self, Tokens, tint};
 use crate::widgets::{self, Kind};
+use crate::i18n::{tf, tr};
 
 fn modal_frame(t: &Tokens) -> Frame {
     Frame::new().fill(t.surface).stroke(Stroke::new(1.0, t.line_strong)).corner_radius(16).shadow(theme::shadow(t)).inner_margin(Margin::same(26))
@@ -24,7 +25,7 @@ fn modal_header(ui: &mut Ui, title: &str, subtitle: &str) -> bool {
             ui.label(RichText::new(subtitle).size(14.0).color(t.muted));
         });
         ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
-            close = widgets::icon_button(ui, Icon::X, "Fermer", 34.0).clicked();
+            close = widgets::icon_button(ui, Icon::X, tr("Fermer"), 34.0).clicked();
         });
     });
     close
@@ -39,14 +40,14 @@ pub fn gallery(ctx: &egui::Context, data: &Data, g: &mut GalleryState, act: &mut
     let modal = egui::Modal::new(Id::unique("gallery")).backdrop_color(theme::scrim(&t)).frame(modal_frame(&t)).show(ctx, |ui| {
         ui.set_width(820.0);
         let subtitle = match &target_name {
-            Some(n) => format!("Un bouton de plus dans la colonne « Ouvrir avec » de {n}."),
-            None => "Un bouton de plus sur tous les projets.".to_owned(),
+            Some(n) => tf("Un bouton de plus dans la colonne « Ouvrir avec » de {n}.", &[("n", &n)]),
+            None => tr("Un bouton de plus sur tous les projets.").to_owned(),
         };
-        if modal_header(ui, "Ajouter un lanceur", &subtitle) {
+        if modal_header(ui, tr("Ajouter un lanceur"), &subtitle) {
             open = false;
         }
         ui.add_space(8.0);
-        widgets::tabs(ui, "gallery-tabs", &mut g.tab, &[(GalleryTab::Gallery, "Galerie"), (GalleryTab::Custom, "Créer un lanceur")]);
+        widgets::tabs(ui, "gallery-tabs", &mut g.tab, &[(GalleryTab::Gallery, tr("Galerie")), (GalleryTab::Custom, tr("Créer un lanceur"))]);
         ui.add_space(14.0);
         match g.tab {
             GalleryTab::Gallery => gallery_grid(ui, data, g, act),
@@ -59,26 +60,26 @@ pub fn gallery(ctx: &egui::Context, data: &Data, g: &mut GalleryState, act: &mut
         ui.add_space(4.0);
         ui.horizontal(|ui| {
             if g.project.is_some() {
-                ui.label(RichText::new("Ajouter pour").size(14.0).color(t.muted));
+                ui.label(RichText::new(tr("Ajouter pour")).size(14.0).color(t.muted));
                 let this = target_name.clone().unwrap_or_default();
-                widgets::segmented(ui, "gallery-scope", &mut g.for_all, &[(false, Some(Icon::Folder), this.as_str()), (true, Some(Icon::Layers), "Tous les projets")], None);
+                widgets::segmented(ui, "gallery-scope", &mut g.for_all, &[(false, Some(Icon::Folder), this.as_str()), (true, Some(Icon::Layers), tr("Tous les projets"))], None);
             }
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| match g.tab {
                 GalleryTab::Gallery => {
-                    if widgets::button(ui, None, "Terminé", Kind::Primary).clicked() {
+                    if widgets::button(ui, None, tr("Terminé"), Kind::Primary).clicked() {
                         open = false;
                     }
                 }
                 GalleryTab::Custom => {
                     let valid = g.draft.is_valid();
-                    let create = ui.add_enabled_ui(valid, |ui| widgets::button(ui, Some(Icon::Plus), "Créer le lanceur", Kind::Primary)).inner;
+                    let create = ui.add_enabled_ui(valid, |ui| widgets::button(ui, Some(Icon::Plus), tr("Créer le lanceur"), Kind::Primary)).inner;
                     if create.clicked() {
                         act.push(Action::AddLauncher { launcher: g.draft.to_launcher(), project: if g.for_all { None } else { g.project } });
                         g.draft = LauncherDraft::default();
                         g.tab = GalleryTab::Gallery;
                     }
                     if !valid {
-                        ui.label(RichText::new("Un nom et une commande suffisent.").size(13.0).color(t.faint));
+                        ui.label(RichText::new(tr("Un nom et une commande suffisent.")).size(13.0).color(t.faint));
                     }
                 }
             });
@@ -90,7 +91,7 @@ pub fn gallery(ctx: &egui::Context, data: &Data, g: &mut GalleryState, act: &mut
 fn gallery_grid(ui: &mut Ui, data: &Data, g: &mut GalleryState, act: &mut Vec<Action>) {
     let t = Tokens::get(ui.ctx());
     ui.horizontal(|ui| {
-        widgets::icon_input(ui, &mut g.search, Icon::Search, "Rechercher : terminal, éditeur, docker…", 300.0, theme::CONTROL_H);
+        widgets::icon_input(ui, &mut g.search, Icon::Search, tr("Rechercher : terminal, éditeur, docker…"), 300.0, theme::CONTROL_H);
         ui.add_space(8.0);
         ui.spacing_mut().item_spacing.x = 6.0;
         let chip = |ui: &mut Ui, selected: bool, label: &str| -> bool {
@@ -109,7 +110,7 @@ fn gallery_grid(ui: &mut Ui, data: &Data, g: &mut GalleryState, act: &mut Vec<Ac
             ui.painter().galley(rect.center() - galley.size() / 2.0, galley, fg);
             resp.clicked()
         };
-        if chip(ui, g.group.is_none(), "Tous") {
+        if chip(ui, g.group.is_none(), tr("Tous")) {
             g.group = None;
         }
         for group in Group::ALL {
@@ -135,8 +136,8 @@ fn gallery_grid(ui: &mut Ui, data: &Data, g: &mut GalleryState, act: &mut Vec<Ac
         if items.is_empty() {
             ui.add_space(30.0);
             ui.vertical_centered(|ui| {
-                widgets::muted(ui, "Rien dans la galerie pour cette recherche.");
-                if widgets::link(ui, "Créer un lanceur sur mesure", Some(Icon::ArrowRight), 14.0).clicked() {
+                widgets::muted(ui, tr("Rien dans la galerie pour cette recherche."));
+                if widgets::link(ui, tr("Créer un lanceur sur mesure"), Some(Icon::ArrowRight), 14.0).clicked() {
                     g.draft.name = g.search.trim().to_owned();
                     g.tab = GalleryTab::Custom;
                 }
@@ -187,14 +188,14 @@ fn tile(ui: &mut Ui, l: &crate::model::Launcher, added: bool, width: f32) -> boo
     // Bouton d'ajout, en bas à droite.
     let button = Rect::from_min_size(rect.right_bottom() - vec2(88.0, 40.0), vec2(76.0, 30.0));
     if added {
-        p.text(button.center(), egui::Align2::CENTER_CENTER, format!("{} Ajouté", icons::ch(Icon::Check)), FontId::new(13.0, theme::semibold()), t.good_fg);
+        p.text(button.center(), egui::Align2::CENTER_CENTER, tf("{0} Ajouté", &[("0", &(icons::ch(Icon::Check)))]), FontId::new(13.0, theme::semibold()), t.good_fg);
         false
     } else {
         let b = ui.interact(button, Id::unique(("gallery-add", &l.name)), Sense::click()).on_hover_cursor(egui::CursorIcon::PointingHand);
-        b.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, format!("Ajouter {}", l.name)));
+        b.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tf("Ajouter {0}", &[("0", &l.name)])));
         let fill = if b.hovered() { t.accent_hover } else { t.accent };
         p.rect_filled(button, CornerRadius::same(7), fill);
-        p.text(button.center(), egui::Align2::CENTER_CENTER, format!("{} Ajouter", icons::ch(Icon::Plus)), FontId::new(13.0, theme::semibold()), t.on_accent);
+        p.text(button.center(), egui::Align2::CENTER_CENTER, tf("{0} Ajouter", &[("0", &(icons::ch(Icon::Plus)))]), FontId::new(13.0, theme::semibold()), t.on_accent);
         b.clicked()
     }
 }
@@ -207,8 +208,8 @@ pub fn editor(ctx: &egui::Context, data: &Data, launcher: Option<usize>, draft: 
     let modal = egui::Modal::new(Id::unique("launcher-editor")).backdrop_color(theme::scrim(&t)).frame(modal_frame(&t)).show(ctx, |ui| {
         ui.set_width(820.0);
         let (title, subtitle) = match launcher {
-            Some(id) => (format!("Modifier « {} »", data.launchers[id].name), "Les projets qui l'utilisent verront le changement."),
-            None => ("Nouveau lanceur".to_owned(), "Il s'ajoutera aux lanceurs par défaut, sur tous les projets."),
+            Some(id) => (tf("Modifier « {0} »", &[("0", &data.launchers[id].name)]), tr("Les projets qui l'utilisent verront le changement.")),
+            None => (tr("Nouveau lanceur").to_owned(), tr("Il s'ajoutera aux lanceurs par défaut, sur tous les projets.")),
         };
         if modal_header(ui, &title, subtitle) {
             open = false;
@@ -218,7 +219,7 @@ pub fn editor(ctx: &egui::Context, data: &Data, launcher: Option<usize>, draft: 
         ui.add_space(12.0);
         widgets::separator(ui);
         ui.add_space(4.0);
-        let (cancel, ok) = footer_buttons(ui, if launcher.is_some() { "Enregistrer" } else { "Créer le lanceur" }, draft.is_valid());
+        let (cancel, ok) = footer_buttons(ui, if launcher.is_some() { tr("Enregistrer") } else { tr("Créer le lanceur") }, draft.is_valid());
         if cancel {
             open = false;
         }
@@ -245,25 +246,25 @@ pub fn editor_form(ui: &mut Ui, d: &mut LauncherDraft, preview: Option<&Project>
                 let name_w = form_w - 150.0;
                 ui.vertical(|ui| {
                     ui.set_width(name_w);
-                    widgets::labeled(ui, "Nom du bouton", |ui| widgets::text_input(ui, &mut d.name, "ex. Storybook", name_w - 8.0));
+                    widgets::labeled(ui, tr("Nom du bouton"), |ui| widgets::text_input(ui, &mut d.name, tr("ex. Storybook"), name_w - 8.0));
                 });
-                ui.vertical(|ui| widgets::labeled(ui, "Raccourci", |ui| widgets::text_input(ui, &mut d.shortcut, "Ctrl+4", 136.0)));
+                ui.vertical(|ui| widgets::labeled(ui, tr("Raccourci"), |ui| widgets::text_input(ui, &mut d.shortcut, tr("Ctrl+4"), 136.0)));
             });
-            widgets::labeled(ui, "Type", |ui| {
+            widgets::labeled(ui, tr("Type"), |ui| {
                 let options: Vec<(LauncherKind, Option<Icon>, &str)> = LauncherKind::ALL.iter().map(|k| (*k, Some(k.icon()), k.label())).collect();
                 widgets::segmented(ui, "launcher-kind", &mut d.kind, &options, Some(form_w));
             });
             let (label, hint) = match d.kind {
                 LauncherKind::App => ("Application et arguments", r#"code "{dossier}""#),
-                LauncherKind::Command => ("Commande", "npm run storybook"),
-                LauncherKind::Url => ("Adresse", "http://localhost:{port}"),
-                LauncherKind::Folder => ("Dossier", r"{dossier}\docs"),
+                LauncherKind::Command => (tr("Commande"), tr("npm run storybook")),
+                LauncherKind::Url => (tr("Adresse"), "http://localhost:{port}"),
+                LauncherKind::Folder => (tr("Dossier"), r"{dossier}\docs"),
             };
             widgets::labeled(ui, label, |ui| {
                 widgets::mono_input(ui, &mut d.command, hint, form_w);
                 ui.horizontal_wrapped(|ui| {
                     ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
-                    ui.label(RichText::new("Insérer :").size(12.5).color(t.faint));
+                    ui.label(RichText::new(tr("Insérer :")).size(12.5).color(t.faint));
                     for (var, help) in VARIABLES {
                         if widgets::tag(ui, var).interact(Sense::click()).on_hover_text(help).on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
                             if !d.command.is_empty() && !d.command.ends_with(' ') {
@@ -275,9 +276,9 @@ pub fn editor_form(ui: &mut Ui, d: &mut LauncherDraft, preview: Option<&Project>
                 });
             });
             if d.kind == LauncherKind::Command {
-                widgets::toggle_row(ui, &mut d.in_terminal, "Ouvrir dans un terminal", Some("La commande tourne dans un nouvel onglet, placé dans le dossier du projet."));
+                widgets::toggle_row(ui, &mut d.in_terminal, tr("Ouvrir dans un terminal"), Some(tr("La commande tourne dans un nouvel onglet, placé dans le dossier du projet.")));
             }
-            widgets::labeled(ui, "Icône", |ui| {
+            widgets::labeled(ui, tr("Icône"), |ui| {
                 ui.horizontal_wrapped(|ui| {
                     ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
                     for icon in LAUNCHER_ICONS {
@@ -293,12 +294,12 @@ pub fn editor_form(ui: &mut Ui, d: &mut LauncherDraft, preview: Option<&Project>
                     }
                 });
             });
-            widgets::labeled(ui, "Couleur", |ui| {
+            widgets::labeled(ui, tr("Couleur"), |ui| {
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 2.0;
                     for (hex, name) in COLORS {
                         let c = theme::rgb(hex);
-                        if widgets::swatch(ui, c, c == d.color, name).clicked() {
+                        if widgets::swatch(ui, c, c == d.color, tr(name)).clicked() {
                             d.color = c;
                         }
                     }
@@ -311,27 +312,27 @@ pub fn editor_form(ui: &mut Ui, d: &mut LauncherDraft, preview: Option<&Project>
         Frame::new().fill(t.bg).stroke(Stroke::new(1.0, t.line)).corner_radius(12).inner_margin(Margin::same(16)).show(ui, |ui| ui.vertical(|ui| {
             ui.set_width(250.0);
             ui.spacing_mut().item_spacing.y = 8.0;
-            widgets::caps(ui, "Aperçu");
+            widgets::caps(ui, tr("Aperçu"));
             let mut l = d.to_launcher();
             if l.name.is_empty() {
-                l.name = "Mon lanceur".into();
+                l.name = tr("Mon lanceur").into();
             }
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 8.0;
                 widgets::launcher_tile(ui, &l, false, 0.0);
                 widgets::launcher_tile(ui, &l, true, 0.0);
             });
-            ui.label(RichText::new("À droite, en favori : il prend la couleur d'accent.").size(12.0).color(t.faint));
+            ui.label(RichText::new(tr("À droite, en favori : il prend la couleur d'accent.")).size(12.0).color(t.faint));
             ui.add_space(6.0);
             if let Some(project) = preview {
-                widgets::caps(ui, &format!("Pour {}", project.name));
+                widgets::caps(ui, &tf("Pour {0}", &[("0", &project.name)]));
                 let resolved = if l.command.is_empty() { "—".to_owned() } else { l.resolve(project) };
                 Frame::new().fill(t.input).corner_radius(8).inner_margin(Margin::same(10)).show(ui, |ui| {
                     ui.set_width(ui.available_width());
                     ui.label(RichText::new(resolved).font(FontId::new(11.5, FontFamily::Monospace)).color(t.ink));
                 });
                 if l.in_terminal {
-                    ui.label(RichText::new(format!("{} dans un terminal ouvert sur le dossier", icons::ch(Icon::SquareTerminal))).size(12.0).color(t.muted));
+                    ui.label(RichText::new(tf("{0} dans un terminal ouvert sur le dossier", &[("0", &(icons::ch(Icon::SquareTerminal)))])).size(12.0).color(t.muted));
                 }
             }
         }));

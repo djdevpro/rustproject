@@ -2512,7 +2512,7 @@
       "group": "Terminal"
     },
     {
-      "name": "Explorateur",
+      "name": "Explorer",
       "icon": "folder-open",
       "color": [
         244,
@@ -2641,6 +2641,7 @@
     "demo_data": true,
     "update_auto": true,
     "update_beta": false,
+    "language": null,
     "markers_version": 2,
     "ignored": []
   },

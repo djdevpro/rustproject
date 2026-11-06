@@ -21,10 +21,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
+      # Tous les tests (moteur et interface, sans GPU) avant le build.
+      - name: Tests
+        run: cargo test
+
       - name: Build
         run: cargo build
-
-      # Les tests du moteur. Les captures d'interface demandent un GPU et tournent en local.
-      - name: Tests
-        shell: bash
-        run: 'cargo test -- ::tests:: --skip screens::'

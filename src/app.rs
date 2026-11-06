@@ -22,6 +22,7 @@ use crate::store::{SemanticIndex, Store, text_hash};
 use crate::theme::{self, Tokens, tint};
 use crate::widgets::{self, Kind};
 use crate::{launch, launchers, panel, update};
+use crate::i18n::{tf, tr};
 
 const TOAST_SECS: f64 = 4.0;
 /// Au plus tant de dossiers envoyés à l'IA par analyse.
@@ -76,14 +77,14 @@ impl CfgSection {
     pub const ALL: [Self; 8] = [Self::Sources, Self::Discovery, Self::Ai, Self::Ontology, Self::Launchers, Self::Attention, Self::Appearance, Self::Data];
     pub fn label(self) -> &'static str {
         match self {
-            Self::Sources => "Dossiers sources",
-            Self::Discovery => "Découverte",
-            Self::Ai => "IA & modèles",
-            Self::Ontology => "Ontologie",
-            Self::Launchers => "Lanceurs",
-            Self::Attention => "États & attention",
-            Self::Appearance => "Apparence",
-            Self::Data => "Données",
+            Self::Sources => tr("Dossiers sources"),
+            Self::Discovery => tr("Découverte"),
+            Self::Ai => tr("IA & modèles"),
+            Self::Ontology => tr("Ontologie"),
+            Self::Launchers => tr("Lanceurs"),
+            Self::Attention => tr("États & attention"),
+            Self::Appearance => tr("Apparence"),
+            Self::Data => tr("Données"),
         }
     }
     pub fn icon(self) -> Icon {
@@ -100,14 +101,14 @@ impl CfgSection {
     }
     pub fn hint(self) -> &'static str {
         match self {
-            Self::Sources => "Où chercher",
-            Self::Discovery => "Comment reconnaître un projet",
-            Self::Ai => "Ollama, Ollaya, recherche",
-            Self::Ontology => "Facettes, concepts, classement",
-            Self::Launchers => "Boutons « Ouvrir avec »",
-            Self::Attention => "Focus, réserve, revue",
-            Self::Appearance => "Thème, accent, densité",
-            Self::Data => "Index, export, démo",
+            Self::Sources => tr("Où chercher"),
+            Self::Discovery => tr("Comment reconnaître un projet"),
+            Self::Ai => tr("Ollama, Ollaya, recherche"),
+            Self::Ontology => tr("Facettes, concepts, classement"),
+            Self::Launchers => tr("Boutons « Ouvrir avec »"),
+            Self::Attention => tr("Focus, réserve, revue"),
+            Self::Appearance => tr("Thème, accent, densité"),
+            Self::Data => tr("Index, export, démo"),
         }
     }
 }
@@ -163,7 +164,7 @@ impl LauncherDraft {
             command: self.command.trim().to_owned(),
             in_terminal: self.in_terminal && self.kind == LauncherKind::Command,
             shortcut: self.shortcut.trim().to_owned(),
-            description: if self.description.trim().is_empty() { "Lanceur personnalisé".into() } else { self.description.trim().to_owned() },
+            description: if self.description.trim().is_empty() { tr("Lanceur personnalisé").into() } else { self.description.trim().to_owned() },
             group: Group::Tools,
         }
     }
@@ -335,11 +336,11 @@ pub enum Decision {
 impl Decision {
     pub fn label(self) -> &'static str {
         match self {
-            Self::Focus => "Remis en focus",
-            Self::Flow => "Au fil de l'eau",
-            Self::Keep => "Gardé en réserve",
-            Self::Archive => "Archivé",
-            Self::Later => "Reporté",
+            Self::Focus => tr("Remis en focus"),
+            Self::Flow => tr("Au fil de l'eau"),
+            Self::Keep => tr("Gardé en réserve"),
+            Self::Archive => tr("Archivé"),
+            Self::Later => tr("Reporté"),
         }
     }
 }
@@ -373,6 +374,8 @@ pub enum Action {
     Decide(usize, Decision),
     StartScan,
     ApplyTheme,
+    /// Changer la langue de l'interface (`None` : celle du système).
+    SetLanguage(Option<crate::i18n::Lang>),
     ApplyZoom,
     OpenUpdate,
     CheckUpdate,
@@ -564,10 +567,10 @@ impl Default for UiState {
 /// « il y a 3 j », « aujourd'hui »…
 pub fn idle_text(days: u32) -> String {
     match days {
-        0 => "aujourd'hui".into(),
-        1 => "hier".into(),
-        d if d < 60 => format!("il y a {d} j"),
-        d => format!("il y a {} mois", d / 30),
+        0 => tr("aujourd'hui").into(),
+        1 => tr("hier").into(),
+        d if d < 60 => tf("il y a {d} j", &[("d", &d)]),
+        d => tf("il y a {0} mois", &[("0", &(d / 30))]),
     }
 }
 
@@ -615,15 +618,17 @@ impl AtelierApp {
             Err(e) => (Data::fresh(), Some(e)),
         };
         let readable = error.is_none();
+        // La langue de l'interface : celle choisie, sinon celle du système.
+        crate::i18n::set(data.config.language.unwrap_or_else(crate::i18n::detect));
         let mut app = Self::with_data(cc, data, readable.then_some(store));
         // L'adresse du dépôt, lue dans `.git/config`, pour les projets qui ne l'ont pas encore.
         app.data.fill_remotes();
         if let Some(e) = error {
-            app.toast(Icon::TriangleAlert, "Fichier de données illisible", Some(e));
+            app.toast(Icon::TriangleAlert, tr("Fichier de données illisible"), Some(e));
         }
         if std::env::args().any(|a| a == launch::AFTER_UPDATE) {
             crate::release::cleanup_after_update();
-            app.toast(Icon::PackageCheck, format!("Atelier {VERSION} est installé"), None);
+            app.toast(Icon::PackageCheck, tf("Atelier {VERSION} est installé", &[(tr("VERSION"), &VERSION)]), None);
         }
         // Une seule question à GitHub au démarrage : y a-t-il une version plus récente ?
         if app.data.config.update_auto {
@@ -640,12 +645,13 @@ impl AtelierApp {
     pub fn from_fixture(cc: &eframe::CreationContext<'_>, path: &str) -> Self {
         let (data, error) = match Store::open(path).load() {
             Ok(Some(d)) => (d, None),
-            Ok(None) => (Data::fresh(), Some(format!("Fixture introuvable : {path}"))),
+            Ok(None) => (Data::fresh(), Some(tf("Fixture introuvable : {path}", &[("path", &path)]))),
             Err(e) => (Data::fresh(), Some(e)),
         };
+        crate::i18n::set(data.config.language.unwrap_or_else(crate::i18n::detect));
         let mut app = Self::with_data(cc, data, None);
         if let Some(e) = error {
-            app.toast(Icon::TriangleAlert, "Fixture illisible", Some(e));
+            app.toast(Icon::TriangleAlert, tr("Fixture illisible"), Some(e));
         }
         app
     }
@@ -742,7 +748,7 @@ impl AtelierApp {
         let classifier = self.classifier();
         let with_ai = classifier.ollama.is_some();
         if candidates.is_empty() {
-            self.toast(Icon::CircleCheck, "Rien de nouveau à classer", Some("Tous les dossiers relevés sont déjà suivis.".into()));
+            self.toast(Icon::CircleCheck, tr("Rien de nouveau à classer"), Some(tr("Tous les dossiers relevés sont déjà suivis.").into()));
             return;
         }
         self.st.analysis = Some(Analysis { total: candidates.len(), with_ai, ..Default::default() });
@@ -790,9 +796,9 @@ impl AtelierApp {
                     if let Some(a) = &mut self.st.analysis {
                         a.finished = true;
                         let (added, skipped, warnings) = (a.added, a.skipped, a.warnings.len());
-                        let how = if a.with_ai { "par Ollama" } else { "par les règles locales" };
-                        let detail = if warnings > 0 { format!("{skipped} dossiers écartés · {warnings} réponses de l'IA illisibles (règles utilisées)") } else { format!("{skipped} dossiers écartés") };
-                        self.toast(Icon::Sparkles, format!("{added} projets créés {how}"), Some(detail));
+                        let how = if a.with_ai { tr("par Ollama") } else { tr("par les règles locales") };
+                        let detail = if warnings > 0 { tf("{skipped} dossiers écartés · {warnings} réponses de l'IA illisibles (règles utilisées)", &[("skipped", &skipped), ("warnings", &warnings)]) } else { tf("{skipped} dossiers écartés", &[("skipped", &skipped)]) };
+                        self.toast(Icon::Sparkles, tf("{added} projets créés {how}", &[("added", &added), ("how", &how)]), Some(detail));
                     }
                 }
                 JobMsg::OneAnalyzed(result) => {
@@ -834,15 +840,15 @@ impl AtelierApp {
                 JobMsg::PullDone(result) => {
                     self.st.pull = None;
                     match result {
-                        Ok(model) => self.toast(Icon::PackageCheck, format!("{model} téléchargé"), Some("Il apparaît dans la liste des modèles.".into())),
-                        Err(e) => self.toast(Icon::TriangleAlert, "Téléchargement impossible", Some(e)),
+                        Ok(model) => self.toast(Icon::PackageCheck, tf("{model} téléchargé", &[("model", &model)]), Some(tr("Il apparaît dans la liste des modèles.").into())),
+                        Err(e) => self.toast(Icon::TriangleAlert, tr("Téléchargement impossible"), Some(e)),
                     }
                     self.actions.push(Action::ListModels);
                 }
                 JobMsg::Github(result) => {
                     self.st.github_loading = false;
                     if let Err(e) = &result {
-                        self.toast(Icon::TriangleAlert, "GitHub injoignable", Some(e.clone()));
+                        self.toast(Icon::TriangleAlert, tr("GitHub injoignable"), Some(e.clone()));
                     }
                     self.st.github = Some(result);
                 }
@@ -885,8 +891,8 @@ impl AtelierApp {
                 JobMsg::OllayaPullDone(result) => {
                     self.st.ollaya_pull = None;
                     match result {
-                        Ok(model) => self.toast(Icon::PackageCheck, format!("{model} téléchargé"), Some("Il apparaît dans la liste des modèles d'Ollaya.".into())),
-                        Err(e) => self.toast(Icon::TriangleAlert, "Téléchargement impossible", Some(e)),
+                        Ok(model) => self.toast(Icon::PackageCheck, tf("{model} téléchargé", &[("model", &model)]), Some(tr("Il apparaît dans la liste des modèles d'Ollaya.").into())),
+                        Err(e) => self.toast(Icon::TriangleAlert, tr("Téléchargement impossible"), Some(e)),
                     }
                     self.actions.push(Action::ListOllaya);
                 }
@@ -916,7 +922,7 @@ impl AtelierApp {
                         t.current.clear();
                         // Une seule notification, et seulement si quelque chose a coincé.
                         if let Some(e) = t.error.clone() {
-                            self.toast(Icon::TriangleAlert, "Classement interrompu", Some(e));
+                            self.toast(Icon::TriangleAlert, tr("Classement interrompu"), Some(e));
                         }
                     }
                 }
@@ -967,30 +973,30 @@ impl AtelierApp {
         self.st.scan = Some(result);
         let fresh = self.candidates(false).len();
         // Une seule notification par scan : le résultat, ou ce qui attend.
-        let mut detail = format!("{likely} projets probables, dont {fresh} pas encore suivis");
+        let mut detail = tf("{likely} projets probables, dont {fresh} pas encore suivis", &[("likely", &likely), ("fresh", &fresh)]);
         match errors.as_slice() {
             [] => {}
-            [e] => detail.push_str(&format!(" · {e}")),
-            many => detail.push_str(&format!(" · {} dossiers sources illisibles", many.len())),
+            [e] => detail.push_str(&tf(" · {e}", &[("e", &e)])),
+            many => detail.push_str(&tf(" · {0} dossiers sources illisibles", &[("0", &many.len())])),
         }
         let auto = self.data.config.auto_add;
         match self.data.config.ai_mode {
             // Ollama choisi mais aucun modèle : on attend, plutôt que de tout créer par les règles.
             AiMode::Ollama if auto && self.data.config.ollama_model.is_empty() && fresh > 0 => {
-                self.toast(Icon::Sparkles, format!("{fresh} projets probables attendent l'IA"), Some("Choisis un modèle dans Configuration › IA, ou crée les fiches avec les règles.".into()));
+                self.toast(Icon::Sparkles, tf("{fresh} projets probables attendent l'IA", &[("fresh", &fresh)]), Some(tr("Choisis un modèle dans Configuration › IA, ou crée les fiches avec les règles.").into()));
             }
             // L'agent MCP classe lui-même (outil `scanner_dossiers`) : rien d'automatique ici.
             AiMode::Ollama | AiMode::Off if auto => {
                 let with_ai = self.classifier().ollama.is_some();
                 let candidates = self.candidates(with_ai);
                 if candidates.is_empty() {
-                    self.toast(Icon::FolderSearch, format!("Scan terminé : {total} dossiers"), Some(detail));
+                    self.toast(Icon::FolderSearch, tf("Scan terminé : {total} dossiers", &[("total", &total)]), Some(detail));
                 } else {
                     // Le classement suit : sa notification dira ce qui a été créé.
                     self.start_analysis(candidates);
                 }
             }
-            _ => self.toast(Icon::FolderSearch, format!("Scan terminé : {total} dossiers"), Some(detail)),
+            _ => self.toast(Icon::FolderSearch, tf("Scan terminé : {total} dossiers", &[("total", &total)]), Some(detail)),
         }
     }
 
@@ -1013,14 +1019,14 @@ impl AtelierApp {
                     self.st.draft = None;
                     let after = self.data.projects.len();
                     let detail = match after.cmp(&before) {
-                        std::cmp::Ordering::Greater => format!("{} projets ajoutés", after - before),
-                        std::cmp::Ordering::Less => format!("{} projets retirés", before - after),
-                        std::cmp::Ordering::Equal => "Fiches mises à jour".to_owned(),
+                        std::cmp::Ordering::Greater => tf("{0} projets ajoutés", &[("0", &(after - before))]),
+                        std::cmp::Ordering::Less => tf("{0} projets retirés", &[("0", &(before - after))]),
+                        std::cmp::Ordering::Equal => tr("Fiches mises à jour").to_owned(),
                     };
-                    self.toast(Icon::Bot, "Modifié par l'agent IA", Some(detail));
+                    self.toast(Icon::Bot, tr("Modifié par l'agent IA"), Some(detail));
                 }
                 Ok(None) => {}
-                Err(e) => self.toast(Icon::TriangleAlert, "Rechargement impossible", Some(e)),
+                Err(e) => self.toast(Icon::TriangleAlert, tr("Rechargement impossible"), Some(e)),
             }
             return;
         }
@@ -1028,7 +1034,7 @@ impl AtelierApp {
         if json != self.saved_json {
             match store.save_text(&json) {
                 Ok(()) => self.saved_json = json,
-                Err(e) => self.toast(Icon::TriangleAlert, "Enregistrement impossible", Some(e)),
+                Err(e) => self.toast(Icon::TriangleAlert, tr("Enregistrement impossible"), Some(e)),
             }
         }
     }
@@ -1115,13 +1121,13 @@ impl AtelierApp {
         let screen = self.st.screen;
         ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
             ui.add_space(24.0);
-            ui.label(RichText::new("Atelier").font(FontId::new(30.0, theme::bold())).color(t.ink_strong));
+            ui.label(RichText::new(tr("Atelier")).font(FontId::new(30.0, theme::bold())).color(t.ink_strong));
             ui.add_space(14.0);
             widgets::vsep(ui, 30.0);
             ui.add_space(14.0);
             ui.spacing_mut().item_spacing.x = 6.0;
             // « À revisiter » n'est plus dans la barre : on y arrive depuis « À redécouvrir ».
-            for (s, icon, label) in [(Screen::Desk, Icon::LayoutGrid, "Mon bureau"), (Screen::Library, Icon::Layers, "Bibliothèque")] {
+            for (s, icon, label) in [(Screen::Desk, Icon::LayoutGrid, tr("Mon bureau")), (Screen::Library, Icon::Layers, tr("Bibliothèque"))] {
                 if widgets::nav_item(ui, Some(icon), label, screen == s || (s == Screen::Desk && screen == Screen::Revisit)).clicked() {
                     self.actions.push(Action::Go(s));
                 }
@@ -1129,7 +1135,7 @@ impl AtelierApp {
             ui.add_space(6.0);
             widgets::vsep(ui, 26.0);
             ui.add_space(6.0);
-            if widgets::nav_item(ui, Some(Icon::Settings), "Configuration", screen == Screen::Config).clicked() {
+            if widgets::nav_item(ui, Some(Icon::Settings), tr("Configuration"), screen == Screen::Config).clicked() {
                 self.actions.push(Action::Go(Screen::Config));
             }
 
@@ -1140,14 +1146,14 @@ impl AtelierApp {
                 // Mise à jour : une pastille d'accent quand une version attend.
                 let latest = self.st.updater.release.as_ref().map(|r| r.version.clone()).unwrap_or_default();
                 let (tip, pending) = match self.st.updater.phase {
-                    UpdatePhase::Available => (format!("Mise à jour disponible : {latest}"), true),
-                    UpdatePhase::Ready => ("Mise à jour prête : redémarrer pour l'appliquer".to_owned(), true),
-                    UpdatePhase::Downloading => ("Téléchargement de la mise à jour…".to_owned(), false),
-                    UpdatePhase::Checking => ("Recherche d'une nouvelle version…".to_owned(), false),
-                    UpdatePhase::Failed => ("Vérification des mises à jour impossible".to_owned(), false),
-                    _ => (format!("Atelier {VERSION}"), false),
+                    UpdatePhase::Available => (tf("Mise à jour disponible : {latest}", &[("latest", &latest)]), true),
+                    UpdatePhase::Ready => (tr("Mise à jour prête : redémarrer pour l'appliquer").to_owned(), true),
+                    UpdatePhase::Downloading => (tr("Téléchargement de la mise à jour…").to_owned(), false),
+                    UpdatePhase::Checking => (tr("Recherche d'une nouvelle version…").to_owned(), false),
+                    UpdatePhase::Failed => (tr("Vérification des mises à jour impossible").to_owned(), false),
+                    _ => (tf("Atelier {VERSION}", &[(tr("VERSION"), &VERSION)]), false),
                 };
-                let resp = widgets::icon_button_tip(ui, Icon::CircleArrowUp, "Mise à jour", &tip, 34.0);
+                let resp = widgets::icon_button_tip(ui, Icon::CircleArrowUp, tr("Mise à jour"), &tip, 34.0);
                 if pending {
                     ui.painter().circle_filled(resp.rect.right_top() + vec2(-7.0, 7.0), 4.5, t.accent);
                 }
@@ -1156,7 +1162,7 @@ impl AtelierApp {
                 }
                 ui.add_space(4.0);
                 let scanning = self.st.scan_started.is_some();
-                if widgets::icon_button(ui, Icon::RefreshCw, "Scanner les dossiers maintenant", 34.0).clicked() && !scanning {
+                if widgets::icon_button(ui, Icon::RefreshCw, tr("Scanner les dossiers maintenant"), 34.0).clicked() && !scanning {
                     self.actions.push(Action::StartScan);
                 }
                 // Le texte d'état seulement s'il reste de la place (fenêtre étroite, zoom…).
@@ -1164,11 +1170,11 @@ impl AtelierApp {
                     ui.add_space(6.0);
                     let last = self.data.config.roots.iter().map(|r| r.last_scan).max().unwrap_or(0);
                     let (text, color) = if scanning {
-                        (format!("Scan en cours… {} dossiers", self.st.scan_count), t.accent_ink)
+                        (tf("Scan en cours… {0} dossiers", &[("0", &self.st.scan_count)]), t.accent_ink)
                     } else if last == 0 {
-                        ("Aucun scan pour l'instant".to_owned(), t.muted)
+                        (tr("Aucun scan pour l'instant").to_owned(), t.muted)
                     } else {
-                        (format!("Dossiers scannés {}", model::ago(last)), t.muted)
+                        (tf("Dossiers scannés {0}", &[("0", &model::ago(last))]), t.muted)
                     };
                     ui.label(RichText::new(text).size(13.0).color(color));
                     ui.add_space(6.0);
@@ -1186,16 +1192,10 @@ impl AtelierApp {
         let d = &self.data;
         let total = d.projects.len();
         let archived = d.archived();
-        let text = format!(
-            "{total} au total (dont {archived} archivés) · {} non archivés : Focus {} · Au fil de l'eau {} · En réserve {}",
-            total - archived,
-            d.count(Attention::Focus),
-            d.count(Attention::Flow),
-            d.count(Attention::Reserve)
-        );
+        let text = tf("{total} au total (dont {archived} archivés) · {0} non archivés : Focus {1} · Au fil de l'eau {2} · En réserve {3}", &[("total", &total), ("archived", &archived), ("0", &(total - archived)), ("1", &(d.count(Attention::Focus))), ("2", &(d.count(Attention::Flow))), ("3", &(d.count(Attention::Reserve)))]);
         ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
             ui.add_space(24.0);
-            if widgets::link(ui, &format!("Explorer les {total} projets"), Some(Icon::ArrowRight), 14.5).clicked() {
+            if widgets::link(ui, &tf("Explorer les {total} projets", &[("total", &total)]), Some(Icon::ArrowRight), 14.5).clicked() {
                 self.actions.push(Action::Library(None));
             }
             ui.add_space(12.0);
@@ -1209,11 +1209,11 @@ impl AtelierApp {
                 ui.add_space(24.0);
                 match &self.st.store_path {
                     Some(path) => {
-                        ui.label(RichText::new("Enregistré").size(13.0).color(t.faint)).on_hover_text(path);
+                        ui.label(RichText::new(tr("Enregistré")).size(13.0).color(t.faint)).on_hover_text(path);
                         icons::show(ui, Icon::HardDrive, 15.0, t.faint);
                     }
                     None => {
-                        ui.label(RichText::new("Données de démonstration").size(13.0).color(t.faint));
+                        ui.label(RichText::new(tr("Données de démonstration")).size(13.0).color(t.faint));
                         icons::show(ui, Icon::FlaskConical, 15.0, t.faint);
                     }
                 }
@@ -1264,7 +1264,7 @@ impl AtelierApp {
         let limit = self.data.config.focus_limit;
         let focus = self.data.count(Attention::Focus);
         if self.data.config.limit_focus && a == Attention::Focus && self.data.projects[p].attention != Attention::Focus && focus >= limit {
-            self.toast(Icon::Crosshair, format!("Focus complet ({focus}/{limit})"), Some("Passe d'abord un projet au fil de l'eau pour libérer une place.".into()));
+            self.toast(Icon::Crosshair, tf("Focus complet ({focus}/{limit})", &[("focus", &focus), ("limit", &limit)]), Some(tr("Passe d'abord un projet au fil de l'eau pour libérer une place.").into()));
             return false;
         }
         let next_order = self.data.projects.iter().map(|p| p.order).max().unwrap_or(0) + 1;
@@ -1309,7 +1309,7 @@ impl AtelierApp {
                     let launcher = &self.data.launchers[l];
                     let (name, icon) = (launcher.name.clone(), launcher.icon);
                     match launch::plan(launcher, &self.data.projects[p]) {
-                        Err(why) => self.toast(Icon::TriangleAlert, format!("{name} n'a pas pu être lancé"), Some(why)),
+                        Err(why) => self.toast(Icon::TriangleAlert, tf("{name} n'a pas pu être lancé", &[("name", &name)]), Some(why)),
                         Ok(plan) => {
                             self.launched.push(plan.line.clone());
                             self.st.flash = Some((p, l, self.st.now));
@@ -1322,7 +1322,7 @@ impl AtelierApp {
                                     repaint.request_repaint();
                                 });
                                 if let Err(why) = result {
-                                    self.toast(icon, format!("{name} n'a pas pu être lancé"), Some(why));
+                                    self.toast(icon, tf("{name} n'a pas pu être lancé", &[("name", &name)]), Some(why));
                                 }
                             }
                         }
@@ -1332,7 +1332,7 @@ impl AtelierApp {
                 Action::ToggleStep(p, s) => {
                     if let Some(step) = self.data.projects.get_mut(p).and_then(|x| x.steps.get_mut(s)) {
                         step.done = !step.done;
-                        let text = format!("Étape {} : {}", if step.done { "faite" } else { "rouverte" }, step.text);
+                        let text = tf("Étape {0} : {1}", &[("0", &if step.done { "faite" } else { "rouverte" }), ("1", &step.text)]);
                         self.data.projects[p].log(ActivityKind::Edit, text);
                     }
                 }
@@ -1346,7 +1346,7 @@ impl AtelierApp {
                         && project.status != s
                     {
                         project.status = s;
-                        project.log(ActivityKind::Edit, format!("État : {}", s.label()));
+                        project.log(ActivityKind::Edit, tf("État : {0}", &[("0", &s.label())]));
                     }
                 }
                 Action::OpenGallery(project) => {
@@ -1389,26 +1389,26 @@ impl AtelierApp {
                             if !project.launchers.contains(&id) && !self.data.default_launchers.contains(&id) {
                                 project.launchers.push(id);
                             }
-                            format!("Pour {}", project.name)
+                            tf("Pour {0}", &[("0", &project.name)])
                         }
                         None => {
                             if !self.data.default_launchers.contains(&id) {
                                 self.data.default_launchers.push(id);
                             }
-                            "Sur tous les projets".to_owned()
+                            tr("Sur tous les projets").to_owned()
                         }
                     };
-                    self.toast(launcher.icon, format!("{} ajouté", launcher.name), Some(target));
+                    self.toast(launcher.icon, tf("{0} ajouté", &[("0", &launcher.name)]), Some(target));
                 }
                 Action::SaveLauncher(id, launcher) => {
                     let name = launcher.name.clone();
                     self.data.launchers[id] = launcher;
-                    self.toast(Icon::Check, format!("« {name} » enregistré"), None);
+                    self.toast(Icon::Check, tf("« {name} » enregistré", &[("name", &name)]), None);
                 }
                 Action::RemoveDefault(id) => {
                     self.data.default_launchers.retain(|l| *l != id);
                     let name = self.data.launchers[id].name.clone();
-                    self.toast(Icon::Minus, format!("« {name} » n'est plus affiché par défaut"), None);
+                    self.toast(Icon::Minus, tf("« {name} » n'est plus affiché par défaut", &[("name", &name)]), None);
                 }
                 Action::MoveDefault(id, delta) => {
                     let list = &mut self.data.default_launchers;
@@ -1420,7 +1420,7 @@ impl AtelierApp {
                 Action::SetFavorite(p, l) => {
                     self.data.projects[p].favorite = Some(l);
                     let name = self.data.launchers[l].name.clone();
-                    self.toast(Icon::Star, format!("{name} mis en avant"), Some(format!("Pour {}", self.data.projects[p].name)));
+                    self.toast(Icon::Star, tf("{name} mis en avant", &[("name", &name)]), Some(tf("Pour {0}", &[("0", &self.data.projects[p].name)])));
                 }
                 Action::MoveInProject(p, l, delta) => {
                     let list = &mut self.data.projects[p].launchers;
@@ -1428,7 +1428,7 @@ impl AtelierApp {
                         let j = (i as i32 + delta).clamp(0, list.len() as i32 - 1) as usize;
                         list.swap(i, j);
                     } else {
-                        self.toast(Icon::Info, "Lanceur par défaut", Some("Son ordre se règle dans Configuration › Lanceurs.".into()));
+                        self.toast(Icon::Info, tr("Lanceur par défaut"), Some(tr("Son ordre se règle dans Configuration › Lanceurs.").into()));
                     }
                 }
                 Action::HideForProject(p, l) => {
@@ -1439,7 +1439,7 @@ impl AtelierApp {
                         project.hidden.push(l);
                     }
                     let (name, pname) = (self.data.launchers[l].name.clone(), project.name.clone());
-                    self.toast(Icon::EyeOff, format!("{name} masqué"), Some(format!("Pour {pname}")));
+                    self.toast(Icon::EyeOff, tf("{name} masqué", &[("name", &name)]), Some(tf("Pour {pname}", &[("pname", &pname)])));
                 }
                 Action::MoveFocus(p, delta) => {
                     let ids = self.data.focus();
@@ -1489,7 +1489,7 @@ impl AtelierApp {
                         Decision::Archive => {
                             self.data.projects[p].status = Status::Archived;
                             let name = self.data.projects[p].name.clone();
-                            self.toast(Icon::Archive, format!("{name} archivé"), Some("Il reste consultable dans la bibliothèque.".into()));
+                            self.toast(Icon::Archive, tf("{name} archivé", &[("name", &name)]), Some(tr("Il reste consultable dans la bibliothèque.").into()));
                             true
                         }
                         Decision::Keep | Decision::Later => true,
@@ -1505,7 +1505,7 @@ impl AtelierApp {
                     }
                     let opts = ScanOptions::from_config(&self.data.config);
                     if opts.roots.is_empty() {
-                        self.toast(Icon::FolderSearch, "Aucun dossier source", Some("Ajoute un dossier dans Configuration › Dossiers sources.".into()));
+                        self.toast(Icon::FolderSearch, tr("Aucun dossier source"), Some(tr("Ajoute un dossier dans Configuration › Dossiers sources.").into()));
                         continue;
                     }
                     self.st.scan_started = Some(self.st.now);
@@ -1524,9 +1524,9 @@ impl AtelierApp {
                         }
                         let name = self.data.projects[i].name.clone();
                         self.st.selected = Some(i);
-                        self.toast(Icon::CirclePlus, format!("{name} ajouté"), Some(proposal.description.clone()));
+                        self.toast(Icon::CirclePlus, tf("{name} ajouté", &[("name", &name)]), Some(proposal.description.clone()));
                     }
-                    None => self.toast(Icon::Info, "Ce dossier est déjà suivi", proposal.folder.clone()),
+                    None => self.toast(Icon::Info, tr("Ce dossier est déjà suivi"), proposal.folder.clone()),
                 },
                 Action::AskDelete(p) => self.st.modal = Some(Modal::ConfirmDelete(p)),
                 Action::DeleteProject(p) => {
@@ -1539,7 +1539,7 @@ impl AtelierApp {
                         self.st.flash = None;
                         self.st.revisit = None;
                         self.st.decisions.clear();
-                        self.toast(Icon::Trash2, format!("{} supprimé", removed.name), Some("La fiche seulement : le dossier n'est pas touché.".into()));
+                        self.toast(Icon::Trash2, tf("{0} supprimé", &[("0", &removed.name)]), Some(tr("La fiche seulement : le dossier n'est pas touché.").into()));
                     }
                 }
                 Action::AddStep(p, text) => {
@@ -1548,7 +1548,7 @@ impl AtelierApp {
                         && let Some(project) = self.data.projects.get_mut(p)
                     {
                         project.steps.push(Step { text: text.clone(), done: false });
-                        project.log(ActivityKind::Edit, format!("Étape ajoutée : {text}"));
+                        project.log(ActivityKind::Edit, tf("Étape ajoutée : {text}", &[("text", &text)]));
                     }
                 }
                 Action::RemoveStep(p, s) => {
@@ -1556,26 +1556,26 @@ impl AtelierApp {
                         && s < project.steps.len()
                     {
                         let step = project.steps.remove(s);
-                        project.log(ActivityKind::Edit, format!("Étape retirée : {}", step.text));
+                        project.log(ActivityKind::Edit, tf("Étape retirée : {0}", &[("0", &step.text)]));
                     }
                 }
                 Action::AddNote(p, text) => {
                     if let Some(project) = self.data.projects.get_mut(p) {
                         project.notes.insert(0, text.clone());
-                        project.log(ActivityKind::Note, format!("Note : {text}"));
+                        project.log(ActivityKind::Note, tf("Note : {text}", &[("text", &text)]));
                     }
                 }
                 Action::PickRoot => {
                     let start = self.data.config.roots.first().map(|r| r.path.clone()).unwrap_or_else(model::default_root);
                     if !self.dry_run
-                        && let Some(dir) = rfd::FileDialog::new().set_title("Dossier qui contient des projets").set_directory(start).pick_folder()
+                        && let Some(dir) = rfd::FileDialog::new().set_title(tr("Dossier qui contient des projets")).set_directory(start).pick_folder()
                     {
                         let path = dir.display().to_string();
                         if self.data.config.roots.iter().any(|r| model::path_key(&r.path) == model::path_key(&path)) {
-                            self.toast(Icon::Info, "Ce dossier est déjà un dossier source", Some(path));
+                            self.toast(Icon::Info, tr("Ce dossier est déjà un dossier source"), Some(path));
                         } else {
                             self.data.config.roots.push(ScanRoot { path: path.clone(), ..Default::default() });
-                            self.toast(Icon::FolderPlus, "Dossier source ajouté", Some(path));
+                            self.toast(Icon::FolderPlus, tr("Dossier source ajouté"), Some(path));
                             // On relève tout de suite ce qu'il contient.
                             self.actions.push(Action::StartScan);
                         }
@@ -1584,7 +1584,7 @@ impl AtelierApp {
                 Action::RemoveRoot(i) => {
                     if i < self.data.config.roots.len() {
                         let r = self.data.config.roots.remove(i);
-                        self.toast(Icon::Trash2, "Dossier source retiré", Some(format!("{} — ses projets restent suivis.", r.path)));
+                        self.toast(Icon::Trash2, tr("Dossier source retiré"), Some(tf("{0} — ses projets restent suivis.", &[("0", &r.path)])));
                     }
                 }
                 Action::IgnoreFolder(path) => {
@@ -1599,12 +1599,12 @@ impl AtelierApp {
                             k != key && !k.starts_with(&below)
                         });
                     }
-                    self.toast(Icon::EyeOff, "Dossier écarté des scans", Some(path));
+                    self.toast(Icon::EyeOff, tr("Dossier écarté des scans"), Some(path));
                 }
                 Action::RestoreFolder(i) => {
                     if i < self.data.config.ignored.len() {
                         let path = self.data.config.ignored.remove(i);
-                        self.toast(Icon::Eye, "Dossier rétabli", Some(format!("{path} — il réapparaîtra au prochain scan.")));
+                        self.toast(Icon::Eye, tr("Dossier rétabli"), Some(tf("{path} — il réapparaîtra au prochain scan.", &[("path", &path)])));
                     }
                 }
                 Action::AddCandidate(path) => {
@@ -1614,7 +1614,7 @@ impl AtelierApp {
                         let mut p = classify::by_rules(&f);
                         p.is_project = true;
                         if let Some(i) = classify::apply(&mut self.data, &p, AddedBy::Manual) {
-                            self.toast(Icon::CirclePlus, format!("{} ajouté", self.data.projects[i].name), Some(p.description));
+                            self.toast(Icon::CirclePlus, tf("{0} ajouté", &[("0", &self.data.projects[i].name)]), Some(p.description));
                         }
                     }
                 }
@@ -1626,7 +1626,7 @@ impl AtelierApp {
                             added += 1;
                         }
                     }
-                    self.toast(Icon::CirclePlus, format!("{added} projets ajoutés"), Some("Reconnus par leurs marqueurs (.git, Cargo.toml…).".into()));
+                    self.toast(Icon::CirclePlus, tf("{added} projets ajoutés", &[("added", &added)]), Some(tr("Reconnus par leurs marqueurs (.git, Cargo.toml…).").into()));
                 }
                 Action::AnalyzeCandidates => {
                     let with_ai = self.classifier().ollama.is_some();
@@ -1644,7 +1644,7 @@ impl AtelierApp {
                         let mut p = crate::github::proposal(repo);
                         p.is_project = true;
                         if let Some(i) = classify::apply(&mut self.data, &p, AddedBy::Manual) {
-                            self.toast(Icon::GitBranch, format!("{} ajouté", self.data.projects[i].name), Some(repo.html_url.clone()));
+                            self.toast(Icon::GitBranch, tf("{0} ajouté", &[("0", &self.data.projects[i].name)]), Some(repo.html_url.clone()));
                         }
                     }
                 }
@@ -1658,7 +1658,7 @@ impl AtelierApp {
                             }
                         }
                     }
-                    self.toast(Icon::GitBranch, format!("{added} dépôts ajoutés"), Some("Sans dossier local : ils sont marqués « GitHub ».".into()));
+                    self.toast(Icon::GitBranch, tf("{added} dépôts ajoutés", &[("added", &added)]), Some(tr("Sans dossier local : ils sont marqués « GitHub ».").into()));
                 }
                 Action::ListModels => {
                     self.st.models_loading = true;
@@ -1667,7 +1667,7 @@ impl AtelierApp {
                 Action::PullModel(name) => {
                     let name = name.trim().to_owned();
                     if !name.is_empty() && self.st.pull.is_none() {
-                        self.st.pull = Some((name.clone(), "démarrage…".into(), -1.0));
+                        self.st.pull = Some((name.clone(), tr("démarrage…").into(), -1.0));
                         jobs::spawn_pull(self.bus(), self.data.config.ollama_url.clone(), name);
                     }
                 }
@@ -1678,7 +1678,7 @@ impl AtelierApp {
                 Action::PullOllaya(name) => {
                     let name = name.trim().to_owned();
                     if !name.is_empty() && self.st.ollaya_pull.is_none() {
-                        self.st.ollaya_pull = Some((name.clone(), "démarrage…".into(), -1.0));
+                        self.st.ollaya_pull = Some((name.clone(), tr("démarrage…").into(), -1.0));
                         jobs::spawn_ollaya_pull(self.bus(), self.data.config.ollaya_url.clone(), name);
                     }
                 }
@@ -1706,9 +1706,14 @@ impl AtelierApp {
                 }
                 Action::CopyText(text) => {
                     ctx.copy_text(text);
-                    self.toast(Icon::Copy, "Copié dans le presse-papiers", None);
+                    self.toast(Icon::Copy, tr("Copié dans le presse-papiers"), None);
                 }
                 Action::SetDemo(on) => self.set_demo(on),
+                Action::SetLanguage(lang) => {
+                    self.data.config.language = lang;
+                    crate::i18n::set(lang.unwrap_or_else(crate::i18n::detect));
+                    theme::install_fonts(ctx);
+                }
                 Action::ApplyTheme => {
                     let c = &self.data.config;
                     theme::apply(ctx, c.theme, c.accent, c.compact);
@@ -1717,13 +1722,13 @@ impl AtelierApp {
                 Action::OpenUpdate => self.st.modal = Some(Modal::Update),
                 Action::CheckUpdate => {
                     if !self.dry_run {
-                        self.st.updater.check(&ctx, self.data.config.update_beta);
+                        self.st.updater.check(ctx, self.data.config.update_beta);
                     }
                 }
                 Action::DownloadUpdate => {
                     if !self.dry_run {
                         let dir = Store::default_path().parent().map(|p| p.join("updates")).unwrap_or_else(std::env::temp_dir);
-                        self.st.updater.download(&ctx, dir);
+                        self.st.updater.download(ctx, dir);
                     }
                 }
                 Action::Restart => {
@@ -1734,12 +1739,12 @@ impl AtelierApp {
                         if let (UpdatePhase::Ready, Some(path)) = (self.st.updater.phase, self.st.updater.downloaded.clone())
                             && let Err(why) = crate::release::install(&path)
                         {
-                            self.toast(Icon::TriangleAlert, "Installation impossible", Some(why));
+                            self.toast(Icon::TriangleAlert, tr("Installation impossible"), Some(why));
                             continue;
                         }
                         match launch::restart() {
                             Ok(()) => ctx.send_viewport_cmd(egui::ViewportCommand::Close),
-                            Err(why) => self.toast(Icon::TriangleAlert, "Redémarrage impossible", Some(why)),
+                            Err(why) => self.toast(Icon::TriangleAlert, tr("Redémarrage impossible"), Some(why)),
                         }
                     }
                 }
@@ -1815,7 +1820,7 @@ impl eframe::App for AtelierApp {
         self.st.now = ctx.input(|i| i.time);
         // Erreurs remontées par les programmes lancés.
         while let Ok((who, err)) = self.errors_rx.try_recv() {
-            self.toast(Icon::TriangleAlert, format!("{who} a échoué"), Some(err));
+            self.toast(Icon::TriangleAlert, tf("{who} a échoué", &[("who", &who)]), Some(err));
         }
         // Mise à jour : les réponses de GitHub et la progression du téléchargement.
         self.st.updater.poll();
@@ -1882,17 +1887,17 @@ fn confirm_delete(ctx: &egui::Context, data: &Data, p: usize, act: &mut Vec<Acti
         ui.set_width(440.0);
         ui.horizontal(|ui| {
             widgets::icon_tile(ui, Icon::Trash2, t.danger, 40.0);
-            widgets::title(ui, &format!("Supprimer « {} » ?", project.name), 20.0);
+            widgets::title(ui, &tf("Supprimer « {0} » ?", &[("0", &project.name)]), 20.0);
         });
         ui.add_space(8.0);
-        widgets::muted(ui, "La fiche, ses étapes et ses notes disparaissent d'Atelier. Le dossier sur le disque n'est pas touché ; un prochain scan pourra le proposer à nouveau.");
+        widgets::muted(ui, tr("La fiche, ses étapes et ses notes disparaissent d'Atelier. Le dossier sur le disque n'est pas touché ; un prochain scan pourra le proposer à nouveau."));
         ui.add_space(14.0);
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            if widgets::button(ui, Some(Icon::Trash2), "Supprimer", Kind::Danger).clicked() {
+            if widgets::button(ui, Some(Icon::Trash2), tr("Supprimer"), Kind::Danger).clicked() {
                 act.push(Action::DeleteProject(p));
                 open = false;
             }
-            if widgets::button(ui, None, "Annuler", Kind::Secondary).clicked() {
+            if widgets::button(ui, None, tr("Annuler"), Kind::Secondary).clicked() {
                 open = false;
             }
         });
@@ -1906,7 +1911,7 @@ pub fn footer_buttons(ui: &mut Ui, primary: &str, primary_enabled: bool) -> (boo
     let mut ok = false;
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
         ok = ui.add_enabled_ui(primary_enabled, |ui| widgets::button(ui, None, primary, Kind::Primary)).inner.clicked();
-        cancel = widgets::button(ui, None, "Annuler", Kind::Secondary).clicked();
+        cancel = widgets::button(ui, None, tr("Annuler"), Kind::Secondary).clicked();
     });
     (cancel, ok)
 }

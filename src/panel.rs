@@ -9,6 +9,7 @@ use crate::model::{Attention, Data, Status};
 use crate::scan;
 use crate::theme::{self, Tokens};
 use crate::widgets::{self, Kind};
+use crate::i18n::{tf, tr};
 
 /// Durée de l'éclat d'une tuile après un lancement, en secondes.
 const FLASH_SECS: f64 = 0.8;
@@ -26,7 +27,7 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>, p
                 ui.add_space(16.0);
                 launchers(ui, data, st, p, act);
                 ui.add_space(10.0);
-                let tabs = [(PanelTab::Summary, "Résumé"), (PanelTab::Activity, "Activité"), (PanelTab::Resources, "Ressources"), (PanelTab::Edit, "Modifier")];
+                let tabs = [(PanelTab::Summary, tr("Résumé")), (PanelTab::Activity, tr("Activité")), (PanelTab::Resources, tr("Ressources")), (PanelTab::Edit, tr("Modifier"))];
                 widgets::tabs(ui, "panel-tabs", &mut st.tab, &tabs);
                 ui.add_space(16.0);
                 match st.tab {
@@ -60,17 +61,17 @@ fn header(ui: &mut Ui, data: &Data, p: usize, act: &mut Vec<Action>) {
             ui.horizontal_wrapped(|ui| {
                 ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
                 let statuses: Vec<(Status, &str)> = Status::ALL.iter().map(|s| (*s, s.label())).collect();
-                if let Some(s) = widgets::chip_menu(ui, "Changer l'état", project.status, widgets::status_tone(project.status), &statuses) {
+                if let Some(s) = widgets::chip_menu(ui, tr("Changer l'état"), project.status, widgets::status_tone(project.status), &statuses) {
                     act.push(Action::SetStatus(p, s));
                 }
                 let attentions: Vec<(Attention, &str)> = Attention::ALL.iter().map(|a| (*a, a.label())).collect();
-                if let Some(a) = widgets::chip_menu(ui, "Changer l'attention", project.attention, widgets::attention_tone(project.attention), &attentions) {
+                if let Some(a) = widgets::chip_menu(ui, tr("Changer l'attention"), project.attention, widgets::attention_tone(project.attention), &attentions) {
                     act.push(Action::SetAttention(p, a, false));
                 }
             });
         });
         ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
-            if widgets::icon_button(ui, Icon::X, "Fermer le panneau", 32.0).clicked() {
+            if widgets::icon_button(ui, Icon::X, tr("Fermer le panneau"), 32.0).clicked() {
                 act.push(Action::Deselect);
             }
         });
@@ -84,9 +85,9 @@ fn launchers(ui: &mut Ui, data: &Data, st: &UiState, p: usize, act: &mut Vec<Act
     let favorite = data.favorite_of(p);
     let project = &data.projects[p];
     ui.horizontal(|ui| {
-        widgets::caps(ui, "Ouvrir avec");
+        widgets::caps(ui, tr("Ouvrir avec"));
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            if widgets::link(ui, "Gérer", Some(Icon::Settings2), 12.5).on_hover_text("Configuration › Lanceurs").clicked() {
+            if widgets::link(ui, tr("Gérer"), Some(Icon::Settings2), 12.5).on_hover_text(tr("Configuration › Lanceurs")).clicked() {
                 act.push(Action::GoConfig(CfgSection::Launchers));
             }
         });
@@ -109,31 +110,31 @@ fn launchers(ui: &mut Ui, data: &Data, st: &UiState, p: usize, act: &mut Vec<Act
                     act.push(Action::Launch(p, id));
                 }
                 let shortcut = if l.shortcut.is_empty() { String::new() } else { format!(" · {}", l.shortcut) };
-                let resp = resp.on_hover_text(format!("{}{shortcut}\n{}\nClic droit : options", l.name, l.resolve(project)));
+                let resp = resp.on_hover_text(tf("{0}{shortcut}\n{1}\nClic droit : options", &[("0", &l.name), ("shortcut", &shortcut), ("1", &l.resolve(project))]));
                 resp.context_menu(|ui| {
                     ui.set_min_width(220.0);
-                    if ui.button(format!("{}  Mettre en avant", icons::ch(Icon::Star))).clicked() {
+                    if ui.button(tf("{0}  Mettre en avant", &[("0", &(icons::ch(Icon::Star)))])).clicked() {
                         act.push(Action::SetFavorite(p, id));
                     }
                     if !is_default {
-                        if ui.button(format!("{}  Vers la gauche", icons::ch(Icon::ArrowLeft))).clicked() {
+                        if ui.button(tf("{0}  Vers la gauche", &[("0", &(icons::ch(Icon::ArrowLeft)))])).clicked() {
                             act.push(Action::MoveInProject(p, id, -1));
                         }
-                        if ui.button(format!("{}  Vers la droite", icons::ch(Icon::ArrowRight))).clicked() {
+                        if ui.button(tf("{0}  Vers la droite", &[("0", &(icons::ch(Icon::ArrowRight)))])).clicked() {
                             act.push(Action::MoveInProject(p, id, 1));
                         }
                     }
-                    if ui.button(format!("{}  Modifier le lanceur…", icons::ch(Icon::Pencil))).clicked() {
+                    if ui.button(tf("{0}  Modifier le lanceur…", &[("0", &(icons::ch(Icon::Pencil)))])).clicked() {
                         act.push(Action::OpenEditor(Some(id)));
                     }
                     ui.separator();
-                    let label = if is_default { "Masquer pour ce projet" } else { "Retirer de ce projet" };
+                    let label = if is_default { tr("Masquer pour ce projet") } else { tr("Retirer de ce projet") };
                     if ui.button(format!("{}  {label}", icons::ch(Icon::EyeOff))).clicked() {
                         act.push(Action::HideForProject(p, id));
                     }
                 });
             }
-            if widgets::add_tile(ui, "Ajouter un lanceur").clicked() {
+            if widgets::add_tile(ui, tr("Ajouter un lanceur")).clicked() {
                 act.push(Action::OpenGallery(Some(p)));
             }
         });
@@ -151,33 +152,33 @@ fn summary(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<A
         ui.add_space(12.0);
     };
     if !project.description.is_empty() {
-        widgets::info_row(ui, Icon::Info, "En une phrase", |ui| {
+        widgets::info_row(ui, Icon::Info, tr("En une phrase"), |ui| {
             ui.label(RichText::new(&project.description).size(14.5).color(t.ink));
         });
         gap(ui);
     }
     if !project.objective.is_empty() {
-        widgets::info_row(ui, Icon::Crosshair, "Objectif", |ui| {
+        widgets::info_row(ui, Icon::Crosshair, tr("Objectif"), |ui| {
             widgets::muted(ui, &project.objective);
         });
         gap(ui);
     }
     if !project.last_point.is_empty() {
-        widgets::info_row(ui, Icon::FileText, "Dernier point", |ui| {
+        widgets::info_row(ui, Icon::FileText, tr("Dernier point"), |ui| {
             widgets::muted(ui, &project.last_point);
         });
         gap(ui);
     }
-    widgets::info_row(ui, Icon::Zap, "Prochaine action", |ui| {
+    widgets::info_row(ui, Icon::Zap, tr("Prochaine action"), |ui| {
         if project.next_action.is_empty() {
-            widgets::muted(ui, "Pas encore définie (onglet « Modifier »).");
+            widgets::muted(ui, tr("Pas encore définie (onglet « Modifier »)."));
         } else {
             ui.label(RichText::new(&project.next_action).size(14.5).color(t.ink));
         }
     });
     gap(ui);
     let (done, total) = project.steps_done();
-    widgets::info_row(ui, Icon::ListChecks, &format!("Prochaines étapes · {done}/{total}"), |ui| {
+    widgets::info_row(ui, Icon::ListChecks, &tf("Prochaines étapes · {done}/{total}", &[("done", &done), ("total", &total)]), |ui| {
         ui.add_space(4.0);
         let width = ui.available_width();
         // L'espacement hérité de `info_row` (14 points), pas celui par défaut : sinon la rangée
@@ -193,7 +194,7 @@ fn summary(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<A
                 if resp.inner.changed() {
                     act.push(Action::ToggleStep(p, i));
                 }
-                if widgets::icon_button(ui, Icon::X, &format!("Retirer « {} »", step.text), 24.0).clicked() {
+                if widgets::icon_button(ui, Icon::X, &tf("Retirer « {0} »", &[("0", &step.text)]), 24.0).clicked() {
                     act.push(Action::RemoveStep(p, i));
                 }
             });
@@ -201,9 +202,9 @@ fn summary(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<A
         // Ajouter une étape : on tape, puis Entrée.
         ui.add_space(2.0);
         ui.horizontal(|ui| {
-            let resp = widgets::text_input(ui, &mut st.new_step, "Ajouter une étape…", width - 34.0 - spacing);
+            let resp = widgets::text_input(ui, &mut st.new_step, tr("Ajouter une étape…"), width - 34.0 - spacing);
             let enter = resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-            let add = widgets::icon_button(ui, Icon::Plus, "Ajouter l'étape", 34.0).clicked();
+            let add = widgets::icon_button(ui, Icon::Plus, tr("Ajouter l'étape"), 34.0).clicked();
             if (enter || add) && !st.new_step.trim().is_empty() {
                 act.push(Action::AddStep(p, st.new_step.trim().to_owned()));
                 st.new_step.clear();
@@ -215,14 +216,14 @@ fn summary(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<A
         });
     });
     gap(ui);
-    widgets::info_row(ui, Icon::Calendar, "Prochaine revue", |ui| {
+    widgets::info_row(ui, Icon::Calendar, tr("Prochaine revue"), |ui| {
         widgets::muted(ui, &project.review);
     });
     // Les concepts de l'ontologie auxquels Ollaya (ou l'utilisateur) l'a rattaché.
     let concepts = data.concepts_of(p);
     if !concepts.is_empty() {
         gap(ui);
-        widgets::info_row(ui, Icon::Network, "Concepts", |ui| {
+        widgets::info_row(ui, Icon::Network, tr("Concepts"), |ui| {
             ui.horizontal_wrapped(|ui| {
                 ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
                 for (c, w) in concepts {
@@ -239,16 +240,16 @@ fn activity(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<
     let project = &data.projects[p];
     ui.horizontal(|ui| {
         let w = ui.available_width() - 92.0;
-        let resp = widgets::text_input(ui, &mut st.new_note, "Noter un point d'étape…", w);
+        let resp = widgets::text_input(ui, &mut st.new_note, tr("Noter un point d'étape…"), w);
         let enter = resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-        if (widgets::button(ui, None, "Noter", Kind::Secondary).clicked() || enter) && !st.new_note.trim().is_empty() {
+        if (widgets::button(ui, None, tr("Noter"), Kind::Secondary).clicked() || enter) && !st.new_note.trim().is_empty() {
             act.push(Action::AddNote(p, st.new_note.trim().to_owned()));
             st.new_note.clear();
         }
     });
     ui.add_space(14.0);
     if project.activity.is_empty() {
-        widgets::muted(ui, "Rien pour l'instant : les étapes, notes et modifications apparaîtront ici.");
+        widgets::muted(ui, tr("Rien pour l'instant : les étapes, notes et modifications apparaîtront ici."));
     }
     // Frise : une ligne verticale, un point par évènement.
     for (i, a) in project.activity.iter().enumerate() {
@@ -270,7 +271,7 @@ fn activity(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<
         });
     }
     ui.add_space(6.0);
-    widgets::muted(ui, &format!("Dernière activité dans le dossier {} · {}.", idle_text(project.idle_days), project.added_by.label()));
+    widgets::muted(ui, &tf("Dernière activité dans le dossier {0} · {1}.", &[("0", &idle_text(project.idle_days)), ("1", &project.added_by.label())]));
 }
 
 fn resources(ui: &mut Ui, data: &Data, p: usize, act: &mut Vec<Action>) {
@@ -278,23 +279,23 @@ fn resources(ui: &mut Ui, data: &Data, p: usize, act: &mut Vec<Action>) {
     let project = &data.projects[p];
     let explorer = data.launchers.iter().position(|l| l.name == "Explorateur");
 
-    widgets::caps(ui, "Dossiers");
+    widgets::caps(ui, tr("Dossiers"));
     for folder in &project.folders {
         let actions = if explorer.is_some() { 2 } else { 1 };
         row(ui, Icon::Folder, folder, true, actions, |ui| {
             if let Some(e) = explorer
-                && widgets::icon_button(ui, Icon::FolderOpen, "Ouvrir dans l'explorateur", 28.0).clicked()
+                && widgets::icon_button(ui, Icon::FolderOpen, tr("Ouvrir dans l'explorateur"), 28.0).clicked()
             {
                 act.push(Action::Launch(p, e));
             }
-            if widgets::icon_button(ui, Icon::Copy, "Copier le chemin", 28.0).clicked() {
+            if widgets::icon_button(ui, Icon::Copy, tr("Copier le chemin"), 28.0).clicked() {
                 ui.ctx().copy_text(folder.clone());
-                act.push(Action::Toast(Icon::Copy, "Chemin copié".into(), Some(folder.clone())));
+                act.push(Action::Toast(Icon::Copy, tr("Chemin copié").into(), Some(folder.clone())));
             }
         });
     }
     ui.add_space(12.0);
-    widgets::caps(ui, "Fichiers clés · relevés au scan");
+    widgets::caps(ui, tr("Fichiers clés · relevés au scan"));
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
         for f in &project.key_files {
@@ -302,15 +303,15 @@ fn resources(ui: &mut Ui, data: &Data, p: usize, act: &mut Vec<Action>) {
         }
     });
     ui.add_space(14.0);
-    widgets::caps(ui, "Liens");
+    widgets::caps(ui, tr("Liens"));
     if project.links.is_empty() {
-        widgets::muted(ui, "Aucun lien pour l'instant.");
+        widgets::muted(ui, tr("Aucun lien pour l'instant."));
     }
     for (name, url) in &project.links {
         row(ui, Icon::Link, &format!("{name} — {url}"), false, 0, |_| {});
     }
     ui.add_space(14.0);
-    widgets::caps(ui, "Notes");
+    widgets::caps(ui, tr("Notes"));
     for note in &project.notes {
         Frame::new().fill(t.raised).corner_radius(8).inner_margin(Margin::symmetric(12, 10)).show(ui, |ui| {
             ui.set_width(ui.available_width());
@@ -363,41 +364,41 @@ fn edit(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<Acti
     let d = &mut s.draft;
     let w = ui.available_width();
     ui.spacing_mut().item_spacing.y = 12.0;
-    widgets::labeled(ui, "Nom du projet", |ui| widgets::text_input(ui, &mut d.name, "Nom", w));
-    widgets::labeled(ui, "Description (une phrase)", |ui| widgets::text_input(ui, &mut d.description, "Ce qu'est le projet, en une phrase", w));
-    widgets::labeled(ui, "Résultat recherché", |ui| widgets::text_input(ui, &mut d.outcome, "Ce que tu veux avoir entre les mains", w));
+    widgets::labeled(ui, tr("Nom du projet"), |ui| widgets::text_input(ui, &mut d.name, tr("Nom"), w));
+    widgets::labeled(ui, tr("Description (une phrase)"), |ui| widgets::text_input(ui, &mut d.description, tr("Ce qu'est le projet, en une phrase"), w));
+    widgets::labeled(ui, tr("Résultat recherché"), |ui| widgets::text_input(ui, &mut d.outcome, tr("Ce que tu veux avoir entre les mains"), w));
     ui.horizontal(|ui| {
         let half = (w - 12.0) / 2.0;
         let statuses: Vec<(Status, &str)> = Status::ALL.iter().map(|s| (*s, s.label())).collect();
         let attentions: Vec<(Attention, &str)> = Attention::ALL.iter().map(|a| (*a, a.label())).collect();
         ui.vertical(|ui| {
             ui.set_width(half);
-            widgets::labeled(ui, "État", |ui| widgets::combo(ui, "État du projet", &mut d.status, &statuses, half - 4.0));
+            widgets::labeled(ui, tr("État"), |ui| widgets::combo(ui, tr("État du projet"), &mut d.status, &statuses, half - 4.0));
         });
         ui.vertical(|ui| {
             ui.set_width(half);
-            widgets::labeled(ui, "Attention", |ui| widgets::combo(ui, "Niveau d'attention", &mut d.attention, &attentions, half - 4.0));
+            widgets::labeled(ui, tr("Attention"), |ui| widgets::combo(ui, tr("Niveau d'attention"), &mut d.attention, &attentions, half - 4.0));
         });
     });
-    widgets::labeled(ui, "Prochaine action", |ui| widgets::text_input(ui, &mut d.next_action, "La toute prochaine chose à faire", w));
-    widgets::labeled(ui, "Objectif", |ui| {
-        widgets::named(ui.add(egui::TextEdit::multiline(&mut d.objective).desired_rows(3).desired_width(w).margin(Margin::symmetric(12, 8))), egui::Role::MultilineTextInput, "Objectif")
+    widgets::labeled(ui, tr("Prochaine action"), |ui| widgets::text_input(ui, &mut d.next_action, tr("La toute prochaine chose à faire"), w));
+    widgets::labeled(ui, tr("Objectif"), |ui| {
+        widgets::named(ui.add(egui::TextEdit::multiline(&mut d.objective).desired_rows(3).desired_width(w).margin(Margin::symmetric(12, 8))), egui::Role::MultilineTextInput, tr("Objectif"))
     });
     let domains: Vec<(usize, &str)> = data.domains.iter().enumerate().map(|(i, dm)| (i, dm.name.as_str())).collect();
-    widgets::labeled(ui, "Domaine (proposé par l'IA)", |ui| widgets::combo(ui, "Domaine du projet", &mut d.domain, &domains, w - 4.0));
+    widgets::labeled(ui, tr("Domaine (proposé par l'IA)"), |ui| widgets::combo(ui, tr("Domaine du projet"), &mut d.domain, &domains, w - 4.0));
     // L'icône (un bouton qui ouvre le sélecteur), à gauche des dossiers.
     ui.horizontal_top(|ui| {
         ui.spacing_mut().item_spacing.x = 12.0;
-        widgets::labeled(ui, "Icône", |ui| widgets::icon_picker(ui, "Icône du projet", &mut d.icon));
+        widgets::labeled(ui, tr("Icône"), |ui| widgets::icon_picker(ui, tr("Icône du projet"), &mut d.icon));
         ui.vertical(|ui| {
             let fw = ui.available_width();
-            widgets::labeled(ui, "Dossiers du projet", |ui| {
+            widgets::labeled(ui, tr("Dossiers du projet"), |ui| {
                 let mut remove = None;
                 for (i, folder) in d.folders.iter_mut().enumerate() {
                     ui.horizontal(|ui| {
                         ui.spacing_mut().item_spacing.x = 6.0;
                         widgets::path_input(ui, folder, fw - 40.0);
-                        if widgets::icon_button(ui, Icon::Trash2, "Retirer ce dossier", 34.0).clicked() {
+                        if widgets::icon_button(ui, Icon::Trash2, tr("Retirer ce dossier"), 34.0).clicked() {
                             remove = Some(i);
                         }
                     });
@@ -405,20 +406,20 @@ fn edit(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<Acti
                 if let Some(i) = remove {
                     d.folders.remove(i);
                 }
-                if widgets::link(ui, "Ajouter un dossier", Some(Icon::Plus), 13.5).clicked() {
+                if widgets::link(ui, tr("Ajouter un dossier"), Some(Icon::Plus), 13.5).clicked() {
                     d.folders.push(String::new());
                 }
             });
         });
     });
-    widgets::labeled(ui, "Dépôt GitHub", |ui| {
+    widgets::labeled(ui, tr("Dépôt GitHub"), |ui| {
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 6.0;
             widgets::mono_input(ui, &mut d.remote, "https://github.com/…", w - 42.0);
-            if widgets::icon_button(ui, Icon::GitBranch, "Détecter depuis le dépôt Git du dossier", theme::CONTROL_H).clicked() {
+            if widgets::icon_button(ui, Icon::GitBranch, tr("Détecter depuis le dépôt Git du dossier"), theme::CONTROL_H).clicked() {
                 match scan::remote_of(&d.folders) {
                     Some(url) => d.remote = url,
-                    None => act.push(Action::Toast(Icon::GitBranch, "Aucun dépôt distant".into(), Some("Les dossiers du projet n'ont pas de remote Git.".into()))),
+                    None => act.push(Action::Toast(Icon::GitBranch, tr("Aucun dépôt distant").into(), Some(tr("Les dossiers du projet n'ont pas de remote Git.").into()))),
                 }
             }
         });
@@ -432,10 +433,10 @@ fn edit(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<Acti
     ui.add_space(6.0);
     widgets::separator(ui);
     ui.add_space(4.0);
-    if widgets::button(ui, Some(Icon::Trash2), "Supprimer le projet", Kind::Danger).clicked() {
+    if widgets::button(ui, Some(Icon::Trash2), tr("Supprimer le projet"), Kind::Danger).clicked() {
         act.push(Action::AskDelete(p));
     }
     ui.vertical_centered(|ui| {
-        ui.label(RichText::new("Chaque changement est enregistré tout de suite.").italics().size(12.5).color(t.faint));
+        ui.label(RichText::new(tr("Chaque changement est enregistré tout de suite.")).italics().size(12.5).color(t.faint));
     });
 }

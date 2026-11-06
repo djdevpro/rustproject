@@ -129,6 +129,13 @@ pub fn english() -> Data {
     let mut data = Data::fresh();
     data.domains = domains();
     data.ontology = Default::default();
+    for l in &mut data.launchers {
+        l.name = match l.name.as_str() {
+            "Explorateur" => "Explorer".into(),
+            "Terminal" => "Terminal".into(),
+            other => other.to_owned(),
+        };
+    }
     for (order, (name, icon, domain, kind, stack, status, attention, idle, folder, description, outcome, next)) in rows().into_iter().enumerate() {
         let folder = match folder.strip_prefix(r"CLIENTS\") {
             Some(rest) => format!(r"{CLIENTS}\{rest}"),
@@ -214,6 +221,8 @@ mod captures {
     #[test]
     #[ignore]
     fn captures_readme() {
+        // Les captures du README sont en anglais, comme la fixture.
+        crate::i18n::set(crate::i18n::Lang::En);
         let atlas = |app: &AtelierApp| app.data.projects.iter().position(|p| p.name == "Atlas");
         shot("bureau", |app| app.st.selected = atlas(app));
         shot("carte", |app| {
@@ -226,5 +235,23 @@ mod captures {
             app.st.lib_view = LibView::Grid;
             app.st.selected = atlas(app);
         });
+        crate::i18n::set(crate::i18n::Lang::Fr);
+    }
+
+    /// Vérification à l'œil des écritures non latines : `target/langues/*.png`.
+    #[test]
+    #[ignore]
+    fn captures_langues() {
+        for lang in [crate::i18n::Lang::Zh, crate::i18n::Lang::Ja, crate::i18n::Lang::Ru, crate::i18n::Lang::Ko] {
+            crate::i18n::set(lang);
+            let data = crate::store::Store::open(super::PATH).load().unwrap().unwrap();
+            let mut h = Harness::builder().with_size(egui::vec2(1480.0, 920.0)).with_max_steps(80).build_eframe(move |cc| AtelierApp::with_data(cc, data.clone(), None));
+            h.state_mut().dry_run = true;
+            h.state_mut().st.selected = h.state().data.projects.iter().position(|p| p.name == "Atlas");
+            h.run_steps(6);
+            std::fs::create_dir_all("target/langues").unwrap();
+            h.render().unwrap().save(format!("target/langues/{}.png", lang.code())).unwrap();
+        }
+        crate::i18n::set(crate::i18n::Lang::Fr);
     }
 }

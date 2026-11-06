@@ -192,7 +192,7 @@ const USER_AGENT: &str = concat!("atelier/", env!("CARGO_PKG_VERSION"));
 
 enum Fetch {
     NotModified,
-    Latest(Option<Release>, Option<String>),
+    Latest(Option<Box<Release>>, Option<String>),
 }
 
 fn fetch(api: &str, beta: bool, etag: Option<&str>) -> Result<Fetch, String> {
@@ -214,7 +214,7 @@ fn fetch(api: &str, beta: bool, etag: Option<&str>) -> Result<Fetch, String> {
     }
     let body: Value = serde_json::from_str(&resp.body_mut().with_config().limit(8 * 1024 * 1024).read_to_string().map_err(|e| e.to_string())?).map_err(|e| format!("Réponse illisible : {e}"))?;
     let release = if beta { body.as_array().and_then(|list| list.iter().find_map(parse_release)) } else { parse_release(&body) };
-    Ok(Fetch::Latest(release, etag))
+    Ok(Fetch::Latest(release.map(Box::new), etag))
 }
 
 /// Télécharge le fichier de la release, vérifie son empreinte, et le range dans `dir`.
@@ -398,8 +398,8 @@ impl Updater {
             match msg {
                 Msg::Checked(Ok(Fetch::Latest(release, etag))) => {
                     self.etag = etag;
-                    self.cached = release.clone();
-                    self.apply(release);
+                    self.cached = release.as_deref().cloned();
+                    self.apply(release.map(|r| *r));
                 }
                 Msg::Checked(Ok(Fetch::NotModified)) => {
                     let cached = self.cached.clone();

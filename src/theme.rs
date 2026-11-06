@@ -348,6 +348,18 @@ pub fn install_fonts(ctx: &egui::Context) {
         ("Body-Bold", BODY, &[(*b"wght", 700.0), (*b"opsz", 28.0)], bold()),
         ("Mono", MONO, &[(*b"wght", 400.0)], FontFamily::Monospace),
     ];
+    // Chinois, japonais, coréen : la police du système pour ces écritures, en secours derrière
+    // les autres (seulement pour la langue choisie : ces polices pèsent lourd).
+    let cjk = match crate::i18n::current() {
+        crate::i18n::Lang::Zh => Some(("msyh.ttc", "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc")),
+        crate::i18n::Lang::Ja => Some(("YuGothM.ttc", "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc")),
+        crate::i18n::Lang::Ko => Some(("malgun.ttf", "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc")),
+        _ => None,
+    }
+    .and_then(|(windows, linux)| system_font(windows).or_else(|| system_font(linux)));
+    if let Some(bytes) = cjk {
+        fonts.font_data.insert("CJK".to_owned(), FontData::from_static(bytes).into());
+    }
     fonts.font_data.insert(
         "Lucide".to_owned(),
         FontData::from_static(lucide_icons::LUCIDE_FONT_BYTES).tweak(FontTweak { y_offset_factor: 0.07, ..Default::default() }).into(),
@@ -361,6 +373,9 @@ pub fn install_fonts(ctx: &egui::Context) {
             stack.push(name.to_owned());
         }
         stack.extend(fallback.iter().cloned());
+        if cjk.is_some() {
+            stack.push("CJK".to_owned());
+        }
         stack.push("Lucide".to_owned());
         fonts.families.insert(family, stack);
     }
@@ -368,7 +383,8 @@ pub fn install_fonts(ctx: &egui::Context) {
     ctx.set_fonts(fonts);
 }
 
-/// Lit une police de `C:\Windows\Fonts` une seule fois (octets partagés en `&'static [u8]`).
+/// Lit une police de `C:\Windows\Fonts` (ou un chemin absolu) une seule fois (octets partagés en
+/// `&'static [u8]`).
 fn system_font(file: &str) -> Option<&'static [u8]> {
     use std::collections::HashMap;
     use std::sync::{Mutex, OnceLock};
@@ -376,8 +392,13 @@ fn system_font(file: &str) -> Option<&'static [u8]> {
     static CACHE: OnceLock<Mutex<FontCache>> = OnceLock::new();
     let mut cache = CACHE.get_or_init(Default::default).lock().ok()?;
     *cache.entry(file.to_owned()).or_insert_with(|| {
-        let dir = std::env::var("WINDIR").unwrap_or_else(|_| r"C:\Windows".into());
-        let bytes = std::fs::read(std::path::Path::new(&dir).join("Fonts").join(file)).ok()?;
+        let path = if std::path::Path::new(file).is_absolute() {
+            std::path::PathBuf::from(file)
+        } else {
+            let dir = std::env::var("WINDIR").unwrap_or_else(|_| r"C:\Windows".into());
+            std::path::Path::new(&dir).join("Fonts").join(file)
+        };
+        let bytes = std::fs::read(path).ok()?;
         Some(&*Box::leak(bytes.into_boxed_slice()))
     })
 }

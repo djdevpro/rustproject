@@ -8,6 +8,7 @@ use crate::icons::{self, Icon};
 use crate::model::{Attention, Data, Status};
 use crate::theme::{self, Tokens, mix, tint};
 use crate::widgets::{self, Tone};
+use crate::i18n::{tf, tr};
 
 /// Les projets visibles avec les filtres en cours, triés. Pendant une recherche (floue et
 /// sémantique, voir `search.rs`), les plus pertinents d'abord.
@@ -104,7 +105,7 @@ fn sidebar(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
         ui.spacing_mut().item_spacing.y = 2.0;
         // L'attention d'abord : c'est elle qui range le bureau. On y dépose aussi les projets.
         let dragging = egui::DragAndDrop::has_payload_of_type::<DraggedProject>(ui.ctx());
-        widgets::caps(ui, if dragging { "Attention · dépose le projet ici" } else { "Attention" });
+        widgets::caps(ui, if dragging { tr("Attention · dépose le projet ici") } else { tr("Attention") });
         ui.add_space(6.0);
         for a in Attention::ALL {
             let color = if a == Attention::Focus { t.accent_ink } else { t.muted };
@@ -125,21 +126,21 @@ fn sidebar(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
         }
         // Les archivés : une entrée comme les autres (elle montre les archivés seuls), et on y
         // dépose un projet pour l'archiver.
-        let resp = side_item(ui, Icon::ArchiveX, t.muted, "Archivés", data.archived(), st.lib_archived);
+        let resp = side_item(ui, Icon::ArchiveX, t.muted, tr("Archivés"), data.archived(), st.lib_archived);
         if dragging {
             drop_highlight(ui, &t, &resp);
         }
         if let Some(dropped) = resp.dnd_release_payload::<DraggedProject>() {
             if let Some(p) = data.projects.get(dropped.0).filter(|p| p.status != Status::Archived) {
                 act.push(Action::SetStatus(dropped.0, Status::Archived));
-                act.push(Action::Toast(Icon::ArchiveX, format!("« {} » archivé", p.name), Some("Retrouve-le dans « Archivés ».".into())));
+                act.push(Action::Toast(Icon::ArchiveX, tf("« {0} » archivé", &[("0", &p.name)]), Some(tr("Retrouve-le dans « Archivés ».").into())));
             }
         } else if resp.clicked() {
             st.lib_archived = !st.lib_archived;
             st.lib_attention = None;
         }
         ui.add_space(16.0);
-        widgets::caps(ui, "Domaines · proposés par l'IA");
+        widgets::caps(ui, tr("Domaines · proposés par l'IA"));
         ui.add_space(6.0);
         let (archived, attention) = (st.lib_archived, st.lib_attention);
         let in_scope = |d: Option<usize>| {
@@ -148,7 +149,7 @@ fn sidebar(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
                 .filter(|p| in_view(archived, attention, p) && d.is_none_or(|d| p.domain == d))
                 .count()
         };
-        if side_item(ui, Icon::LayoutGrid, t.muted, "Tous les domaines", in_scope(None), st.lib_domain.is_none()).clicked() {
+        if side_item(ui, Icon::LayoutGrid, t.muted, tr("Tous les domaines"), in_scope(None), st.lib_domain.is_none()).clicked() {
             st.lib_domain = None;
         }
         for (i, d) in data.domains.iter().enumerate() {
@@ -162,15 +163,15 @@ fn sidebar(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
             ui.spacing_mut().item_spacing.y = 6.0;
             ui.horizontal(|ui| {
                 icons::show(ui, Icon::Sparkles, 16.0, t.accent_ink);
-                ui.label(RichText::new("Taxonomie IA").font(FontId::new(14.0, theme::semibold())).color(t.ink_strong));
+                ui.label(RichText::new(tr("Taxonomie IA")).font(FontId::new(14.0, theme::semibold())).color(t.ink_strong));
             });
-            ui.label(RichText::new(format!("{} domaines · générée il y a 2 h · 2 suggestions en attente", data.domains.len())).size(12.5).color(t.muted));
+            ui.label(RichText::new(tf("{0} domaines · générée il y a 2 h · 2 suggestions en attente", &[("0", &data.domains.len())])).size(12.5).color(t.muted));
             ui.horizontal(|ui| {
-                if widgets::button_sized(ui, Some(Icon::RefreshCw), "Regénérer", widgets::Kind::Secondary, 32.0, None).clicked() {
-                    act.push(Action::Toast(Icon::Sparkles, "Taxonomie en cours de régénération".into(), Some("Simulation : la carte se mettra à jour.".into())));
+                if widgets::button_sized(ui, Some(Icon::RefreshCw), tr("Regénérer"), widgets::Kind::Secondary, 32.0, None).clicked() {
+                    act.push(Action::Toast(Icon::Sparkles, tr("Taxonomie en cours de régénération").into(), Some(tr("Simulation : la carte se mettra à jour.").into())));
                 }
             });
-            if widgets::link(ui, "Régler l'IA", Some(Icon::ArrowRight), 13.0).clicked() {
+            if widgets::link(ui, tr("Régler l'IA"), Some(Icon::ArrowRight), 13.0).clicked() {
                 act.push(Action::GoConfig(CfgSection::Ai));
             }
         });
@@ -196,17 +197,17 @@ fn main(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
         filters.push((Filter::Attention, a.label().into(), t.accent_ink));
     }
     if st.lib_archived {
-        filters.push((Filter::Archived, "Archivés".into(), t.muted));
+        filters.push((Filter::Archived, tr("Archivés").into(), t.muted));
     }
 
     // ---- Ligne 1 : le titre et le compte à gauche, la vue à droite. Toujours sur une ligne :
     // quand la place manque, le choix de la vue passe en icônes.
     ui.horizontal(|ui| {
-        widgets::title(ui, "Bibliothèque", 28.0);
+        widgets::title(ui, tr("Bibliothèque"), 28.0);
         widgets::count_pill(ui, &ids.len().to_string());
         let pool = if st.lib_archived { data.archived() } else { data.projects.len() - data.archived() };
         if ids.len() != pool {
-            ui.label(RichText::new(format!("sur {pool}")).size(13.5).color(t.faint));
+            ui.label(RichText::new(tf("sur {pool}", &[("pool", &pool)])).size(13.5).color(t.faint));
         }
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             let compact = ui.available_width() < 330.0;
@@ -227,7 +228,7 @@ fn main(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 8.0;
         let search_w = (avail - sort_w - if inline { chips_w } else { 0.0 } - 24.0).max(160.0);
-        let hint = if search_w >= 380.0 { "Rechercher : nom, type, techno (rust, next.js…)" } else { "Rechercher un projet…" };
+        let hint = if search_w >= 380.0 { tr("Rechercher : nom, type, techno (rust, next.js…)") } else { tr("Rechercher un projet…") };
         widgets::icon_input(ui, &mut st.lib_search, Icon::Search, hint, search_w, theme::CONTROL_H);
         if inline {
             filter_chips(ui, &filters, &mut removed, &mut clear_all);
@@ -266,27 +267,27 @@ fn filter_chips(ui: &mut Ui, filters: &[(Filter, String, Color32)], removed: &mu
             *removed = Some(*f);
         }
     }
-    if filters.len() >= 2 && widgets::link(ui, "Tout effacer", None, 12.5).clicked() {
+    if filters.len() >= 2 && widgets::link(ui, tr("Tout effacer"), None, 12.5).clicked() {
         *clear_all = true;
     }
 }
 
 /// Le tri, compact : « Tri : Activité récente ▾ ».
 fn sort_menu(ui: &mut Ui, sort: &mut Sort) {
-    let sorts = [(Sort::Recent, "Activité récente"), (Sort::Name, "Nom"), (Sort::Domain, "Domaine")];
+    let sorts = [(Sort::Recent, tr("Activité récente")), (Sort::Name, tr("Nom")), (Sort::Domain, tr("Domaine"))];
     let current = sorts.iter().find(|s| s.0 == *sort).map(|s| s.1).unwrap_or("");
-    let inner = egui::ComboBox::from_id_salt("lib-sort").selected_text(format!("Tri : {current}")).width(200.0).show_ui(ui, |ui| {
+    let inner = egui::ComboBox::from_id_salt("lib-sort").selected_text(tf("Tri : {current}", &[("current", &current)])).width(200.0).show_ui(ui, |ui| {
         for (v, label) in sorts {
             ui.selectable_value(sort, v, label);
         }
     });
-    inner.response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ComboBox, true, "Trier par"));
+    inner.response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ComboBox, true, tr("Trier par")));
 }
 
 /// Carte, Grille, Liste : avec leurs noms, ou en icônes seules quand la place manque (le nom
 /// reste en bulle et pour l'accessibilité).
 fn view_switch(ui: &mut Ui, view: &mut LibView, compact: bool) {
-    let views = [(LibView::Map, Icon::Map, "Carte"), (LibView::Grid, Icon::LayoutGrid, "Grille"), (LibView::List, Icon::List, "Liste")];
+    let views = [(LibView::Map, Icon::Map, tr("Carte")), (LibView::Grid, Icon::LayoutGrid, tr("Grille")), (LibView::List, Icon::List, tr("Liste"))];
     if !compact {
         widgets::segmented(ui, "lib-view", view, &views.map(|(v, i, l)| (v, Some(i), l)), None);
         return;
@@ -317,7 +318,7 @@ fn filter_chip(ui: &mut Ui, label: &str, color: Color32) -> bool {
     let t = Tokens::get(ui.ctx());
     let galley = ui.painter().layout_no_wrap(label.to_owned(), FontId::new(13.0, theme::semibold()), color);
     let (rect, resp) = ui.allocate_exact_size(vec2(galley.size().x + 40.0, 30.0), Sense::click());
-    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, format!("Retirer le filtre {label}")));
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tf("Retirer le filtre {label}", &[("label", &label)])));
     ui.painter().rect(rect, CornerRadius::same(15), tint(color, 0.14), Stroke::new(1.0, tint(color, if resp.hovered() { 0.8 } else { 0.4 })), StrokeKind::Inside);
     ui.painter().galley(pos2(rect.left() + 12.0, rect.center().y - galley.size().y / 2.0), galley, color);
     icons::paint(ui.painter(), pos2(rect.right() - 15.0, rect.center().y), Icon::X, 14.0, if resp.hovered() { t.ink_strong } else { color });
@@ -388,11 +389,11 @@ fn grid(ui: &mut Ui, data: &Data, ids: &[usize], selected: Option<usize>, act: &
 /// une colonne à 0 n'est pas affichée.
 fn list_columns(width: f32) -> [(&'static str, f32); 7] {
     if width >= 900.0 {
-        [("Projet", 0.24), ("Domaine", 0.16), ("Type", 0.17), ("Techno", 0.14), ("État", 0.11), ("Attention", 0.12), ("Activité", 0.06)]
+        [(tr("Projet"), 0.24), (tr("Domaine"), 0.16), (tr("Type"), 0.17), (tr("Techno"), 0.14), (tr("État"), 0.11), (tr("Attention"), 0.12), (tr("Activité"), 0.06)]
     } else if width >= 620.0 {
-        [("Projet", 0.32), ("Domaine", 0.22), ("Type", 0.0), ("Techno", 0.0), ("État", 0.16), ("Attention", 0.20), ("Activité", 0.10)]
+        [(tr("Projet"), 0.32), (tr("Domaine"), 0.22), (tr("Type"), 0.0), (tr("Techno"), 0.0), (tr("État"), 0.16), (tr("Attention"), 0.20), (tr("Activité"), 0.10)]
     } else {
-        [("Projet", 0.50), ("Domaine", 0.0), ("Type", 0.0), ("Techno", 0.0), ("État", 0.30), ("Attention", 0.0), ("Activité", 0.20)]
+        [(tr("Projet"), 0.50), (tr("Domaine"), 0.0), (tr("Type"), 0.0), (tr("Techno"), 0.0), (tr("État"), 0.30), (tr("Attention"), 0.0), (tr("Activité"), 0.20)]
     }
 }
 
@@ -409,7 +410,7 @@ fn list(ui: &mut Ui, data: &Data, ids: &[usize], selected: Option<usize>, act: &
         }
         x += (width - 28.0) * frac;
     }
-    ui.painter().text(pos2(rect.right() - 14.0, rect.center().y), Align2::RIGHT_CENTER, "ACTIVITÉ", FontId::new(11.0, theme::semibold()), t.faint);
+    ui.painter().text(pos2(rect.right() - 14.0, rect.center().y), Align2::RIGHT_CENTER, tr("ACTIVITÉ"), FontId::new(11.0, theme::semibold()), t.faint);
     ui.painter().hline(rect.x_range(), rect.bottom(), t.hairline());
     widgets::draggable(ScrollArea::vertical()).id_salt("library-list").auto_shrink(false).show(ui, |ui| {
         widgets::scroll_content(ui, |ui| {

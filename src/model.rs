@@ -18,17 +18,18 @@ pub fn now() -> u64 {
 
 /// « à l'instant », « il y a 5 min », « hier », « il y a 3 mois »… (`0` = « jamais »).
 pub fn ago(ts: u64) -> String {
+    use crate::i18n::{tf, tr};
     if ts == 0 {
-        return "jamais".into();
+        return tr("jamais").into();
     }
     let s = now().saturating_sub(ts);
     match s {
-        0..60 => "à l'instant".into(),
-        60..3600 => format!("il y a {} min", s / 60),
-        3600..86_400 => format!("il y a {} h", s / 3600),
-        86_400..172_800 => "hier".into(),
-        _ if s < 60 * 86_400 => format!("il y a {} j", s / 86_400),
-        _ => format!("il y a {} mois", s / (30 * 86_400)),
+        0..60 => tr("à l'instant").into(),
+        60..3600 => tf("il y a {0} min", &[("0", &(s / 60))]),
+        3600..86_400 => tf("il y a {0} h", &[("0", &(s / 3600))]),
+        86_400..172_800 => tr("hier").into(),
+        _ if s < 60 * 86_400 => tf("il y a {d} j", &[("d", &(s / 86_400))]),
+        _ => tf("il y a {0} mois", &[("0", &(s / (30 * 86_400)))]),
     }
 }
 
@@ -47,13 +48,13 @@ pub enum Status {
 impl Status {
     pub const ALL: [Self; 5] = [Self::Idea, Self::Active, Self::Paused, Self::Done, Self::Archived];
     pub fn label(self) -> &'static str {
-        match self {
+        crate::i18n::tr(match self {
             Self::Idea => "Idée",
             Self::Active => "En cours",
             Self::Paused => "En pause",
             Self::Done => "Terminé",
             Self::Archived => "Archivé",
-        }
+        })
     }
     /// Pour le serveur MCP : un état à partir de son nom (« en cours », « active »…).
     pub fn parse(s: &str) -> Option<Self> {
@@ -76,11 +77,11 @@ pub enum Attention {
 impl Attention {
     pub const ALL: [Self; 3] = [Self::Focus, Self::Flow, Self::Reserve];
     pub fn label(self) -> &'static str {
-        match self {
+        crate::i18n::tr(match self {
             Self::Focus => "Focus",
             Self::Flow => "Au fil de l'eau",
             Self::Reserve => "En réserve",
-        }
+        })
     }
     pub fn icon(self) -> Icon {
         match self {
@@ -90,11 +91,11 @@ impl Attention {
         }
     }
     pub fn description(self) -> &'static str {
-        match self {
+        crate::i18n::tr(match self {
             Self::Focus => "Les projets du moment, en tête du bureau.",
             Self::Flow => "Ils avancent quand il reste de la place, sans pression.",
             Self::Reserve => "Au repos. Un projet par jour ressort dans « À revisiter ».",
-        }
+        })
     }
     pub fn parse(s: &str) -> Option<Self> {
         let s = s.trim().to_lowercase();
@@ -165,13 +166,13 @@ pub enum AddedBy {
 
 impl AddedBy {
     pub fn label(self) -> &'static str {
-        match self {
+        crate::i18n::tr(match self {
             Self::Manual => "ajouté à la main",
             Self::Rules => "reconnu par les règles locales",
             Self::Ollama => "classé par Ollama",
             Self::Mcp => "ajouté par l'agent IA (MCP)",
             Self::Demo => "démonstration",
-        }
+        })
     }
 }
 
@@ -302,12 +303,12 @@ pub enum LauncherKind {
 impl LauncherKind {
     pub const ALL: [Self; 4] = [Self::App, Self::Command, Self::Url, Self::Folder];
     pub fn label(self) -> &'static str {
-        match self {
+        crate::i18n::tr(match self {
             Self::App => "Application",
             Self::Command => "Commande",
             Self::Url => "Lien",
             Self::Folder => "Dossier",
-        }
+        })
     }
     pub fn icon(self) -> Icon {
         match self {
@@ -333,14 +334,14 @@ pub enum Group {
 impl Group {
     pub const ALL: [Self; 6] = [Self::Terminal, Self::Editor, Self::Ai, Self::Web, Self::Git, Self::Tools];
     pub fn label(self) -> &'static str {
-        match self {
+        crate::i18n::tr(match self {
             Self::Terminal => "Terminaux",
             Self::Editor => "Éditeurs",
             Self::Ai => "IA",
             Self::Web => "Navigateur",
             Self::Git => "Git",
             Self::Tools => "Outils",
-        }
+        })
     }
 }
 
@@ -459,6 +460,8 @@ pub struct Config {
     pub demo_data: bool,
     pub update_auto: bool,
     pub update_beta: bool,
+    /// Langue de l'interface (`None` : celle du système).
+    pub language: Option<crate::i18n::Lang>,
     /// Version de la liste de marqueurs : les anciens fichiers reçoivent les nouveaux marqueurs.
     /// (Absent d'un ancien fichier → 0, d'où le `default` propre au champ.)
     #[serde(default = "zero")]
@@ -522,6 +525,7 @@ impl Default for Config {
             demo_data: false,
             update_auto: true,
             update_beta: false,
+            language: None,
             markers_version: MARKERS_VERSION,
             ignored: Vec::new(),
         }

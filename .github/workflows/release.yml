@@ -93,10 +93,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
-      # Les tests du moteur. Les captures d'interface demandent un GPU et tournent en local.
+      # Tous les tests (moteur et interface, sans GPU) : un seul échec, et rien n'est construit ni publié.
       - name: Tests
-        shell: bash
-        run: 'cargo test --release -- ::tests:: --skip screens::'
+        run: cargo test --release
 
       - name: Build
         env:

@@ -12,12 +12,13 @@ use crate::model::{Data, ago};
 use crate::ontology::{DOMAIN_FACET, Merge};
 use crate::theme::{self, Tokens};
 use crate::widgets::{self, Kind, Tone};
+use crate::i18n::{tf, tr};
 
 pub fn show(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action>) {
     ui.vertical(|ui| {
         ui.spacing_mut().item_spacing.y = 4.0;
-        widgets::title(ui, "Ontologie", 26.0);
-        widgets::muted(ui, "Des facettes (axes de rangement) et leurs concepts. L'IA les propose en voyant tous tes projets ; tu les retouches ; Ollaya y range chaque projet.");
+        widgets::title(ui, tr("Ontologie"), 26.0);
+        widgets::muted(ui, tr("Des facettes (axes de rangement) et leurs concepts. L'IA les propose en voyant tous tes projets ; tu les retouches ; Ollaya y range chaque projet."));
     });
     overview(ui, data, st, act);
     if st.onto_proposal.is_some() {
@@ -28,14 +29,14 @@ pub fn show(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action
     for f in facets {
         facet_card(ui, data, f);
     }
-    if widgets::button(ui, Some(Icon::Plus), "Ajouter une facette", Kind::Secondary).clicked() {
-        data.ontology.add_facet("Nouvelle facette", "");
+    if widgets::button(ui, Some(Icon::Plus), tr("Ajouter une facette"), Kind::Secondary).clicked() {
+        data.ontology.add_facet(tr("Nouvelle facette"), "");
     }
 }
 
 fn overview(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action>) {
     let t = Tokens::get(ui.ctx());
-    widgets::settings_card(ui, "Vue d'ensemble", None, |ui| {
+    widgets::settings_card(ui, tr("Vue d'ensemble"), None, |ui| {
         let linked = data.projects.iter().filter(|p| p.tags.iter().any(|x| x.weight >= crate::ontology::LINK_MIN)).count();
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
@@ -43,29 +44,29 @@ fn overview(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action
             widgets::chip(ui, &plural(data.ontology.facets.len(), "facette"), Tone::Neutral);
             widgets::chip(ui, &plural(data.ontology.concepts.len(), "concept"), Tone::Neutral);
             let tone = if linked == data.projects.len() && linked > 0 { Tone::Good } else { Tone::Neutral };
-            widgets::chip(ui, &format!("{linked}/{} projets rattachés", data.projects.len()), tone);
+            widgets::chip(ui, &tf("{linked}/{0} projets rattachés", &[("linked", &linked), ("0", &data.projects.len())]), tone);
             if data.ontology.generated_at > 0 {
-                ui.label(RichText::new(format!("Proposée par {} {}", data.ontology.generated_by, ago(data.ontology.generated_at))).size(12.5).color(t.faint));
+                ui.label(RichText::new(tf("Proposée par {0} {1}", &[("0", &data.ontology.generated_by), ("1", &ago(data.ontology.generated_at))])).size(12.5).color(t.faint));
             }
         });
         let model = data.config.ollama_model.clone();
         ui.horizontal(|ui| {
             ui.add_enabled_ui(!model.is_empty() && !st.onto_generating, |ui| {
-                let resp = widgets::button(ui, Some(Icon::Sparkles), "Proposer avec l'IA", Kind::Primary);
+                let resp = widgets::button(ui, Some(Icon::Sparkles), tr("Proposer avec l'IA"), Kind::Primary);
                 if resp.clicked() {
                     act.push(Action::GenerateOntology);
                 }
-                resp.on_disabled_hover_text("Choisis d'abord un modèle de langage Ollama (IA & modèles).");
+                resp.on_disabled_hover_text(tr("Choisis d'abord un modèle de langage Ollama (IA & modèles)."));
             });
             if st.onto_generating {
                 ui.add(egui::Spinner::new().size(16.0).color(t.accent));
-                ui.label(RichText::new(format!("{model} lit tes {} projets…", data.projects.len())).size(13.0).color(t.muted));
+                ui.label(RichText::new(tf("{model} lit tes {0} projets…", &[("model", &model), ("0", &data.projects.len())])).size(13.0).color(t.muted));
             } else if model.is_empty() {
-                if widgets::link(ui, "Choisir un modèle de langage", Some(Icon::ArrowRight), 13.0).clicked() {
+                if widgets::link(ui, tr("Choisir un modèle de langage"), Some(Icon::ArrowRight), 13.0).clicked() {
                     act.push(Action::GoConfig(CfgSection::Ai));
                 }
             } else {
-                ui.label(RichText::new(format!("Avec {model}, qui voit tous tes projets d'un coup. Rien n'est appliqué sans ton accord.")).size(12.5).color(t.faint));
+                ui.label(RichText::new(tf("Avec {model}, qui voit tous tes projets d'un coup. Rien n'est appliqué sans ton accord.", &[("model", &model)])).size(12.5).color(t.faint));
             }
         });
         if let Some(e) = &st.onto_error {
@@ -73,7 +74,7 @@ fn overview(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action
         }
         ui.horizontal(|ui| {
             crate::icons::show(ui, Icon::Lightbulb, 15.0, t.faint);
-            ui.label(RichText::new("Avec un agent MCP : « Propose une ontologie pour mes projets avec Atelier » (prompt concevoir_ontologie).").size(12.5).color(t.muted));
+            ui.label(RichText::new(tr("Avec un agent MCP : « Propose une ontologie pour mes projets avec Atelier » (prompt concevoir_ontologie).")).size(12.5).color(t.muted));
         });
     });
 }
@@ -86,8 +87,8 @@ fn proposal(ui: &mut Ui, st: &mut UiState, act: &mut Vec<Action>) {
         ui.spacing_mut().item_spacing.y = 8.0;
         ui.horizontal(|ui| {
             crate::icons::show(ui, Icon::Sparkles, 18.0, t.accent_ink);
-            ui.label(RichText::new(format!("Proposition de {model}")).font(FontId::new(17.0, theme::bold())).color(t.ink_strong));
-            widgets::chip(ui, &format!("{} facettes · {} concepts", o.facets.len(), o.concepts.len()), Tone::Accent);
+            ui.label(RichText::new(tf("Proposition de {model}", &[("model", &model)])).font(FontId::new(17.0, theme::bold())).color(t.ink_strong));
+            widgets::chip(ui, &tf("{0} facettes · {1} concepts", &[("0", &o.facets.len()), ("1", &o.concepts.len())]), Tone::Accent);
         });
         for f in &o.facets {
             ui.label(RichText::new(&f.name).font(FontId::new(14.5, theme::semibold())).color(t.ink));
@@ -95,37 +96,37 @@ fn proposal(ui: &mut Ui, st: &mut UiState, act: &mut Vec<Action>) {
                 ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
                 for (depth, c) in o.tree(f.id) {
                     let label = if depth > 0 { format!("↳ {}", c.name) } else { c.name.clone() };
-                    let tip = if c.synonyms.is_empty() { c.definition.clone() } else { format!("{}\nSynonymes : {}", c.definition, c.synonyms.join(", ")) };
+                    let tip = if c.synonyms.is_empty() { c.definition.clone() } else { tf("{0}\nSynonymes : {1}", &[("0", &c.definition), ("1", &(c.synonyms.join(", ")))]) };
                     widgets::tag(ui, &label).on_hover_text(tip);
                 }
             });
         }
         ui.add_space(4.0);
         ui.horizontal_wrapped(|ui| {
-            if widgets::button(ui, Some(Icon::Check), "Remplacer (garde tes concepts manuels)", Kind::Primary).clicked() {
+            if widgets::button(ui, Some(Icon::Check), tr("Remplacer (garde tes concepts manuels)"), Kind::Primary).clicked() {
                 act.push(Action::ApplyProposal(Merge::Replace));
             }
-            if widgets::button(ui, Some(Icon::Plus), "Ajouter seulement les nouveaux", Kind::Secondary).clicked() {
+            if widgets::button(ui, Some(Icon::Plus), tr("Ajouter seulement les nouveaux"), Kind::Secondary).clicked() {
                 act.push(Action::ApplyProposal(Merge::AddNew));
             }
-            if widgets::button(ui, Some(Icon::X), "Ignorer", Kind::Ghost).clicked() {
+            if widgets::button(ui, Some(Icon::X), tr("Ignorer"), Kind::Ghost).clicked() {
                 act.push(Action::DiscardProposal);
             }
         });
-        ui.label(RichText::new("Même nom, même concept : les rattachements des projets suivent. Après coup, reclasse les projets.").size(12.5).color(t.faint));
+        ui.label(RichText::new(tr("Même nom, même concept : les rattachements des projets suivent. Après coup, reclasse les projets.")).size(12.5).color(t.faint));
     });
 }
 
 fn classification(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action>) {
     let t = Tokens::get(ui.ctx());
-    widgets::settings_card(ui, "Classement par Ollaya", Some("Une question oui/non par concept, sa définition en critère. À partir de 50 %, le projet est rattaché. Les rattachements faits à la main restent."), |ui| {
+    widgets::settings_card(ui, tr("Classement par Ollaya"), Some(tr("Une question oui/non par concept, sa définition en critère. À partir de 50 %, le projet est rattaché. Les rattachements faits à la main restent.")), |ui| {
         let model = data.config.ollaya_model.clone();
         if model.is_empty() {
             ui.horizontal(|ui| {
                 widgets::chip(ui, "inactif", Tone::Neutral);
-                ui.label(RichText::new("Choisis un modèle de décision Ollaya (decider:2b conseillé).").size(13.0).color(t.muted));
+                ui.label(RichText::new(tr("Choisis un modèle de décision Ollaya (decider:2b conseillé).")).size(13.0).color(t.muted));
             });
-            if widgets::link(ui, "Régler Ollaya", Some(Icon::ArrowRight), 13.0).clicked() {
+            if widgets::link(ui, tr("Régler Ollaya"), Some(Icon::ArrowRight), 13.0).clicked() {
                 act.push(Action::GoConfig(CfgSection::Ai));
             }
             return;
@@ -136,9 +137,9 @@ fn classification(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<
             ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
             widgets::tag(ui, &model);
             if outdated == 0 {
-                widgets::chip(ui, "tous les projets sont classés", Tone::Good);
+                widgets::chip(ui, tr("tous les projets sont classés"), Tone::Good);
             } else {
-                widgets::chip(ui, &format!("{outdated} projets à (re)classer"), Tone::Neutral);
+                widgets::chip(ui, &tf("{outdated} projets à (re)classer", &[("outdated", &outdated)]), Tone::Neutral);
             }
         });
         if let Some(x) = &st.tagging {
@@ -150,17 +151,17 @@ fn classification(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<
                     } else {
                         ui.add(egui::Spinner::new().size(16.0).color(t.accent));
                     }
-                    let what = if paused { "en pause".to_owned() } else { x.current.clone() };
-                    let first = if x.done == 0 && !paused { " · le premier appel charge le modèle" } else { "" };
+                    let what = if paused { tr("en pause").to_owned() } else { x.current.clone() };
+                    let first = if x.done == 0 && !paused { tr(" · le premier appel charge le modèle") } else { "" };
                     ui.label(RichText::new(format!("{}/{} · {what}{first}", x.done, x.total)).size(13.0).color(t.ink));
                 });
                 widgets::progress(ui, x.done as f32 / x.total.max(1) as f32, if paused { t.muted } else { t.accent }, ui.available_width(), 6.0);
                 ui.horizontal(|ui| {
-                    let (icon, label, state) = if paused { (Icon::Play, "Reprendre", crate::jobs::RUN) } else { (Icon::Pause, "Mettre en pause", crate::jobs::PAUSE) };
+                    let (icon, label, state) = if paused { (Icon::Play, tr("Reprendre"), crate::jobs::RUN) } else { (Icon::Pause, tr("Mettre en pause"), crate::jobs::PAUSE) };
                     if widgets::button(ui, Some(icon), label, Kind::Secondary).clicked() {
                         act.push(Action::ControlTagging(state));
                     }
-                    if widgets::button(ui, Some(Icon::Square), "Arrêter", Kind::Ghost).on_hover_text("Les projets déjà classés le restent.").clicked() {
+                    if widgets::button(ui, Some(Icon::Square), tr("Arrêter"), Kind::Ghost).on_hover_text(tr("Les projets déjà classés le restent.")).clicked() {
                         act.push(Action::ControlTagging(crate::jobs::STOP));
                     }
                 });
@@ -172,18 +173,18 @@ fn classification(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<
         if !running {
             ui.horizontal(|ui| {
                 ui.add_enabled_ui(outdated > 0 && !data.ontology.concepts.is_empty(), |ui| {
-                    if widgets::button(ui, Some(Icon::Sparkles), &format!("Classer {outdated} projets"), Kind::Primary).clicked() {
+                    if widgets::button(ui, Some(Icon::Sparkles), &tf("Classer {outdated} projets", &[("outdated", &outdated)]), Kind::Primary).clicked() {
                         act.push(Action::TagProjects(None));
                     }
                 });
                 ui.add_enabled_ui(!data.projects.is_empty(), |ui| {
-                    if widgets::button(ui, Some(Icon::RefreshCw), "Tout reclasser", Kind::Secondary).clicked() {
+                    if widgets::button(ui, Some(Icon::RefreshCw), tr("Tout reclasser"), Kind::Secondary).clicked() {
                         act.push(Action::TagProjects(Some(data.projects.iter().map(|p| p.id).collect())));
                     }
                 });
             });
         }
-        ui.label(RichText::new("Le classement ne part que sur ton clic. Après avoir changé l'ontologie, reclasse.").size(12.5).color(t.faint));
+        ui.label(RichText::new(tr("Le classement ne part que sur ton clic. Après avoir changé l'ontologie, reclasse.")).size(12.5).color(t.faint));
     });
 }
 
@@ -216,19 +217,19 @@ fn facet_card(ui: &mut Ui, data: &mut Data, facet: u64) {
         ui.horizontal(|ui| {
             let f = &mut data.ontology.facets[fi];
             ui.push_id(("facet-name", facet), |ui| {
-                ui.add(egui::TextEdit::singleline(&mut f.name).font(FontId::new(17.0, theme::bold())).desired_width(w - 160.0).margin(Margin::symmetric(8, 4)).hint_text("Nom de la facette"));
+                ui.add(egui::TextEdit::singleline(&mut f.name).font(FontId::new(17.0, theme::bold())).desired_width(w - 160.0).margin(Margin::symmetric(8, 4)).hint_text(tr("Nom de la facette")));
             });
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if !is_domain && widgets::icon_button(ui, Icon::Trash2, "Supprimer la facette et ses concepts", 30.0).clicked() {
+                if !is_domain && widgets::icon_button(ui, Icon::Trash2, tr("Supprimer la facette et ses concepts"), 30.0).clicked() {
                     delete_facet = true;
                 }
                 let n = data.ontology.concepts.iter().filter(|c| c.facet == facet).count();
-                ui.label(RichText::new(format!("{n} concepts")).size(12.5).color(t.faint));
+                ui.label(RichText::new(tf("{n} concepts", &[("n", &n)])).size(12.5).color(t.faint));
             });
         });
-        ui.push_id(("facet-desc", facet), |ui| widgets::text_input(ui, &mut data.ontology.facets[fi].description, "À quoi sert cette facette (un axe de rangement)", w));
+        ui.push_id(("facet-desc", facet), |ui| widgets::text_input(ui, &mut data.ontology.facets[fi].description, tr("À quoi sert cette facette (un axe de rangement)"), w));
         if is_domain {
-            ui.label(RichText::new("Le meilleur concept de premier niveau devient le domaine du projet (carte, filtres de la bibliothèque).").size(12.0).color(t.faint));
+            ui.label(RichText::new(tr("Le meilleur concept de premier niveau devient le domaine du projet (carte, filtres de la bibliothèque).")).size(12.0).color(t.faint));
         }
         ui.add_space(2.0);
         let rows: Vec<(usize, u64)> = data.ontology.tree(facet).into_iter().map(|(d, c)| (d, c.id)).collect();
@@ -250,32 +251,32 @@ fn facet_card(ui: &mut Ui, data: &mut Data, facet: u64) {
                 excluded.extend(more);
             }
             let names: Vec<(Option<u64>, String)> =
-                std::iter::once((None, "— premier niveau —".to_owned())).chain(data.ontology.concepts.iter().filter(|x| x.facet == facet && !excluded.contains(&x.id)).map(|x| (Some(x.id), format!("sous « {} »", x.name)))).collect();
+                std::iter::once((None, tr("— premier niveau —").to_owned())).chain(data.ontology.concepts.iter().filter(|x| x.facet == facet && !excluded.contains(&x.id)).map(|x| (Some(x.id), tf("sous « {0} »", &[("0", &x.name)])))).collect();
             let options: Vec<(Option<u64>, &str)> = names.iter().map(|(v, l)| (*v, l.as_str())).collect();
             let count = data.concept_count(id);
             ui.push_id(("concept", id), |ui| {
                 ui.horizontal(|ui| {
                     ui.add_space(indent);
                     ui.spacing_mut().item_spacing.x = 8.0;
-                    changed |= widgets::text_input(ui, &mut c.name, "Nom du concept", (cw * 0.38).max(120.0)).changed();
-                    changed |= widgets::combo(ui, "Concept parent", &mut c.parent, &options, (cw * 0.30).max(110.0));
+                    changed |= widgets::text_input(ui, &mut c.name, tr("Nom du concept"), (cw * 0.38).max(120.0)).changed();
+                    changed |= widgets::combo(ui, tr("Concept parent"), &mut c.parent, &options, (cw * 0.30).max(110.0));
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        if widgets::icon_button(ui, Icon::Trash2, &format!("Supprimer « {} »", c.name), 30.0).clicked() {
+                        if widgets::icon_button(ui, Icon::Trash2, &tf("Supprimer « {0} »", &[("0", &c.name)]), 30.0).clicked() {
                             delete = Some(id);
                         }
                         if c.manual {
-                            widgets::chip(ui, "manuel", Tone::Accent).on_hover_text("Retouché à la main : gardé tel quel par les propositions de l'IA.");
+                            widgets::chip(ui, "manuel", Tone::Accent).on_hover_text(tr("Retouché à la main : gardé tel quel par les propositions de l'IA."));
                         }
-                        widgets::chip(ui, &format!("{count} projet{}", if count > 1 { "s" } else { "" }), if count > 0 { Tone::Good } else { Tone::Neutral });
+                        widgets::chip(ui, &if count > 1 { tf("{count} projets", &[("count", &count)]) } else { tf("{count} projet", &[("count", &count)]) }, if count > 0 { Tone::Good } else { Tone::Neutral });
                     });
                 });
                 ui.horizontal(|ui| {
                     ui.add_space(indent);
-                    changed |= widgets::text_input(ui, &mut c.definition, "Définition : une phrase qui permet de décider si un projet en relève", cw).changed();
+                    changed |= widgets::text_input(ui, &mut c.definition, tr("Définition : une phrase qui permet de décider si un projet en relève"), cw).changed();
                 });
                 ui.horizontal(|ui| {
                     ui.add_space(indent);
-                    changed |= list_input(ui, Id::unique(("synonyms", id)), &mut c.synonyms, "Synonymes, séparés par des virgules (servent à la recherche)", cw);
+                    changed |= list_input(ui, Id::unique(("synonyms", id)), &mut c.synonyms, tr("Synonymes, séparés par des virgules (servent à la recherche)"), cw);
                 });
             });
             if changed {
@@ -295,8 +296,8 @@ fn facet_card(ui: &mut Ui, data: &mut Data, facet: u64) {
         if let Some(id) = delete {
             data.remove_concept(id);
         }
-        if widgets::link(ui, "Ajouter un concept", Some(Icon::Plus), 13.5).clicked() {
-            let id = data.ontology.add_concept(facet, "Nouveau concept", "");
+        if widgets::link(ui, tr("Ajouter un concept"), Some(Icon::Plus), 13.5).clicked() {
+            let id = data.ontology.add_concept(facet, tr("Nouveau concept"), "");
             if let Some(c) = data.ontology.concepts.iter_mut().find(|c| c.id == id) {
                 c.manual = true;
             }

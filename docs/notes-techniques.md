@@ -7,7 +7,7 @@ lanceurs (VS Code, Claude Code, terminal…).
 ```bash
 cargo run                      # l'application
 cargo run -- --mcp             # le serveur MCP (sans interface), pour un agent IA
-cargo test                     # 32 tests : moteur + interface (captures dans tests/snapshots/)
+cargo test                     # tous les tests : moteur + interface (sans GPU)
 ```
 
 ## Où sont les données
@@ -159,7 +159,7 @@ de d3-force) et dessinée par `screens/map.rs` :
 
 Les tests ne touchent jamais tes vraies données : ils tournent sur la démo ou sur des fichiers et
 dossiers temporaires, et ne lancent aucun programme (`dry_run`). Ollama est testé contre un faux
-serveur local. Après un changement visuel voulu : `UPDATE_SNAPSHOTS=1 cargo test`.
+serveur local.
 
 ## Pas encore fait
 
