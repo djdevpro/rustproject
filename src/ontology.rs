@@ -100,6 +100,11 @@ impl Ontology {
         self.facets.iter().find(|f| same_name(&f.name, name)).map(|f| f.id)
     }
 
+    /// La facette des domaines : « Domaine » (ou « Domain », dans des données en anglais).
+    pub fn domain_facet(&self) -> Option<u64> {
+        self.facet_named(DOMAIN_FACET).or_else(|| self.facet_named("Domain"))
+    }
+
     pub fn concept_named(&self, facet: u64, name: &str) -> Option<u64> {
         self.concepts.iter().find(|c| c.facet == facet && same_name(&c.name, name)).map(|c| c.id)
     }
@@ -192,7 +197,7 @@ impl Data {
 
     /// Chaque concept de premier niveau de la facette « Domaine » a son domaine (carte, filtres).
     pub fn sync_domains(&mut self) {
-        let Some(facet) = self.ontology.facet_named(DOMAIN_FACET) else { return };
+        let Some(facet) = self.ontology.domain_facet() else { return };
         let names: Vec<String> = self.ontology.concepts.iter().filter(|c| c.facet == facet && c.parent.is_none() && !c.name.trim().is_empty()).map(|c| c.name.clone()).collect();
         for n in names {
             self.domain_named(&n);
@@ -235,9 +240,12 @@ impl Data {
     /// Applique les réponses d'Ollaya à un projet : les rattachements manuels restent, les autres
     /// sont remplacés ; le meilleur concept de la facette « Domaine » donne son domaine.
     pub fn apply_scores(&mut self, i: usize, scores: &[(u64, f32)], fingerprint: u64) {
-        let domain_facet = self.ontology.facet_named(DOMAIN_FACET);
+        let domain_facet = self.ontology.domain_facet();
+        // Un tag retiré à la main (poids 0) ne revient pas, pas même comme domaine principal.
+        let rejected: Vec<u64> = self.projects[i].tags.iter().filter(|t| t.manual && t.weight < LINK_MIN).map(|t| t.concept).collect();
         let best_domain = scores
             .iter()
+            .filter(|(id, _)| !rejected.contains(id))
             .filter(|(id, w)| *w >= LINK_MIN && self.ontology.concept(*id).is_some_and(|c| Some(c.facet) == domain_facet && c.parent.is_none()))
             .max_by(|a, b| a.1.total_cmp(&b.1))
             .and_then(|(id, _)| self.ontology.concept(*id))
@@ -260,6 +268,161 @@ impl Data {
     /// Les concepts d'un projet (au-dessus du seuil), du plus sûr au moins sûr.
     pub fn concepts_of(&self, i: usize) -> Vec<(&Concept, f32)> {
         self.projects[i].tags.iter().filter(|t| t.weight >= LINK_MIN).filter_map(|t| self.ontology.concept(t.concept).map(|c| (c, t.weight))).collect()
+    }
+
+    // ---- tags et domaines multiples ------------------------------------------------------------
+    //
+    // Un projet a un domaine PRINCIPAL (`Project::domain` : sa couleur et son île sur la carte) et
+    // autant de tags qu'il faut, dans chaque facette. Les tags de la facette « Domaine » lui
+    // donnent des domaines en plus. Retirer un tag le garde noté (poids 0, à la main) : un
+    // classement suivant ne le remet pas.
+
+    /// L'index du domaine qui porte ce nom (sans le créer).
+    fn domain_index(&self, name: &str) -> Option<usize> {
+        self.domains.iter().position(|d| same_name(&d.name, name))
+    }
+
+    /// Le domaine d'un concept de la facette « Domaine » : celui de son ancêtre de premier niveau.
+    pub fn domain_of_concept(&self, id: u64) -> Option<usize> {
+        let facet = self.ontology.domain_facet()?;
+        let mut c = self.ontology.concept(id).filter(|c| c.facet == facet)?;
+        for _ in 0..8 {
+            match c.parent.and_then(|p| self.ontology.concept(p)) {
+                Some(parent) => c = parent,
+                None => break,
+            }
+        }
+        self.domain_index(&c.name)
+    }
+
+    /// Le concept de premier niveau de la facette « Domaine » qui porte le nom de ce domaine.
+    pub fn domain_concept(&self, d: usize) -> Option<u64> {
+        let facet = self.ontology.domain_facet()?;
+        let name = &self.domains.get(d)?.name;
+        self.ontology.concepts.iter().find(|c| c.facet == facet && c.parent.is_none() && same_name(&c.name, name)).map(|c| c.id)
+    }
+
+    /// Les domaines d'un projet : le principal d'abord, puis ceux de ses tags « Domaine ».
+    pub fn domains_of(&self, i: usize) -> Vec<usize> {
+        let p = &self.projects[i];
+        let mut out = vec![p.domain];
+        for t in p.tags.iter().filter(|t| t.weight >= LINK_MIN) {
+            if let Some(d) = self.domain_of_concept(t.concept)
+                && !out.contains(&d)
+            {
+                out.push(d);
+            }
+        }
+        out
+    }
+
+    pub fn has_domain(&self, i: usize, d: usize) -> bool {
+        self.domains_of(i).contains(&d)
+    }
+
+    /// Rattache un projet à un concept, à la main : un classement suivant ne le touche pas.
+    pub fn tag(&mut self, i: usize, concept: u64) {
+        if self.ontology.concept(concept).is_none() || i >= self.projects.len() {
+            return;
+        }
+        let p = &mut self.projects[i];
+        p.tags.retain(|t| t.concept != concept);
+        p.tags.insert(0, Tag { concept, weight: 1.0, manual: true });
+    }
+
+    /// Retire un tag. Le domaine principal passe au domaine suivant s'il y en a un ; le seul
+    /// domaine d'un projet ne se retire pas (il faut en choisir un autre d'abord).
+    pub fn untag(&mut self, i: usize, concept: u64) {
+        if i >= self.projects.len() {
+            return;
+        }
+        if let Some(d) = self.domain_of_concept(concept)
+            && d == self.projects[i].domain
+            && self.domain_concept(d) == Some(concept)
+        {
+            match self.domains_of(i).into_iter().find(|&x| x != d) {
+                Some(next) => self.projects[i].domain = next,
+                None => return,
+            }
+        }
+        let p = &mut self.projects[i];
+        p.tags.retain(|t| t.concept != concept);
+        p.tags.push(Tag { concept, weight: 0.0, manual: true });
+    }
+
+    /// Ajoute un domaine à un projet, sans changer son domaine principal.
+    pub fn add_domain(&mut self, i: usize, d: usize) {
+        self.ensure_ontology();
+        let concept = match self.domain_concept(d) {
+            Some(c) => c,
+            None => {
+                let Some(name) = self.domains.get(d).map(|x| x.name.clone()) else { return };
+                let facet = self.ontology.domain_facet().unwrap_or_else(|| self.ontology.add_facet(DOMAIN_FACET, ""));
+                self.create_concept(facet, &name, None)
+            }
+        };
+        self.tag(i, concept);
+    }
+
+    /// Change le domaine principal (couleur et île sur la carte). `keep_old` : l'ancien reste un
+    /// domaine du projet (l'étoile déplacée dans la fiche) ; sinon il est remplacé (correction).
+    pub fn set_main_domain(&mut self, i: usize, d: usize, keep_old: bool) {
+        if i >= self.projects.len() || d >= self.domains.len() || self.projects[i].domain == d {
+            return;
+        }
+        if keep_old {
+            let old = self.projects[i].domain;
+            self.add_domain(i, old);
+        }
+        self.projects[i].domain = d;
+    }
+
+    /// Crée un concept à la main (ou renvoie celui qui porte déjà ce nom dans la facette). Au
+    /// premier niveau de la facette « Domaine », il crée aussi le domaine.
+    pub fn create_concept(&mut self, facet: u64, name: &str, parent: Option<u64>) -> u64 {
+        if let Some(id) = self.ontology.concept_named(facet, name) {
+            return id;
+        }
+        let parent = parent.filter(|p| self.ontology.concept(*p).is_some_and(|x| x.facet == facet));
+        let id = self.ontology.add_concept(facet, name, "");
+        if let Some(c) = self.ontology.concepts.iter_mut().find(|c| c.id == id) {
+            c.manual = true;
+            c.parent = parent;
+        }
+        self.sync_domains();
+        id
+    }
+
+    /// Les concepts dont le nom (ou un synonyme) contient `query`, les plus proches d'abord :
+    /// ceux qui commencent par le texte, puis les autres. Sans les concepts déjà rattachés au
+    /// projet `i`.
+    pub fn suggest_concepts(&self, i: usize, query: &str, limit: usize) -> Vec<&Concept> {
+        let q = crate::search::fold(query.trim());
+        if q.is_empty() {
+            return Vec::new();
+        }
+        let taken: Vec<u64> = self.projects.get(i).map(|p| p.tags.iter().filter(|t| t.weight >= LINK_MIN).map(|t| t.concept).collect()).unwrap_or_default();
+        let mut hits: Vec<(u8, &Concept)> = self
+            .ontology
+            .concepts
+            .iter()
+            .filter(|c| !taken.contains(&c.id))
+            .filter_map(|c| {
+                let name = crate::search::fold(&c.name);
+                let rank = if name.starts_with(&q) {
+                    0
+                } else if name.contains(&q) {
+                    1
+                } else if c.synonyms.iter().any(|s| crate::search::fold(s).contains(&q)) {
+                    2
+                } else {
+                    return None;
+                };
+                Some((rank, c))
+            })
+            .collect();
+        hits.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.name.len().cmp(&b.1.name.len())));
+        hits.into_iter().take(limit).map(|(_, c)| c).collect()
     }
 
     /// Applique une proposition de l'IA (voir `Merge`). Renvoie (ajoutés, retirés).
@@ -531,7 +694,7 @@ mod tests {
             p.tags.clear();
         }
         data.ensure_ontology();
-        let facet = data.ontology.facet_named(DOMAIN_FACET).expect("la facette Domaine");
+        let facet = data.ontology.domain_facet().expect("la facette Domaine");
         assert_eq!(data.ontology.concepts.iter().filter(|c| c.facet == facet).count(), data.domains.len());
         let immo = data.projects.iter().position(|p| p.name == "ImmoFormation").unwrap();
         let tag = &data.projects[immo].tags[0];
@@ -548,7 +711,7 @@ mod tests {
 
         let mut data = crate::model::demo();
         // Un concept fait à la main reste, même absent de la proposition.
-        let domain = data.ontology.facet_named(DOMAIN_FACET).unwrap();
+        let domain = data.ontology.domain_facet().unwrap();
         let mine = data.ontology.add_concept(domain, "Mes essais", "Bricolages perso.");
         data.ontology.concepts.iter_mut().find(|c| c.id == mine).unwrap().manual = true;
         let formation_before = data.ontology.concept_named(domain, "Formation");
@@ -578,7 +741,7 @@ mod tests {
     fn scores_appliques_au_projet() {
         let mut data = crate::model::demo();
         data.merge_ontology(&proposal(), Merge::Replace, "test");
-        let domain = data.ontology.facet_named(DOMAIN_FACET).unwrap();
+        let domain = data.ontology.domain_facet().unwrap();
         let immo_c = data.ontology.concept_named(domain, "Immobilier").unwrap();
         let form_c = data.ontology.concept_named(domain, "Formation").unwrap();
         let i = data.projects.iter().position(|p| p.name == "ImmoFormation").unwrap();

@@ -29,6 +29,9 @@ pub struct Proposal {
     pub idle_days: u32,
     pub key_files: Vec<String>,
     pub confidence: f32,
+    /// Les mots-clés proposés par l'IA (vide avec les règles locales).
+    #[serde(default)]
+    pub keywords: Vec<String>,
 }
 
 // ---- règles locales ----------------------------------------------------------------------------
@@ -126,6 +129,7 @@ pub fn by_rules(f: &Found) -> Proposal {
         key_files: f.markers.clone(),
         // Un README seul est un indice faible.
         confidence: if f.strong || !f.bricks.is_empty() { 0.75 } else if f.likely_project { 0.5 } else { 0.3 },
+        keywords: Vec::new(),
     }
 }
 
@@ -137,7 +141,28 @@ rangement (qui regroupe d'autres projets), d'archives, de données ou de dépend
 français. La description tient en UNE phrase courte (15 mots au plus) qui dit ce qu'est le projet, sans répéter son nom. \
 Attention aux BRIQUES : un dossier qui n'est qu'une partie d'un projet plus grand (frontend, backend, api, serveur, \
 client, admin, docs, un paquet dans packages/ ou apps/, un module…) n'est PAS un projet : réponds est_projet = false. \
-À l'inverse, le dossier qui regroupe ces briques EST le projet, même sans marqueur à sa racine.";
+À l'inverse, le dossier qui regroupe ces briques EST le projet, même sans marqueur à sa racine. Les mots_cles : 8 à 15 \
+mots ou courtes expressions en français qu'on taperait pour retrouver le projet (son sujet, son public, son usage, son \
+secteur : « emploi », « entretien d'embauche », « candidats »), pas sa stack technique.";
+
+/// La consigne pour proposer les mots-clés d'une fiche existante.
+pub const KEYWORDS_PROMPT: &str = "Tu reçois la fiche d'un projet d'un développeur. Propose 8 à 15 mots-clés en français : \
+les mots ou courtes expressions qu'on taperait pour retrouver ce projet (son sujet, son public, son usage, son secteur, \
+ex. « emploi », « entretien d'embauche », « candidats », « immobilier »), pas sa stack technique ni son nom. Réponds \
+uniquement en JSON : {\"mots_cles\": [...]}.";
+
+/// Des mots-clés propres : sans espaces en trop, sans doublons (casse et accents ignorés), 20 au plus.
+pub fn clean_keywords(words: Vec<String>) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for w in words {
+        let w = w.trim().trim_matches(|c: char| c == ',' || c == ';' || c == '.').trim().to_owned();
+        if !w.is_empty() && w.chars().count() <= 60 && !out.iter().any(|x| crate::search::fold(x) == crate::search::fold(&w)) {
+            out.push(w);
+        }
+    }
+    out.truncate(20);
+    out
+}
 
 /// Le schéma JSON imposé à la réponse (sorties structurées d'Ollama).
 pub fn answer_schema() -> Value {
@@ -150,9 +175,10 @@ pub fn answer_schema() -> Value {
             "domaine": { "type": "string" },
             "type": { "type": "string" },
             "technos": { "type": "array", "items": { "type": "string" } },
+            "mots_cles": { "type": "array", "items": { "type": "string" } },
             "confiance": { "type": "number" }
         },
-        "required": ["est_projet", "nom", "description", "domaine", "type", "technos", "confiance"]
+        "required": ["est_projet", "nom", "description", "domaine", "type", "technos", "mots_cles", "confiance"]
     })
 }
 
@@ -219,6 +245,7 @@ pub fn parse_answer(text: &str, f: &Found) -> Result<Proposal, String> {
         idle_days: f.idle_days,
         key_files: f.markers.clone(),
         confidence: v["confiance"].as_f64().unwrap_or(0.6) as f32,
+        keywords: clean_keywords(v["mots_cles"].as_array().map(|a| a.iter().filter_map(|x| x.as_str().map(str::to_owned)).collect()).unwrap_or_default()),
     })
 }
 
@@ -280,6 +307,7 @@ pub fn apply(data: &mut Data, p: &Proposal, by: AddedBy) -> Option<usize> {
         idle_days: p.idle_days,
         confidence: p.confidence,
         remote: p.remote.clone(),
+        keywords: p.keywords.clone(),
         source: if p.folder.is_some() { Source::Local } else { Source::GitHub },
         added_by: by,
         // Les projets endormis depuis longtemps arrivent directement en réserve.

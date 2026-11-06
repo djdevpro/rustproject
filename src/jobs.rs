@@ -25,6 +25,11 @@ pub enum JobMsg {
     PullProgress { status: String, fraction: f32 },
     PullDone(Result<String, String>),
     Github(Result<Vec<Repo>, String>),
+    /// Les paquets de chaque projet, relus dans ses manifestes : (identifiant, paquets).
+    Packages(Vec<(u64, Vec<crate::packages::Package>)>),
+    /// Les mots-clés proposés par Ollama pour un projet.
+    Keywords { id: u64, result: Result<Vec<String>, String> },
+    KeywordsDone,
     /// Comptes connectés à gh, et le compte actif.
     GithubAccounts(Result<crate::github::Accounts, String>),
     /// Assistant « Dossiers sources » : projets probables d'un dossier proposé.
@@ -147,6 +152,40 @@ pub fn spawn_github(bus: Bus, account: String, projects: Vec<(u64, Vec<String>)>
             repos
         });
         bus.send(JobMsg::Github(result));
+    });
+}
+
+/// Fait proposer des mots-clés par le modèle de langage d'Ollama : (identifiant, texte de la fiche).
+pub fn spawn_keywords(bus: Bus, url: String, model: String, projects: Vec<(u64, String)>) {
+    std::thread::spawn(move || {
+        let ollama = Ollama::new(&url);
+        let schema = serde_json::json!({
+            "type": "object",
+            "properties": { "mots_cles": { "type": "array", "items": { "type": "string" } } },
+            "required": ["mots_cles"]
+        });
+        for (id, text) in projects {
+            let result = ollama.chat_json(&model, crate::classify::KEYWORDS_PROMPT, &text, &schema).and_then(|answer| {
+                let start = answer.find('{').ok_or("réponse sans JSON")?;
+                let end = answer.rfind('}').ok_or("réponse sans JSON")?;
+                let v: serde_json::Value = serde_json::from_str(&answer[start..=end]).map_err(|e| format!("JSON invalide : {e}"))?;
+                Ok(crate::classify::clean_keywords(v["mots_cles"].as_array().map(|a| a.iter().filter_map(|x| x.as_str().map(str::to_owned)).collect()).unwrap_or_default()))
+            });
+            let failed = result.is_err();
+            bus.send(JobMsg::Keywords { id, result });
+            if failed {
+                break;
+            }
+        }
+        bus.send(JobMsg::KeywordsDone);
+    });
+}
+
+/// Relit les paquets des projets dans leurs manifestes (identifiant, dossiers).
+pub fn spawn_packages(bus: Bus, projects: Vec<(u64, Vec<String>)>) {
+    std::thread::spawn(move || {
+        let out = projects.into_iter().map(|(id, folders)| (id, crate::packages::of_folders(&folders))).collect();
+        bus.send(JobMsg::Packages(out));
     });
 }
 

@@ -206,7 +206,7 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>, v
     let lit = |k: usize| spot.is_some_and(|f| f == k || neighbors[f].contains(&k));
     let fade = |k: usize| {
         let mut a = 1.0;
-        if g.last_domain.is_some_and(|d| nodes[k].domain != d) {
+        if g.last_domain.is_some_and(|d| nodes[k].domain != d && !nodes[k].also.contains(&d)) {
             a *= 1.0 - 0.82 * df;
         }
         if spot.is_some() && !lit(k) {
@@ -215,33 +215,42 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>, v
         a
     };
 
-    // ---- liens (les allumés par-dessus), puis particules sur les liens allumés
+    // ---- liens : par défaut, seuls les rayons des grappes, très légers. Les autres liens
+    // (autres domaines, rangés ensemble, technos, tags) n'apparaissent que pour le point survolé,
+    // le projet ouvert (cliqué) ou le centre de grappe survolé. Les allumés par-dessus, avec des
+    // particules sur ceux du point survolé.
+    let opened = nodes.iter().position(|n| !n.is_hub() && Some(n.index) == selected);
     for pass_lit in [false, true] {
         for (e_idx, e) in g.sim.edges.iter().enumerate() {
-            let is_lit = spot.is_some_and(|f| e.a == f || e.b == f);
+            let hover_lit = spot.is_some_and(|f| e.a == f || e.b == f);
+            let open_lit = opened.is_some_and(|s| e.a == s || e.b == s);
+            let is_lit = hover_lit || open_lit;
             if is_lit != pass_lit {
                 continue;
             }
             let (a, b) = (pos[e.a], pos[e.b]);
             let alpha = fade(e.a).min(fade(e.b));
-            let lit_amount = if is_lit { hl } else { 0.0 };
+            let lit_amount = if hover_lit { hl.max(if open_lit { 0.75 } else { 0.0 }) } else if open_lit { 0.75 } else { 0.0 };
             let (base, width, dim, bright) = match e.kind {
-                EdgeKind::Domain => (data.domains[nodes[e.a].domain].color, 1.0, 0.20, 0.85),
-                // Rangés ensemble mais dans deux domaines : plus discret encore.
-                EdgeKind::Family if nodes[e.a].domain != nodes[e.b].domain => (t.ink, 1.0, 0.07, 0.8),
-                EdgeKind::Family => (t.ink, 1.2, 0.16, 0.8),
-                // Les technos communes n'apparaissent qu'au survol (sinon, une pelote).
+                EdgeKind::Domain => (data.domains[nodes[e.a].domain].color, 1.0, 0.10, 0.85),
+                EdgeKind::AlsoDomain => (data.domains[nodes[e.a].domain].color, 1.0, 0.0, 0.75),
+                EdgeKind::Family => (t.ink, 1.2, 0.0, 0.8),
                 EdgeKind::Stack => (t.accent, 1.0, 0.0, 0.7),
+                EdgeKind::Tags => (t.info, 1.0, 0.0, 0.7),
             };
-            let stroke = Stroke::new(width + 0.7 * lit_amount, tint(base, (dim + (bright - dim) * lit_amount) * alpha));
-            if e.kind == EdgeKind::Domain {
+            let strength = (dim + (bright - dim) * lit_amount) * alpha;
+            if strength < 0.01 {
+                continue;
+            }
+            let stroke = Stroke::new(width + 0.7 * lit_amount, tint(base, strength));
+            if matches!(e.kind, EdgeKind::Domain | EdgeKind::AlsoDomain) {
                 painter.line_segment([a, b], stroke);
             } else {
                 painter.extend(Shape::dashed_line(&[a, b], stroke, 5.0, 4.0));
             }
-            if is_lit && hl > 0.05 && !g.instant {
+            if hover_lit && hl > 0.05 && !g.instant {
                 // Une particule court sur le lien, du domaine (ou du nœud survolé) vers l'autre bout.
-                let (from, to) = if e.kind == EdgeKind::Domain || spot == Some(e.a) { (a, b) } else { (b, a) };
+                let (from, to) = if matches!(e.kind, EdgeKind::Domain | EdgeKind::AlsoDomain) || spot == Some(e.a) { (a, b) } else { (b, a) };
                 for phase in [0.0, 0.5] {
                     let f = (now * 0.5 + e_idx as f32 * 0.37 + phase).fract();
                     painter.circle_filled(from + (to - from) * f, 2.2, tint(base, 0.9 * hl * (1.0 - (f - 0.5).abs())));
@@ -358,7 +367,7 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>, v
     }
 
     // ---- habillage : aide, légende, commandes
-    let hint = painter.layout_no_wrap(tr("Glisse pour te déplacer · molette pour zoomer · clique un domaine pour le filtrer").into(), FontId::proportional(12.0), t.faint);
+    let hint = painter.layout_no_wrap(tr("Survole ou clique un point pour voir ses liens · glisse pour te déplacer · molette pour zoomer").into(), FontId::proportional(12.0), t.faint);
     if area.left() + 16.0 + hint.size().x < area.right() - 16.0 - 4.0 * 36.0 - 150.0 {
         painter.galley(area.left_top() + vec2(16.0, 16.0), hint, t.faint);
     }
@@ -431,6 +440,7 @@ fn legend(p: &egui::Painter, t: &Tokens, area: Rect) {
     item(&|c| { p.circle_filled(c, 5.5, tint(t.muted, 0.42)); }, tr("en réserve"));
     item(&|c| { p.extend(Shape::dashed_line(&[c - vec2(8.0, 0.0), c + vec2(8.0, 0.0)], Stroke::new(1.2, tint(t.ink, 0.5)), 4.0, 3.0)); }, tr("rangés ensemble"));
     item(&|c| { p.extend(Shape::dashed_line(&[c - vec2(8.0, 0.0), c + vec2(8.0, 0.0)], Stroke::new(1.2, tint(t.accent, 0.8)), 4.0, 3.0)); }, tr("technos communes (au survol)"));
+    item(&|c| { p.extend(Shape::dashed_line(&[c - vec2(8.0, 0.0), c + vec2(8.0, 0.0)], Stroke::new(1.2, tint(t.info, 0.8)), 4.0, 3.0)); }, tr("tags communs (au survol)"));
 }
 
 #[cfg(test)]

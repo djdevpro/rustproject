@@ -13,7 +13,7 @@ use crate::classify::{self, Proposal};
 use crate::github::Repo;
 use crate::icons::{self, Icon};
 use crate::jobs::{self, Bus, Classifier, JobMsg};
-use crate::model::{self, ActivityKind, AddedBy, AiMode, Attention, Data, Group, Launcher, LauncherKind, Project, ScanRoot, Status, Step};
+use crate::model::{self, ActivityKind, AddedBy, Attention, Data, Group, Launcher, LauncherKind, Project, ScanRoot, Status, Step};
 use crate::ollama::ModelInfo;
 use crate::scan::{self, Found, ScanOptions, ScanResult};
 use crate::screens;
@@ -124,6 +124,11 @@ pub struct LauncherDraft {
     pub in_terminal: bool,
     pub shortcut: String,
     pub description: String,
+    /// Le logo SVG (vide : l'icône).
+    pub svg: String,
+    /// La zone « coller le code SVG », ouverte avec ce qui y est tapé.
+    pub svg_paste: Option<String>,
+    pub svg_error: Option<String>,
 }
 
 impl Default for LauncherDraft {
@@ -137,6 +142,9 @@ impl Default for LauncherDraft {
             in_terminal: true,
             shortcut: String::new(),
             description: String::new(),
+            svg: String::new(),
+            svg_paste: None,
+            svg_error: None,
         }
     }
 }
@@ -152,6 +160,9 @@ impl LauncherDraft {
             in_terminal: l.in_terminal,
             shortcut: l.shortcut.clone(),
             description: l.description.clone(),
+            svg: l.svg.clone(),
+            svg_paste: None,
+            svg_error: None,
         }
     }
 
@@ -166,6 +177,7 @@ impl LauncherDraft {
             shortcut: self.shortcut.trim().to_owned(),
             description: if self.description.trim().is_empty() { tr("Lanceur personnalisé").into() } else { self.description.trim().to_owned() },
             group: Group::Tools,
+            svg: self.svg.clone(),
         }
     }
 
@@ -243,6 +255,16 @@ impl Tagging {
     pub fn paused(&self) -> bool {
         self.control.load(std::sync::atomic::Ordering::Relaxed) == jobs::PAUSE
     }
+}
+
+/// Un tag en cours de création, dans l'onglet « Modifier ».
+#[derive(Clone, Debug, Default)]
+pub struct TagNew {
+    pub name: String,
+    /// La facette choisie (`None` : une nouvelle, nommée `new_facet`).
+    pub facet: Option<u64>,
+    pub new_facet: String,
+    pub parent: Option<u64>,
 }
 
 /// Les champs de l'onglet « Modifier ».
@@ -362,8 +384,24 @@ pub enum Action {
     Select(usize),
     /// Plusieurs projets (index) d'un coup : glisser-déposer groupé, barre de la sélection.
     Bulk(Vec<usize>, BulkOp),
+    // ---- tags (ontologie) d'un projet
+    /// Rattacher un projet à un concept (ou valider un tag proposé par l'IA).
+    Tag(usize, u64),
+    /// Retirer un tag (il ne revient pas au classement suivant).
+    Untag(usize, u64),
+    /// Le domaine principal d'un projet (couleur et île sur la carte).
+    MainDomain(usize, usize),
+    /// Créer un tag et le rattacher au projet : dans une facette existante, ou une nouvelle.
+    NewTag { project: usize, facet: Option<u64>, new_facet: String, name: String, parent: Option<u64> },
+    /// Les mots-clés d'un projet (la liste complète).
+    SetKeywords(usize, Vec<String>),
+    /// Faire proposer des mots-clés par le modèle de langage d'Ollama : à ces projets
+    /// (identifiants), ou à ceux qui n'en ont pas.
+    SuggestKeywords(Option<Vec<u64>>),
     /// Ouvrir une adresse dans le navigateur (page GitHub d'un projet…).
     OpenUrl(String),
+    /// Ouvrir les outils de développement (comme F12).
+    OpenDevTools,
     Deselect,
     Go(Screen),
     GoConfig(CfgSection),
@@ -486,6 +524,23 @@ pub struct UiState {
     pub analysis: Option<Analysis>,
     /// Projets sélectionnés ensemble dans la Bibliothèque (identifiants).
     pub lib_multi: crate::select::MultiSelect<u64>,
+    /// Le filtre par paquet de la Bibliothèque.
+    pub lib_package: Option<crate::packages::Package>,
+    /// La colonne de la Bibliothèque : tous les domaines (sinon les 5 premiers), les gestionnaires
+    /// de paquets dépliés en entier, la taxonomie ouverte.
+    pub lib_domains_all: bool,
+    pub lib_packages_all: Vec<crate::packages::Manager>,
+    /// Les gestionnaires dépliés dans la colonne (repliés par défaut).
+    pub lib_packages_open: Vec<crate::packages::Manager>,
+    pub lib_taxonomy_open: bool,
+    /// L'onglet « Modifier » : le texte tapé pour ajouter un tag, et le tag en cours de création.
+    pub tag_query: String,
+    pub tag_new: Option<TagNew>,
+    /// Les outils de développement (F12).
+    pub devtools: crate::devtools::DevTools,
+    pub keyword_input: String,
+    /// Mots-clés proposés par Ollama : (faits, en tout).
+    pub keywords_job: Option<(usize, usize)>,
     pub new_exclude: String,
     pub new_note: String,
     pub new_step: String,
@@ -567,6 +622,16 @@ impl Default for UiState {
             rescan: false,
             analysis: None,
             lib_multi: Default::default(),
+            lib_package: None,
+            lib_domains_all: false,
+            lib_packages_all: Vec::new(),
+            lib_packages_open: Vec::new(),
+            lib_taxonomy_open: false,
+            tag_query: String::new(),
+            tag_new: None,
+            devtools: Default::default(),
+            keyword_input: String::new(),
+            keywords_job: None,
             new_exclude: String::new(),
             new_note: String::new(),
             new_step: String::new(),
@@ -662,6 +727,8 @@ impl AtelierApp {
         let mut app = Self::with_data(cc, data, readable.then_some(store));
         // L'adresse du dépôt, lue dans `.git/config`, pour les projets qui ne l'ont pas encore.
         app.data.fill_remotes();
+        // Les paquets de chaque projet, relus dans ses manifestes (en arrière-plan).
+        app.refresh_packages();
         if let Some(e) = error {
             app.toast(Icon::TriangleAlert, tr("Fichier de données illisible"), Some(e));
         }
@@ -711,6 +778,8 @@ impl AtelierApp {
 
     pub fn with_data(cc: &eframe::CreationContext<'_>, data: Data, store: Option<Store>) -> Self {
         theme::install_fonts(&cc.egui_ctx);
+        // Les logos SVG des lanceurs.
+        egui_extras::install_image_loaders(&cc.egui_ctx);
         theme::apply(&cc.egui_ctx, data.config.theme, data.config.accent, data.config.compact);
         let (errors_tx, errors_rx) = channel();
         let (jobs_tx, jobs_rx) = channel();
@@ -756,7 +825,7 @@ impl AtelierApp {
     /// Le classement à utiliser : Ollama si un modèle est choisi, sinon les règles locales.
     fn classifier(&self) -> Classifier {
         let c = &self.data.config;
-        let ollama = (c.ai_mode == AiMode::Ollama && !c.ollama_model.trim().is_empty()).then(|| (c.ollama_url.clone(), c.ollama_model.clone()));
+        let ollama = (c.ollama_on && !c.ollama_model.trim().is_empty()).then(|| (c.ollama_url.clone(), c.ollama_model.clone()));
         Classifier { ollama, domains: self.data.domains.iter().map(|d| d.name.clone()).collect(), depth: c.read_depth }
     }
 
@@ -906,6 +975,36 @@ impl AtelierApp {
                     }
                     self.st.github = Some(result);
                 }
+                JobMsg::Packages(list) => {
+                    for (id, packages) in list {
+                        if let Some(p) = self.data.index_of(id).and_then(|i| self.data.projects.get_mut(i))
+                            && p.packages != packages
+                        {
+                            p.packages = packages;
+                        }
+                    }
+                }
+                JobMsg::Keywords { id, result } => {
+                    if let Some(job) = &mut self.st.keywords_job {
+                        job.0 += 1;
+                    }
+                    match result {
+                        // Ceux de l'IA s'ajoutent à ceux qui existent déjà.
+                        Ok(words) => {
+                            if let Some(p) = self.data.index_of(id).and_then(|i| self.data.projects.get_mut(i)) {
+                                let mut all = p.keywords.clone();
+                                all.extend(words);
+                                p.keywords = crate::classify::clean_keywords(all);
+                            }
+                        }
+                        Err(e) => self.toast(Icon::TriangleAlert, tr("Mots-clés impossibles"), Some(e)),
+                    }
+                }
+                JobMsg::KeywordsDone => {
+                    if let Some((done, _)) = self.st.keywords_job.take() {
+                        self.toast(Icon::Sparkles, tf("Mots-clés proposés pour {0} projets", &[("0", &done)]), Some(tr("Ils comptent maintenant dans la recherche par le sens.").into()));
+                    }
+                }
                 JobMsg::GithubAccounts(result) => {
                     self.st.github_accounts_loading = false;
                     self.st.github_accounts = Some(result);
@@ -1032,6 +1131,7 @@ impl AtelierApp {
         }
         // Les projets suivis sans adresse de dépôt la prennent de leur dossier Git.
         self.data.fill_remotes();
+        self.refresh_packages();
         let errors = result.errors.clone();
         let likely = result.likely().count();
         let total = result.dirs.len();
@@ -1048,24 +1148,23 @@ impl AtelierApp {
             [e] => detail.push_str(&tf(" · {e}", &[("e", &e)])),
             many => detail.push_str(&tf(" · {0} dossiers sources illisibles", &[("0", &many.len())])),
         }
-        let auto = self.data.config.auto_add;
-        match self.data.config.ai_mode {
-            // Ollama choisi mais aucun modèle : on attend, plutôt que de tout créer par les règles.
-            AiMode::Ollama if auto && self.data.config.ollama_model.is_empty() && fresh > 0 => {
-                self.toast(Icon::Sparkles, tf("{fresh} projets probables attendent l'IA", &[("fresh", &fresh)]), Some(tr("Choisis un modèle dans Configuration › IA, ou crée les fiches avec les règles.").into()));
+        let c = &self.data.config;
+        let (auto, llm) = (c.auto_add, c.ollama_on && !c.ollama_model.trim().is_empty());
+        if auto && (llm || (!c.mcp_on && !c.ollama_on)) {
+            // Le modèle de langage d'Ollama classe ; sans aucune IA, les règles locales.
+            let candidates = self.candidates(llm);
+            if candidates.is_empty() {
+                self.toast(Icon::FolderSearch, tf("Scan terminé : {total} dossiers", &[("total", &total)]), Some(detail));
+            } else {
+                // Le classement suit : sa notification dira ce qui a été créé.
+                self.start_analysis(candidates);
             }
+        } else if auto && !c.mcp_on && fresh > 0 {
+            // Ollama sans modèle de langage : on attend, plutôt que de tout créer par les règles.
+            self.toast(Icon::Sparkles, tf("{fresh} projets probables attendent l'IA", &[("fresh", &fresh)]), Some(tr("Choisis un modèle dans Configuration › IA, ou crée les fiches avec les règles.").into()));
+        } else {
             // L'agent MCP classe lui-même (outil `scanner_dossiers`) : rien d'automatique ici.
-            AiMode::Ollama | AiMode::Off if auto => {
-                let with_ai = self.classifier().ollama.is_some();
-                let candidates = self.candidates(with_ai);
-                if candidates.is_empty() {
-                    self.toast(Icon::FolderSearch, tf("Scan terminé : {total} dossiers", &[("total", &total)]), Some(detail));
-                } else {
-                    // Le classement suit : sa notification dira ce qui a été créé.
-                    self.start_analysis(candidates);
-                }
-            }
-            _ => self.toast(Icon::FolderSearch, tf("Scan terminé : {total} dossiers", &[("total", &total)]), Some(detail)),
+            self.toast(Icon::FolderSearch, tf("Scan terminé : {total} dossiers", &[("total", &total)]), Some(detail));
         }
     }
 
@@ -1111,7 +1210,7 @@ impl AtelierApp {
     /// Les résultats de recherche du bureau et de la bibliothèque (flou + sémantique).
     fn update_search(&mut self) {
         let embed_model = self.data.config.ollama_embed_model.clone();
-        let semantic_on = self.data.config.ai_mode != AiMode::Off && !embed_model.is_empty() && self.semantic.model == embed_model;
+        let semantic_on = self.data.config.ollama_on && !embed_model.is_empty() && self.semantic.model == embed_model;
         let query_for = |q: &str| q.trim().to_owned();
         let (desk_q, lib_q) = (query_for(&self.st.search), query_for(&self.st.lib_search));
         let active = if self.st.screen == Screen::Library { lib_q.clone() } else { desk_q.clone() };
@@ -1142,7 +1241,7 @@ impl AtelierApp {
     /// Met à jour l'index sémantique (projets nouveaux ou modifiés), au plus toutes les 3 s.
     fn schedule_embeddings(&mut self) {
         let c = &self.data.config;
-        if c.ai_mode == AiMode::Off || c.ollama_embed_model.is_empty() || self.st.semantic_busy || self.st.now - self.last_embed_check < 3.0 || self.dry_run {
+        if !c.ollama_on || c.ollama_embed_model.is_empty() || self.st.semantic_busy || self.st.now - self.last_embed_check < 3.0 || self.dry_run {
             return;
         }
         self.last_embed_check = self.st.now;
@@ -1352,6 +1451,51 @@ impl AtelierApp {
         true
     }
 
+    /// Relit en arrière-plan les paquets de chaque projet (dépendances de ses manifestes).
+    fn refresh_packages(&mut self) {
+        let projects = self.data.projects.iter().map(|p| (p.id, p.folders.clone())).collect();
+        jobs::spawn_packages(self.bus(), projects);
+    }
+
+    /// L'état de l'application, pour l'onglet « État » des outils de développement.
+    fn debug_state(&self) -> Vec<(String, String)> {
+        let d = &self.data;
+        let yes_no = |b: bool| if b { tr("en cours").to_owned() } else { "—".to_owned() };
+        let tags: usize = d.projects.iter().map(|p| p.tags.iter().filter(|t| t.weight >= crate::ontology::LINK_MIN).count()).sum();
+        let packages: usize = d.projects.iter().map(|p| p.packages.len()).sum();
+        let mut out = vec![
+            (tr("Version").to_owned(), VERSION.to_owned()),
+            (tr("Fichier de données").to_owned(), self.st.store_path.clone().unwrap_or_else(|| tr("démonstration (rien n'est enregistré)").to_owned())),
+            (tr("Projets").to_owned(), d.projects.len().to_string()),
+            (tr("Domaines").to_owned(), d.domains.len().to_string()),
+            (tr("Tags (concepts) · rattachements").to_owned(), format!("{} · {tags}", d.ontology.concepts.len())),
+            (tr("Fiches avec mots-clés").to_owned(), d.projects.iter().filter(|p| !p.keywords.is_empty()).count().to_string()),
+            (tr("Paquets relevés").to_owned(), packages.to_string()),
+            (tr("Index sémantique").to_owned(), format!("{}/{} · {}", self.st.semantic_indexed, d.projects.len(), if self.semantic.model.is_empty() { "—" } else { self.semantic.model.as_str() })),
+            (tr("Ollama · agent MCP").to_owned(), format!("{} · {}", d.config.ollama_on, d.config.mcp_on)),
+            (tr("Modèle de langage · d'embeddings").to_owned(), format!("{} · {}", if d.config.ollama_model.is_empty() { "—" } else { &d.config.ollama_model }, if d.config.ollama_embed_model.is_empty() { "—" } else { &d.config.ollama_embed_model })),
+            (tr("Dossiers sources").to_owned(), d.config.roots.iter().map(|r| format!("{} ({})", r.path, r.depth)).collect::<Vec<_>>().join(" · ")),
+            (tr("Dernier scan").to_owned(), self.st.scan.as_ref().map(|s| tf("{0} dossiers", &[("0", &s.dirs.len())])).unwrap_or_else(|| "—".into())),
+            (tr("Scan").to_owned(), yes_no(self.st.scan_started.is_some())),
+            (tr("Classement par l'IA").to_owned(), yes_no(self.st.analysis.as_ref().is_some_and(|a| !a.finished))),
+            (tr("Classement Ollaya").to_owned(), yes_no(self.st.tagging.as_ref().is_some_and(|t| !t.finished))),
+            (tr("Calcul des embeddings").to_owned(), yes_no(self.st.semantic_busy)),
+            (tr("Mots-clés par Ollama").to_owned(), self.st.keywords_job.map(|(a, b)| format!("{a}/{b}")).unwrap_or_else(|| "—".into())),
+            (tr("Carte : nœuds · liens").to_owned(), format!("{} · {}", self.st.graph.sim.nodes.len(), self.st.graph.sim.edges.len())),
+            (tr("Écran · projet ouvert").to_owned(), format!("{:?} · {}", self.st.screen, self.st.selected.and_then(|i| d.projects.get(i)).map(|p| p.name.as_str()).unwrap_or("—"))),
+        ];
+        if let Some(e) = &self.st.semantic_error {
+            out.push((tr("Dernière erreur d'embeddings").to_owned(), e.clone()));
+        }
+        for (k, toast) in self.toasts.iter().rev().enumerate() {
+            out.push((tf("Notification {0}", &[("0", &(k + 1))]), format!("{} {}", toast.title, toast.detail.clone().unwrap_or_default())));
+        }
+        for (k, line) in self.launched.iter().rev().take(5).enumerate() {
+            out.push((tf("Lancement {0}", &[("0", &(k + 1))]), line.clone()));
+        }
+        out
+    }
+
     /// Écarte un dossier des scans (et de ce que le dernier scan a relevé, lui et ses sous-dossiers).
     fn ignore_folder(&mut self, path: &str) {
         let key = model::path_key(path);
@@ -1432,12 +1576,13 @@ impl AtelierApp {
                 self.toast(Icon::ArchiveX, title, Some(detail.into()));
             }
             BulkOp::Domain(d) => {
+                // Un domaine de plus : le domaine principal (la couleur sur la carte) ne change pas.
                 let Some(domain) = self.data.domains.get(d).map(|x| x.name.clone()) else { return };
                 for &p in &projects {
-                    self.data.projects[p].domain = d;
+                    self.data.add_domain(p, d);
                 }
-                let title = if n == 1 { format!("{name} → {domain}") } else { tf("{0} projets → {1}", &[("0", &n), ("1", &domain)]) };
-                self.toast(Icon::Tag, title, None);
+                let title = if n == 1 { format!("{name} + {domain}") } else { tf("{0} projets + {1}", &[("0", &n), ("1", &domain)]) };
+                self.toast(Icon::Tag, title, Some(tr("Un domaine de plus : le domaine principal ne change pas.").into()));
             }
         }
     }
@@ -1448,11 +1593,71 @@ impl AtelierApp {
                 Action::Select(p) => {
                     if self.st.selected != Some(p) {
                         self.st.draft = None;
+                        self.st.tag_query.clear();
+                        self.st.tag_new = None;
                     }
                     self.st.selected = Some(p);
                 }
                 Action::Deselect => self.st.selected = None,
                 Action::Bulk(projects, op) => self.bulk(projects, op),
+                Action::OpenDevTools => self.st.devtools.open = true,
+                Action::Tag(p, concept) => {
+                    self.data.tag(p, concept);
+                    let name = self.data.ontology.path(concept);
+                    if let Some(project) = self.data.projects.get_mut(p) {
+                        project.log(ActivityKind::Edit, tf("Tag ajouté : {0}", &[("0", &name)]));
+                    }
+                }
+                Action::Untag(p, concept) => {
+                    self.data.untag(p, concept);
+                    let name = self.data.ontology.path(concept);
+                    if let Some(project) = self.data.projects.get_mut(p) {
+                        project.log(ActivityKind::Edit, tf("Tag retiré : {0}", &[("0", &name)]));
+                    }
+                }
+                Action::MainDomain(p, d) => self.data.set_main_domain(p, d, true),
+                Action::SetKeywords(p, words) => {
+                    if let Some(project) = self.data.projects.get_mut(p) {
+                        project.keywords = crate::classify::clean_keywords(words);
+                    }
+                }
+                Action::SuggestKeywords(ids) => {
+                    let c = &self.data.config;
+                    if self.dry_run || !c.ollama_on || c.ollama_model.trim().is_empty() || self.st.keywords_job.is_some() {
+                        continue;
+                    }
+                    let todo: Vec<(u64, String)> = self
+                        .data
+                        .projects
+                        .iter()
+                        .filter(|p| ids.as_ref().map_or(p.keywords.is_empty(), |ids| ids.contains(&p.id)))
+                        .map(|p| (p.id, crate::search::embed_text(&self.data, p)))
+                        .collect();
+                    if todo.is_empty() {
+                        self.toast(Icon::Sparkles, tr("Chaque projet a déjà ses mots-clés"), None);
+                        continue;
+                    }
+                    self.st.keywords_job = Some((0, todo.len()));
+                    jobs::spawn_keywords(self.bus(), c.ollama_url.clone(), c.ollama_model.clone(), todo);
+                }
+                Action::NewTag { project, facet, new_facet, name, parent } => {
+                    let name = name.trim().to_owned();
+                    let facet = match facet {
+                        Some(f) => Some(f),
+                        None if !new_facet.trim().is_empty() => {
+                            Some(self.data.ontology.facet_named(new_facet.trim()).unwrap_or_else(|| self.data.ontology.add_facet(new_facet.trim(), "")))
+                        }
+                        None => None,
+                    };
+                    if let Some(facet) = facet.filter(|_| !name.is_empty()) {
+                        let concept = self.data.create_concept(facet, &name, parent);
+                        self.data.tag(project, concept);
+                        self.st.tag_new = None;
+                        self.st.tag_query.clear();
+                        let path = self.data.ontology.path(concept);
+                        self.toast(Icon::Tag, tf("Tag « {0} » créé", &[("0", &path)]), self.data.ontology.facet(facet).map(|f| f.name.clone()));
+                    }
+                }
                 Action::OpenUrl(url) => {
                     let plan = launch::open_url(&url);
                     self.launched.push(plan.line.clone());
@@ -1944,7 +2149,14 @@ impl AtelierApp {
                     theme::apply(ctx, c.theme, c.accent, c.compact);
                 }
                 Action::ApplyZoom => ctx.set_zoom_factor(self.data.config.zoom),
-                Action::OpenUpdate => self.st.modal = Some(Modal::Update),
+                Action::OpenUpdate => {
+                    self.st.modal = Some(Modal::Update);
+                    // La vérification part dès l'ouverture : pas besoin de cliquer « Vérifier
+                    // maintenant ». Une version déjà trouvée (ou téléchargée) reste affichée.
+                    if !self.dry_run && matches!(self.st.updater.phase, UpdatePhase::Idle | UpdatePhase::UpToDate | UpdatePhase::Failed) {
+                        self.st.updater.check(ctx, self.data.config.update_beta);
+                    }
+                }
                 Action::CheckUpdate => {
                     if !self.dry_run {
                         self.st.updater.check(ctx, self.data.config.update_beta);
@@ -2093,6 +2305,14 @@ impl eframe::App for AtelierApp {
         self.modal(&ctx);
         self.apply_actions(&ctx);
         self.show_toasts(&ctx);
+        // Les outils de développement : F12 (ou Ctrl + Maj + I).
+        if crate::devtools::toggled(&ctx) {
+            self.st.devtools.open = !self.st.devtools.open;
+        }
+        if self.st.devtools.open {
+            let state = self.debug_state();
+            crate::devtools::show(&ctx, &mut self.st.devtools, &state);
+        }
 
         // Un filet autour de la fenêtre sans bordure.
         if !ctx.input(|i| i.viewport().maximized.unwrap_or(false)) {

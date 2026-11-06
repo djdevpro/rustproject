@@ -16,7 +16,7 @@ use crate::ollaya::Ollaya;
 use crate::ontology::{self, Merge};
 use crate::model::{ActivityKind, AddedBy, Attention, Data, Status, Step, path_key};
 use crate::scan::{ScanOptions, scan};
-use crate::store::Store;
+use crate::store::{SemanticIndex, Store};
 
 const PROTOCOLS: [&str; 3] = ["2025-06-18", "2025-03-26", "2024-11-05"];
 
@@ -50,7 +50,23 @@ finalité…) et des concepts définis. Pour la proposer : `lire_ontologie`, `li
 d'ensemble), puis `definir_ontologie` (une définition d'une phrase par concept : c'est le critère du classement ; des \
 synonymes en français : ils servent à la recherche). Les concepts marqués « manuel » viennent de l'utilisateur : ne les \
 contredis pas. Méthode complète : prompt `concevoir_ontologie`. `classer_projets` (un modèle de décision Ollaya range \
-chaque projet) seulement si l'utilisateur le demande.";
+chaque projet) seulement si l'utilisateur le demande.
+
+TAGS ET DOMAINES — un projet a UN domaine principal (`domaine` de `modifier_projet` : sa couleur et son île sur la carte) \
+et autant de tags qu'il faut, dans chaque facette, dont d'autres domaines (`domaines`, ou `rattacher_concept` avec un \
+concept de premier niveau de la facette Domaine). `rattacher_concept` + `retirer` enlève un tag pour de bon (un \
+classement suivant ne le remet pas). Pour un tag qui manque : `modifier_concept` sans id (au premier niveau de Domaine, il \
+crée un domaine), puis `rattacher_concept`. Les tags posés par l'utilisateur (« manuel ») sont à respecter.
+MOTS-CLÉS — chaque fiche porte 8 à 15 `mots_cles` en français : ce qu'on taperait pour la retrouver (son sujet, son \
+public, son usage, son secteur : « emploi », « entretien d'embauche », « candidats »), jamais la stack. Ils entrent dans \
+la recherche et dans l'embedding (la recherche par le sens, calculée par Rust Project avec le modèle d'embeddings \
+d'Ollama). Écris-les à chaque création de fiche ; pour compléter l'existant : prompt `ajouter_mots_cles`.
+
+CONSEIL — tu es aussi le conseiller de l'utilisateur sur ses projets. Pour une question comme « que penses-tu de mes \
+projets sur l'emploi ? » : `vue_d_ensemble` (ses projets du moment, au fil de l'eau, en réserve), `chercher_projets` (par \
+les mots, le sens et l'ontologie), `voir_projet`, `projets_proches` (projets parallèles, annexes, anciennes versions), \
+`technologies` (ce qu'il utilise et où). Lis un README seulement si la fiche ne suffit pas ; ne parcours jamais le disque. \
+Méthode complète : prompt `conseiller`.";
 
 /// Rappel glissé dans la réponse du scan : l'agent le lit au moment où il décide.
 const SCAN_REMINDER: &str = "Une fiche par PROJET. Les briques (frontend, api, db, site, packages/x…) vont dans \
@@ -66,8 +82,9 @@ AGENTS.md, README…), sous-dossiers, technos, début du README, `parent`, `briq
 parties de lui), `copie_probable`. Les briques déjà repérées sont masquées (`inclure_briques: true` pour les voir).
 3. Pour chaque dossier, décide :
    - PROJET : une chose que je fais ou veux faire avancer (appli, site, outil, formation, étude…). → `ajouter_projet` \
-avec un nom lisible, une description d'UNE phrase (15 mots au plus, à quoi ça sert), un domaine existant si possible, \
-un type, les technos, et `dossiers_supplementaires` = ses briques (le champ `briques` du scan, plus celles que tu repères).
+avec un nom lisible, une description d'UNE phrase (15 mots au plus, à quoi ça sert), un domaine principal existant si \
+possible (et `domaines` s'il en touche d'autres), un type, les technos, 8 à 15 `mots_cles` (sujet, public, usage, \
+secteur), et `dossiers_supplementaires` = ses briques (le champ `briques` du scan, plus celles que tu repères).
    - BRIQUE : une partie d'un projet (frontend, backend, api, db, docs, le site d'un produit, packages/x…), même avec \
 son propre manifeste ou .git. → pas de fiche ; elle rejoint les dossiers du projet parent.
    - RANGEMENT : un dossier qui regroupe des projets indépendants. → pas de fiche ; ses enfants sont les projets.
@@ -114,6 +131,38 @@ dossier parent et une description d'une phrase), puis `fusionner_projets` (id = 
 4. Les fusions, tu peux les faire. Les suppressions, demande-moi d'abord.
 5. Termine par un bilan : fusions faites, fiches laissées telles quelles, questions.";
 
+const PROMPT_MOTS_CLES: &str = "\
+Complète les mots-clés et les tags de mes fiches Rust Project, pour que la recherche (par les mots et par le sens) les \
+retrouve.
+
+1. `lister_projets` : pour chaque fiche, regarde sa description, ses domaines, ses tags, ses dossiers et ses `mots_cles`.
+2. Pour chaque fiche sans mots-clés (ou avec moins de 8) : si la fiche ne suffit pas à comprendre le projet, lis le \
+README de son dossier. Puis `modifier_projet` avec `mots_cles` : 8 à 15 mots ou courtes expressions en français, ce \
+que je taperais pour la retrouver (le sujet, le public, l'usage, le secteur, les synonymes courants : « emploi », \
+« recrutement », « entretien d'embauche »), jamais la stack ni le nom du projet.
+3. Au passage : une description qui ne dit que la technique devient une phrase qui dit à quoi sert le projet ; un projet \
+qui touche plusieurs domaines reçoit les autres dans `domaines` (le principal reste celui de son sujet).
+4. Termine par un bilan court : fiches complétées, descriptions corrigées, domaines ajoutés, questions.";
+
+const PROMPT_CONSEILLER: &str = "\
+Conseille-moi sur mes projets{sujet}.
+
+1. `vue_d_ensemble` : mes projets du moment (Focus), au fil de l'eau, en réserve, archivés ; mes domaines et mes technos.
+2. `chercher_projets` avec le sujet (par les mots, le sens et l'ontologie) ; `voir_projet` pour les plus pertinents \
+(description, étapes, notes, dossiers, paquets).
+3. `projets_proches` sur chacun : les projets parallèles, annexes ou plus anciens qui touchent au même sujet ; \
+`technologies` pour voir ce que j'utilise ailleurs (et avec quels paquets).
+4. Si une fiche ne suffit pas, lis le README ou le CLAUDE.md de son dossier (les chemins sont dans la fiche). Ne \
+parcours jamais le disque.
+5. Réponds en conseiller, concret et franc :
+   - ce que j'ai déjà sur le sujet, et où en est chaque projet (attention, état, dernière activité) ;
+   - les liens entre ces projets : doublons, briques réutilisables, versions qui se chevauchent ;
+   - mes choix techniques : pourquoi je les ai sans doute faits, et ce qui pourrait les remplacer aujourd'hui (avec \
+le gain attendu) ;
+   - des idées : une nouvelle version, la fusion de projets proches, un nouveau projet qui réutilise mes briques.
+   Priorise selon mon attention : le Focus d'abord, puis le fil de l'eau ; la réserve est un gisement d'idées.
+6. Ne crée, ne modifie et ne supprime rien sans mon accord : propose, puis demande.";
+
 /// Les prompts MCP : des commandes prêtes (dans Claude Code : `/mcp__rust-project__ranger_mes_projets`).
 fn prompts() -> Value {
     json!([
@@ -127,6 +176,18 @@ fn prompts() -> Value {
             "name": "concevoir_ontologie",
             "title": "Concevoir une ontologie complète",
             "description": "Lit tous les projets et propose une ontologie complète (facettes, concepts définis, synonymes, hiérarchie) ; ne lance pas le classement sans accord.",
+            "arguments": []
+        },
+        {
+            "name": "conseiller",
+            "title": "Me conseiller sur mes projets",
+            "description": "Regarde mes projets sur un sujet (et leurs voisins, leurs technos) et me conseille : liens, choix techniques, idées de nouvelles versions ou de nouveaux projets.",
+            "arguments": [{ "name": "sujet", "description": "Le sujet (« l'emploi », « mes SaaS »…), facultatif", "required": false }]
+        },
+        {
+            "name": "ajouter_mots_cles",
+            "title": "Ajouter les mots-clés",
+            "description": "Écrit 8 à 15 mots-clés par fiche (sujet, public, usage) pour une recherche plus juste, et corrige au passage descriptions et domaines.",
             "arguments": []
         },
         {
@@ -146,6 +207,11 @@ fn get_prompt(params: &Value) -> Result<Value, (i64, String)> {
             PROMPT_RANGER.replace("{portee}", &scope.map(|d| format!(" (seulement ce qui se trouve sous « {d} »)")).unwrap_or_default())
         }
         "nettoyer_mes_fiches" => PROMPT_NETTOYER.to_owned(),
+        "ajouter_mots_cles" => PROMPT_MOTS_CLES.to_owned(),
+        "conseiller" => {
+            let topic = params["arguments"]["sujet"].as_str().map(str::trim).filter(|s| !s.is_empty());
+            PROMPT_CONSEILLER.replace("{sujet}", &topic.map(|s| format!(" : {s}")).unwrap_or_default())
+        }
         "concevoir_ontologie" => PROMPT_ONTOLOGIE.to_owned(),
         _ => return Err((-32602, format!("Prompt inconnu : {name}"))),
     };
@@ -185,7 +251,7 @@ pub fn handle_line(store: &mut Store, line: &str) -> Option<String> {
     // Une notification (sans id) n'appelle pas de réponse.
     let id = id?;
     let result = match method {
-        "initialize" => Ok(initialize(&params)),
+        "initialize" => Ok(initialize(store, &params)),
         "ping" => Ok(json!({})),
         "tools/list" => Ok(json!({ "tools": tools() })),
         "tools/call" => Ok(call_tool(store, &params)),
@@ -200,15 +266,29 @@ pub fn handle_line(store: &mut Store, line: &str) -> Option<String> {
     .to_string())
 }
 
-fn initialize(params: &Value) -> Value {
+fn initialize(store: &mut Store, params: &Value) -> Value {
     let asked = params["protocolVersion"].as_str().unwrap_or(PROTOCOLS[0]);
     let version = if PROTOCOLS.contains(&asked) { asked } else { PROTOCOLS[0] };
+    // Les consignes, plus un résumé des projets du moment : l'agent est contexté dès la connexion.
+    let snapshot = store.load().ok().flatten().map(|data| crate::context::snapshot(&data, &SemanticIndex::load(&store.embeddings_path()))).unwrap_or_default();
     json!({
         "protocolVersion": version,
         "capabilities": { "tools": { "listChanged": false }, "prompts": { "listChanged": false } },
         "serverInfo": { "name": "rust-project", "version": env!("CARGO_PKG_VERSION") },
-        "instructions": INSTRUCTIONS
+        "instructions": format!("{INSTRUCTIONS}{snapshot}")
     })
+}
+
+/// L'embedding d'une question, par le modèle d'embeddings d'Ollama choisi dans Rust Project, si
+/// la recherche par le sens est possible (Ollama branché, index du même modèle).
+fn query_vector(data: &Data, index: &SemanticIndex, query: &str) -> Option<Vec<f32>> {
+    let c = &data.config;
+    let model = c.ollama_embed_model.trim();
+    if !c.ollama_on || model.is_empty() || index.model != model || index.vectors.is_empty() {
+        return None;
+    }
+    let text = crate::ollama::query_text(model, query);
+    crate::ollama::Ollama::new(&c.ollama_url).embed(model, std::slice::from_ref(&text)).ok().and_then(|mut v| (!v.is_empty()).then(|| v.remove(0)))
 }
 
 fn tool(name: &str, description: &str, properties: Value, required: &[&str]) -> Value {
@@ -228,7 +308,10 @@ fn tools() -> Vec<Value> {
         "description": s("UNE phrase courte (15 mots au plus) qui dit ce qu'est le projet"),
         "dossier": s("Chemin du dossier du projet"),
         "depot": s("URL du dépôt distant (GitHub…)"),
-        "domaine": s("Domaine (voir lister_domaines ; un nouveau nom est créé s'il n'existe pas)"),
+        "domaine": s("Domaine PRINCIPAL : sa couleur et son île sur la carte (voir lister_domaines ; un nouveau nom est créé s'il n'existe pas)"),
+        "domaines": { "type": "array", "items": { "type": "string" }, "description": "D'autres domaines, en plus du principal (ajoutés ; le principal ne change pas)" },
+        "mots_cles": { "type": "array", "items": { "type": "string" }, "description": "8 à 15 mots-clés en français : ce qu'on taperait pour retrouver le projet (sujet, public, usage, secteur), pas la stack. Remplace la liste." },
+        "concepts": { "type": "array", "items": { "type": "integer" }, "description": "Identifiants de concepts de l'ontologie à rattacher (voir lire_ontologie)" },
         "type": s("Type de projet, ex. « Application web », « Outil en ligne de commande »"),
         "technos": { "type": "array", "items": { "type": "string" }, "description": "Technologies" },
         "etat": s("Idée, En cours, En pause, Terminé ou Archivé"),
@@ -257,8 +340,33 @@ fn tools() -> Vec<Value> {
         ),
         tool("lister_depots_github", "Les dépôts GitHub de l'utilisateur (via la CLI gh), avec ceux déjà suivis.", json!({}), &[]),
         tool("lister_domaines", "Les domaines de la taxonomie, avec leur nombre de projets.", json!({}), &[]),
-        tool("lister_projets", "Les projets suivis (résumé). Filtre facultatif sur le nom ou la description.", json!({ "filtre": s("Texte à chercher") }), &[]),
+        tool(
+            "lister_projets",
+            "Les projets suivis (résumé). Filtres facultatifs : un texte (recherche sur le nom, la description, les mots-clés…), ou un paquet ou une image Docker qu'ils utilisent (« expo », « laravel/framework », « postgres »). Le détail des paquets d'un projet : voir_projet.",
+            json!({ "filtre": s("Texte à chercher"), "paquet": s("Nom d'un paquet (npm, Cargo, pip, Composer, Go, Maven…) ou d'une image Docker") }),
+            &[],
+        ),
         tool("voir_projet", "La fiche complète d'un projet (étapes, journal…).", json!({ "id": n("Identifiant") }), &["id"]),
+        // ---- contexte et conseil
+        tool("vue_d_ensemble", "La vue d'ensemble : les projets par attention (Focus, au fil de l'eau, en réserve, archivés), du plus récemment actif au plus ancien, les domaines et les technos les plus utilisées. Le point de départ pour comprendre ou conseiller.", json!({}), &[]),
+        tool(
+            "chercher_projets",
+            "Cherche les projets qui répondent à une question, par les mots (noms, descriptions, mots-clés, paquets), par le SENS (embeddings d'Ollama, si disponibles) et par l'ontologie. Chaque résultat dit par quoi il a été trouvé.",
+            json!({ "question": s("Ce qu'on cherche, en langage naturel (« emploi », « mes outils pour les agents IA »)"), "limite": n("Nombre de résultats (12 par défaut)") }),
+            &["question"],
+        ),
+        tool(
+            "projets_proches",
+            "Les projets proches d'un projet, avec les raisons : sens proche (embeddings), tags en commun (les rares comptent plus), paquets ou technos partagés, même domaine, même dossier parent. Pour trouver les projets parallèles, annexes ou les anciennes versions.",
+            json!({ "id": n("Identifiant du projet"), "limite": n("Nombre de projets (8 par défaut)") }),
+            &["id"],
+        ),
+        tool(
+            "technologies",
+            "Les technologies utilisées : les technos des fiches et les paquets par gestionnaire (npm, Cargo, pip, Composer, Go…, images Docker), avec les projets qui les utilisent. Avec « techno » : les projets qui utilisent celle-là.",
+            json!({ "techno": s("Une techno ou un paquet précis (« React », « expo », « postgres »), facultatif") }),
+            &[],
+        ),
         tool(
             "ajouter_projet",
             "Crée la fiche d'UN projet (jamais d'une brique, d'un dossier de rangement ou d'une copie). Ses briques vont dans `dossiers_supplementaires`. Refuse un dossier déjà suivi (renvoie son id).",
@@ -345,7 +453,7 @@ fn tools() -> Vec<Value> {
         ),
         tool(
             "rattacher_concept",
-            "Rattache un projet à un concept (ou le détache avec `retirer`). Un rattachement fait ainsi est gardé par les classements suivants.",
+            "Rattache un projet à un concept, ou le retire pour de bon avec `retirer` (un classement suivant ne le remet pas). Un concept de premier niveau de la facette Domaine ajoute un domaine au projet ; le domaine principal se change avec `modifier_projet` (`domaine`).",
             json!({ "id": n("Identifiant du projet"), "concept": n("Identifiant du concept"), "retirer": { "type": "boolean" } }),
             &["id", "concept"],
         ),
@@ -383,7 +491,16 @@ fn project_summary(data: &Data, i: usize) -> Value {
         "id": p.id, "nom": p.name, "description": p.description, "etat": p.status.label(), "attention": p.attention.label(),
         "domaine": data.domains.get(p.domain).map(|d| d.name.clone()), "type": p.kind, "technos": p.stack,
         "dossiers": p.folders, "depot": p.remote, "etapes": p.steps.len(),
-        "concepts": data.concepts_of(i).into_iter().map(|(c, _)| data.ontology.path(c.id)).collect::<Vec<_>>()
+        "domaines": data.domains_of(i).into_iter().filter_map(|d| data.domains.get(d).map(|x| x.name.clone())).collect::<Vec<_>>(),
+        "mots_cles": p.keywords,
+        "concepts": data.concepts_of(i).into_iter().map(|(c, _)| data.ontology.path(c.id)).collect::<Vec<_>>(),
+        "tags": p.tags.iter().filter(|t| t.weight >= ontology::LINK_MIN).filter_map(|t| data.ontology.concept(t.concept).map(|c| json!({
+            "id": c.id,
+            "facette": data.ontology.facet(c.facet).map(|f| f.name.clone()),
+            "chemin": data.ontology.path(c.id),
+            "poids": (t.weight * 100.0).round() / 100.0,
+            "manuel": t.manual
+        }))).collect::<Vec<_>>()
     })
 }
 
@@ -516,14 +633,30 @@ fn set_fields(data: &mut Data, i: usize, args: &Value) -> Result<(), String> {
     if let Some(v) = txt("resultat_vise") {
         p.outcome = v;
     }
-    if let Some(d) = domain {
-        p.domain = d;
-    }
     if let Some(s) = args["etat"].as_str() {
         p.status = Status::parse(s).ok_or_else(|| format!("État inconnu : {s}"))?;
     }
     if let Some(a) = args["attention"].as_str() {
         p.attention = Attention::parse(a).ok_or_else(|| format!("Attention inconnue : {a}"))?;
+    }
+    if let Some(words) = strings(&args["mots_cles"]) {
+        p.keywords = crate::classify::clean_keywords(words);
+    }
+    // Le domaine principal (il devient aussi un tag), puis les autres domaines et les concepts.
+    if let Some(d) = domain {
+        data.set_main_domain(i, d, false);
+    }
+    for name in strings(&args["domaines"]).unwrap_or_default() {
+        if !name.trim().is_empty() {
+            let d = data.domain_named(&name);
+            data.add_domain(i, d);
+        }
+    }
+    if let Some(ids) = args["concepts"].as_array() {
+        for id in ids.iter().filter_map(|v| v.as_u64()) {
+            data.ontology.concept(id).ok_or_else(|| format!("Aucun concept avec l'id {id} (voir lire_ontologie)"))?;
+            data.tag(i, id);
+        }
     }
     Ok(())
 }
@@ -577,19 +710,49 @@ pub fn run_tool(store: &mut Store, name: &str, args: &Value) -> Result<Value, St
                 "archive": r.archived, "prive": r.private, "fork": r.fork, "deja_suivi": crate::github::local_match(&data, r).map(|i| data.projects[i].id)
             })).collect::<Vec<_>>()))
         }
-        "lister_domaines" => Ok(json!(data.domains.iter().enumerate().map(|(i, d)| json!({ "nom": d.name, "projets": data.projects.iter().filter(|p| p.domain == i).count() })).collect::<Vec<_>>())),
+        "lister_domaines" => Ok(json!(data.domains.iter().enumerate().map(|(i, d)| json!({
+            "nom": d.name,
+            "projets": (0..data.projects.len()).filter(|&p| data.has_domain(p, i)).count(),
+            "principal_de": data.projects.iter().filter(|p| p.domain == i).count()
+        })).collect::<Vec<_>>())),
         "lister_projets" => {
             let filter = args["filtre"].as_str().unwrap_or("").to_owned();
-            let ids: Vec<usize> = if filter.trim().is_empty() {
+            let mut ids: Vec<usize> = if filter.trim().is_empty() {
                 (0..data.projects.len()).collect()
             } else {
                 crate::search::rank(&data, &filter, None, &Default::default()).into_iter().map(|h| h.index).collect()
             };
+            // Par paquet : les paquets sont relus dans les manifestes (le fichier peut dater).
+            if let Some(name) = args["paquet"].as_str().map(str::trim).filter(|n| !n.is_empty()) {
+                let words: Vec<String> = name.to_lowercase().split_whitespace().map(str::to_owned).collect();
+                ids.retain(|&i| crate::packages::match_score(&words, &crate::packages::of_folders(&data.projects[i].folders)) >= 0.9);
+            }
             Ok(json!(ids.into_iter().map(|i| project_summary(&data, i)).collect::<Vec<_>>()))
         }
+        "vue_d_ensemble" => Ok(crate::context::overview(&data)),
+        "chercher_projets" => {
+            let question = args["question"].as_str().map(str::trim).filter(|q| !q.is_empty()).ok_or("Paramètre « question » manquant")?;
+            let limit = args["limite"].as_u64().unwrap_or(12).clamp(1, 50) as usize;
+            let index = SemanticIndex::load(&store.embeddings_path());
+            let vector = query_vector(&data, &index, question);
+            Ok(json!({
+                "recherche_par_le_sens": vector.is_some(),
+                "resultats": crate::context::search(&data, &index, question, vector.as_deref(), limit)
+            }))
+        }
+        "projets_proches" => {
+            let i = find(&data, args)?;
+            let limit = args["limite"].as_u64().unwrap_or(8).clamp(1, 30) as usize;
+            let index = SemanticIndex::load(&store.embeddings_path());
+            Ok(crate::context::neighbors(&data, &index, i, &crate::context::fresh_packages(&data), limit))
+        }
+        "technologies" => Ok(crate::context::technologies(&data, &crate::context::fresh_packages(&data), args["techno"].as_str())),
         "voir_projet" => {
             let i = find(&data, args)?;
-            serde_json::to_value(&data.projects[i]).map_err(|e| e.to_string())
+            // Les paquets à jour, relus dans les manifestes de ses dossiers.
+            let mut p = data.projects[i].clone();
+            p.packages = crate::packages::of_folders(&p.folders);
+            serde_json::to_value(&p).map_err(|e| e.to_string())
         }
         "ajouter_projet" => {
             let name = args["nom"].as_str().ok_or("Paramètre « nom » manquant")?.trim().to_owned();
@@ -818,12 +981,13 @@ pub fn run_tool(store: &mut Store, name: &str, args: &Value) -> Result<Value, St
             let i = find(&data, args)?;
             let concept = args["concept"].as_u64().ok_or("Paramètre « concept » manquant")?;
             let name = data.ontology.concept(concept).map(|c| c.name.clone()).ok_or_else(|| format!("Aucun concept avec l'id {concept}"))?;
-            let p = &mut data.projects[i];
-            p.tags.retain(|t| t.concept != concept);
-            if !args["retirer"].as_bool().unwrap_or(false) {
-                p.tags.insert(0, ontology::Tag { concept, weight: 1.0, manual: true });
+            let remove = args["retirer"].as_bool().unwrap_or(false);
+            if remove {
+                data.untag(i, concept);
+            } else {
+                data.tag(i, concept);
             }
-            let out = json!({ "projet": p.name, "concept": name, "rattache": !args["retirer"].as_bool().unwrap_or(false) });
+            let out = json!({ "projet": data.projects[i].name, "concept": name, "rattache": !remove, "fiche": project_summary(&data, i) });
             store.save(&data)?;
             Ok(out)
         }
@@ -913,7 +1077,7 @@ mod tests {
         assert!(instructions.contains("BRIQUES") && instructions.contains("ranger_mes_projets"));
         let list = call(&mut store, 2, "prompts/list", json!({}));
         let names: Vec<&str> = list["result"]["prompts"].as_array().unwrap().iter().map(|p| p["name"].as_str().unwrap()).collect();
-        assert_eq!(names, ["ranger_mes_projets", "concevoir_ontologie", "nettoyer_mes_fiches"]);
+        assert_eq!(names, ["ranger_mes_projets", "concevoir_ontologie", "conseiller", "ajouter_mots_cles", "nettoyer_mes_fiches"]);
         let onto = call(&mut store, 6, "prompts/get", json!({ "name": "concevoir_ontologie" }));
         let text = onto["result"]["messages"][0]["content"]["text"].as_str().unwrap();
         assert!(text.contains("definir_ontologie") && text.contains("sans mon accord"), "{text}");

@@ -6,7 +6,7 @@ use egui::{Align, Color32, CornerRadius, FontFamily, FontId, Frame, Layout, Marg
 use crate::app::{Action, CfgSection, UiState, UpdatePhase, VERSION};
 use crate::screens::setup::Step;
 use crate::icons::{self, Icon};
-use crate::model::{AiMode, Attention, Data, ReadDepth, ScanFreq, Status, VARIABLES};
+use crate::model::{Attention, Data, ReadDepth, ScanFreq, Status, VARIABLES};
 use crate::ollama::ModelInfo;
 use crate::theme::{self, Accent, ThemeChoice, Tokens, tint};
 use crate::widgets::{self, Kind, Tone};
@@ -349,12 +349,14 @@ fn discovery(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Actio
         });
         ui.label(RichText::new(tr("Le README est un indice faible : il signale un projet sans empêcher de regarder ses sous-dossiers (un dossier de rangement en a souvent un).")).size(12.5).color(t.faint));
     });
-    let ollama_ready = c.ai_mode == AiMode::Ollama && !c.ollama_model.is_empty();
+    let ollama_ready = c.ollama_on && !c.ollama_model.is_empty();
     widgets::settings_card(ui, tr("Création des fiches"), None, |ui| {
-        let auto_help = match c.ai_mode {
-            AiMode::Ollama if ollama_ready => tr("Après chaque scan, l'IA classe les nouveaux dossiers et crée les fiches."),
-            AiMode::Mcp => tr("En mode agent MCP, c'est l'agent qui crée les fiches : rien d'automatique ici."),
-            _ => tr("Après chaque scan, les dossiers avec un marqueur (.git, manifeste…) deviennent des fiches."),
+        let auto_help = if ollama_ready {
+            tr("Après chaque scan, l'IA classe les nouveaux dossiers et crée les fiches.")
+        } else if c.mcp_on {
+            tr("En mode agent MCP, c'est l'agent qui crée les fiches : rien d'automatique ici.")
+        } else {
+            tr("Après chaque scan, les dossiers avec un marqueur (.git, manifeste…) deviennent des fiches.")
         };
         widgets::toggle_row(ui, &mut c.auto_add, tr("Créer les projets automatiquement"), Some(auto_help));
         ui.label(RichText::new(tr("Sinon, tu tries toi-même les nouveaux projets dans l'assistant (Dossiers sources).")).size(12.5).color(t.faint));
@@ -463,25 +465,25 @@ fn discovery(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Actio
 fn ai(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action>) {
     let t = Tokens::get(ui.ctx());
     header(ui, tr("IA & modèles"), tr("L'algorithme trouve les dossiers ; l'IA décide lesquels sont des projets et rédige leur fiche en une phrase."));
-    widgets::settings_card(ui, tr("Mode"), None, |ui| {
-        let options = [(AiMode::Ollama, Some(Icon::Cpu), tr("Ollama (API)")), (AiMode::Mcp, Some(Icon::Network), tr("Agent MCP")), (AiMode::Off, Some(Icon::CircleOff), tr("Sans IA"))];
-        widgets::segmented(ui, "ai-mode", &mut data.config.ai_mode, &options, Some(ui.available_width().min(560.0)));
-        let explain = match data.config.ai_mode {
-            AiMode::Ollama => tr("Rust Project envoie à un modèle local (Ollama) un résumé de chaque dossier : nom, marqueurs, début du README. Rien ne sort de ta machine."),
-            AiMode::Mcp => tr("Un agent IA (Claude Code…) se connecte à Rust Project par le protocole MCP : il scanne, décide et crée les fiches lui-même."),
-            AiMode::Off => tr("Pas d'IA : les dossiers avec un marqueur (.git, Cargo.toml, package.json…) deviennent des projets, décrits par leur manifeste ou leur README."),
-        };
-        ui.label(RichText::new(explain).size(13.0).color(t.muted));
+    // Les deux cohabitent : Ollama (embeddings, et le modèle de langage s'il est choisi) et
+    // l'agent MCP (qui écrit les fiches, les tags et les mots-clés).
+    widgets::settings_card(ui, tr("Les IA utilisées"), Some(tr("Ollama et l'agent MCP travaillent ensemble : le premier cherche par le sens et peut classer, le second range et décrit tes projets.")), |ui| {
+        widgets::toggle_row(ui, &mut data.config.ollama_on, tr("Ollama (API)"), Some(tr("Rust Project envoie à un modèle local (Ollama) un résumé de chaque dossier : nom, marqueurs, début du README. Rien ne sort de ta machine.")));
+        ui.add_space(4.0);
+        widgets::toggle_row(ui, &mut data.config.mcp_on, tr("Agent MCP"), Some(tr("Un agent IA (Claude Code…) se connecte à Rust Project par le protocole MCP : il scanne, décide et crée les fiches lui-même.")));
+        if !data.config.ollama_on && !data.config.mcp_on {
+            ui.add_space(4.0);
+            ui.label(RichText::new(tr("Pas d'IA : les dossiers avec un marqueur (.git, Cargo.toml, package.json…) deviennent des projets, décrits par leur manifeste ou leur README.")).size(13.0).color(t.muted));
+        }
     });
-    match data.config.ai_mode {
-        AiMode::Ollama => ollama_card(ui, data, st, act),
-        AiMode::Mcp => mcp_card(ui, data, st, act),
-        AiMode::Off => {}
-    }
-    if data.config.ai_mode != AiMode::Off {
+    if data.config.ollama_on {
+        ollama_card(ui, data, st, act);
         semantic_card(ui, data, st, act);
     }
-    if data.config.ai_mode == AiMode::Ollama {
+    if data.config.mcp_on {
+        mcp_card(ui, data, st, act);
+    }
+    if data.config.ollama_on {
         widgets::settings_card(ui, tr("Ce que l'IA lit"), Some(tr("Ce qui est envoyé au modèle pour chaque dossier.")), |ui| {
             let options = [(ReadDepth::Readme, Some(Icon::FileText), tr("README")), (ReadDepth::Manifests, Some(Icon::FileJson), tr("+ manifestes")), (ReadDepth::Tree, Some(Icon::FolderTree), tr("+ sous-dossiers"))];
             widgets::segmented(ui, "read-depth", &mut data.config.read_depth, &options, Some(ui.available_width().min(560.0)));
@@ -708,7 +710,7 @@ fn semantic_card(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<A
                 widgets::chip(ui, "inactive", Tone::Neutral);
                 ui.label(RichText::new(tr("Choisis un modèle d'embeddings (qwen3-embedding:4b conseillé pour le français).")).size(13.0).color(t.muted));
             });
-            if data.config.ai_mode == AiMode::Mcp {
+            if data.config.mcp_on {
                 ui.label(RichText::new(tf("Elle passe par le serveur Ollama ({0}), même en mode agent MCP.", &[("0", &data.config.ollama_url)])).size(12.5).color(t.faint));
             }
             return;
@@ -730,6 +732,31 @@ fn semantic_card(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<A
                 act.push(Action::Reindex);
             }
             ui.label(RichText::new(tr("L'index se met à jour tout seul quand une fiche change.")).size(12.5).color(t.faint));
+        });
+        // Les mots-clés : ce qui donne le sens à l'index. L'agent MCP les écrit, ou le modèle de
+        // langage d'Ollama.
+        ui.add_space(4.0);
+        let missing = data.projects.iter().filter(|p| p.keywords.is_empty()).count();
+        ui.label(RichText::new(tf("{0} fiches sans mots-clés. L'agent MCP les écrit (prompt « ajouter_mots_cles »), ou le modèle de langage d'Ollama.", &[("0", &missing)])).size(12.5).color(t.muted));
+        let llm = data.config.ollama_on && !data.config.ollama_model.trim().is_empty();
+        ui.horizontal(|ui| {
+            match st.keywords_job {
+                Some((done, total)) => {
+                    ui.add(egui::Spinner::new().size(16.0).color(t.accent));
+                    ui.label(RichText::new(tf("Mots-clés : {0}/{1}", &[("0", &done), ("1", &total)])).size(13.0).color(t.ink));
+                }
+                None => {
+                    ui.add_enabled_ui(llm && missing > 0, |ui| {
+                        let resp = widgets::button(ui, Some(Icon::Sparkles), &tf("Proposer les mots-clés manquants ({0})", &[("0", &missing)]), Kind::Secondary);
+                        if resp.clicked() {
+                            act.push(Action::SuggestKeywords(None));
+                        }
+                        if !llm {
+                            resp.on_disabled_hover_text(tr("Choisis d'abord un modèle de langage dans la carte Ollama."));
+                        }
+                    });
+                }
+            }
         });
     });
 }
@@ -793,7 +820,7 @@ fn launchers(ui: &mut Ui, data: &mut Data, act: &mut Vec<Action>) {
                 ui.set_width(ui.available_width());
                 ui.horizontal(|ui| {
                     icons::show(ui, Icon::GripVertical, 16.0, t.faint);
-                    widgets::icon_tile(ui, l.icon, l.color, 36.0);
+                    widgets::launcher_icon_tile(ui, l, 36.0);
                     ui.vertical(|ui| {
                         ui.set_width(ui.available_width() - 300.0);
                         ui.spacing_mut().item_spacing.y = 2.0;
@@ -855,7 +882,7 @@ fn launchers(ui: &mut Ui, data: &mut Data, act: &mut Vec<Action>) {
             let l = &data.launchers[id];
             let users: Vec<&str> = data.projects.iter().filter(|p| p.launchers.contains(&id)).map(|p| p.name.as_str()).collect();
             ui.horizontal(|ui| {
-                widgets::icon_tile(ui, l.icon, l.color, 32.0);
+                widgets::launcher_icon_tile(ui, l, 32.0);
                 ui.vertical(|ui| {
                     ui.spacing_mut().item_spacing.y = 0.0;
                     ui.label(RichText::new(&l.name).font(FontId::new(14.5, theme::semibold())).color(t.ink));
@@ -1014,6 +1041,14 @@ fn appearance(ui: &mut Ui, data: &mut Data, act: &mut Vec<Action>) {
 fn data_section(ui: &mut Ui, data: &mut Data, st: &UiState, act: &mut Vec<Action>) {
     let t = Tokens::get(ui.ctx());
     header(ui, tr("Données"), tr("Tout reste en local, dans un seul fichier lisible."));
+    widgets::settings_card(ui, tr("Outils de développement"), Some(tr("Comme les outils d'un navigateur : inspecter l'interface, les performances, la mémoire, l'état de l'application.")), |ui| {
+        ui.horizontal(|ui| {
+            if widgets::button(ui, Some(Icon::Bug), tr("Ouvrir les outils"), Kind::Secondary).clicked() {
+                act.push(Action::OpenDevTools);
+            }
+            ui.label(RichText::new(tr("Raccourci : F12, ou Ctrl + Maj + I")).size(12.5).color(t.faint));
+        });
+    });
     widgets::settings_card(ui, tr("Mises à jour"), Some(tr("Rust Project évolue par versions : on télécharge, puis on redémarre pour appliquer.")), |ui| {
         ui.horizontal(|ui| {
             icons::show(ui, Icon::PackageCheck, 18.0, t.muted);

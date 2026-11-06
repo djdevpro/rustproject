@@ -18,7 +18,8 @@ fn visible(data: &Data, st: &UiState, ignore_domain: bool) -> Vec<usize> {
         .filter(|&i| {
             let p = &data.projects[i];
             in_view(st.lib_archived, st.lib_attention, p)
-                && (ignore_domain || st.lib_domain.is_none_or(|d| p.domain == d))
+                && (ignore_domain || st.lib_domain.is_none_or(|d| data.has_domain(i, d)))
+                && st.lib_package.as_ref().is_none_or(|pk| p.packages.contains(pk))
                 && hits.is_none_or(|h| h.iter().any(|x| x.index == i))
         })
         .collect();
@@ -168,20 +169,25 @@ fn sidebar(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
             st.lib_attention = None;
         }
         ui.add_space(16.0);
-        widgets::caps(ui, if dragging { tr("Domaines · dépose le projet ici") } else { tr("Domaines · proposés par l'IA") });
+        widgets::caps(ui, if dragging { tr("Domaines · dépose le projet ici") } else { tr("Domaines") });
         ui.add_space(6.0);
         let (archived, attention) = (st.lib_archived, st.lib_attention);
-        let in_scope = |d: Option<usize>| {
-            data.projects
-                .iter()
-                .filter(|p| in_view(archived, attention, p) && d.is_none_or(|d| p.domain == d))
-                .count()
-        };
+        // Un projet compte dans chacun de ses domaines (le principal et ceux de ses tags).
+        let in_scope = |d: Option<usize>| (0..data.projects.len()).filter(|&i| in_view(archived, attention, &data.projects[i]) && d.is_none_or(|d| data.has_domain(i, d))).count();
         if side_item(ui, Icon::LayoutGrid, t.muted, tr("Tous les domaines"), in_scope(None), st.lib_domain.is_none()).clicked() {
             st.lib_domain = None;
         }
-        for (i, d) in data.domains.iter().enumerate() {
-            let resp = side_item(ui, d.icon, d.color, &d.name, in_scope(Some(i)), st.lib_domain == Some(i));
+        // Les plus fournis d'abord ; les 5 premiers seulement, sauf « Tout voir » (et pendant un
+        // glisser-déposer, où chaque domaine est une cible).
+        let mut order: Vec<(usize, usize)> = (0..data.domains.len()).map(|d| (d, in_scope(Some(d)))).collect();
+        order.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+        let show_all = st.lib_domains_all || dragging;
+        for (k, &(i, count)) in order.iter().enumerate() {
+            if !show_all && k >= SHOWN && st.lib_domain != Some(i) {
+                continue;
+            }
+            let d = &data.domains[i];
+            let resp = side_item(ui, d.icon, d.color, &d.name, count, st.lib_domain == Some(i));
             if dragging {
                 drop_highlight(ui, &t, &resp);
             }
@@ -191,25 +197,174 @@ fn sidebar(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
                 st.lib_domain = if st.lib_domain == Some(i) { None } else { Some(i) };
             }
         }
-        ui.add_space(18.0);
-        Frame::new().fill(tint(t.accent, 0.06)).stroke(Stroke::new(1.0, tint(t.accent, 0.25))).corner_radius(10).inner_margin(Margin::same(14)).show(ui, |ui| {
-            ui.set_width(ui.available_width());
-            ui.spacing_mut().item_spacing.y = 6.0;
-            ui.horizontal(|ui| {
-                icons::show(ui, Icon::Sparkles, 16.0, t.accent_ink);
-                ui.label(RichText::new(tr("Taxonomie IA")).font(FontId::new(14.0, theme::semibold())).color(t.ink_strong));
-            });
-            ui.label(RichText::new(tf("{0} domaines · générée il y a 2 h · 2 suggestions en attente", &[("0", &data.domains.len())])).size(12.5).color(t.muted));
-            ui.horizontal(|ui| {
-                if widgets::button_sized(ui, Some(Icon::RefreshCw), tr("Regénérer"), widgets::Kind::Secondary, 32.0, None).clicked() {
-                    act.push(Action::Toast(Icon::Sparkles, tr("Taxonomie en cours de régénération").into(), Some(tr("Simulation : la carte se mettra à jour.").into())));
-                }
-            });
-            if widgets::link(ui, tr("Régler l'IA"), Some(Icon::ArrowRight), 13.0).clicked() {
-                act.push(Action::GoConfig(CfgSection::Ai));
-            }
-        });
+        if order.len() > SHOWN && !dragging {
+            more_link(ui, &mut st.lib_domains_all, order.len());
+        }
+        ui.add_space(16.0);
+        packages_block(ui, data, st);
+        ui.add_space(16.0);
+        docker_block(ui, data, st);
+        ui.add_space(16.0);
+        taxonomy_block(ui, data, st, act);
     }));
+}
+
+/// Combien d'entrées d'une liste de la colonne avant « Tout voir ».
+const SHOWN: usize = 5;
+
+/// « Tout voir (17) » / « Réduire », sous une liste de la colonne.
+fn more_link(ui: &mut Ui, all: &mut bool, total: usize) {
+    ui.horizontal(|ui| {
+        ui.add_space(12.0);
+        let label = if *all { tr("Réduire").to_owned() } else { tf("Tout voir ({0})", &[("0", &total)]) };
+        if widgets::link(ui, &label, Some(if *all { Icon::ChevronUp } else { Icon::ChevronDown }), 12.5).clicked() {
+            *all = !*all;
+        }
+    });
+}
+
+/// Les paquets des projets affichés, par gestionnaire (npm, Cargo, pip, Composer) : les plus
+/// utilisés d'abord, 5 par gestionnaire, « Tout voir » pour la suite. Un clic filtre.
+fn packages_block(ui: &mut Ui, data: &Data, st: &mut UiState) {
+    use crate::packages::{Manager, Package};
+    let t = Tokens::get(ui.ctx());
+    widgets::caps(ui, tr("Paquets"));
+    ui.add_space(6.0);
+    let (archived, attention) = (st.lib_archived, st.lib_attention);
+    let mut counts: std::collections::BTreeMap<Manager, std::collections::HashMap<&str, usize>> = Default::default();
+    for p in data.projects.iter().filter(|p| in_view(archived, attention, p)) {
+        // Les images Docker ont leur propre rubrique.
+        for pk in p.packages.iter().filter(|pk| pk.manager != Manager::Docker) {
+            *counts.entry(pk.manager).or_default().entry(pk.name.as_str()).or_default() += 1;
+        }
+    }
+    if counts.is_empty() {
+        ui.label(RichText::new(tr("Aucun paquet relevé : ils viennent des manifestes (package.json, Cargo.toml, composer.json, requirements.txt).")).size(12.0).color(t.faint));
+        return;
+    }
+    for m in Manager::ALL {
+        let Some(map) = counts.get(&m) else { continue };
+        let mut list: Vec<(&str, usize)> = map.iter().map(|(n, c)| (*n, *c)).collect();
+        list.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
+        // Chaque gestionnaire est une ligne repliable (repliée par défaut) : tous restent visibles
+        // d'un coup d'œil. Celui du paquet filtré s'ouvre de lui-même.
+        let filtered = st.lib_package.as_ref().is_some_and(|p| p.manager == m);
+        let open = st.lib_packages_open.contains(&m) || filtered;
+        let (rect, head) = ui.allocate_exact_size(vec2(ui.available_width(), 28.0), Sense::click());
+        head.widget_info(|| egui::WidgetInfo::selected(egui::Role::Button, true, open, m.label()));
+        if head.hovered() {
+            ui.painter().rect_filled(rect, CornerRadius::same(8), tint(t.ink, 0.05));
+        }
+        ui.painter().circle_filled(pos2(rect.left() + 14.0, rect.center().y), 3.5, m.color());
+        ui.painter().text(pos2(rect.left() + 26.0, rect.center().y), Align2::LEFT_CENTER, m.label(), FontId::new(13.0, theme::semibold()), t.ink);
+        let count = if list.len() == 1 { tr("1 paquet").to_owned() } else { tf("{0} paquets", &[("0", &list.len())]) };
+        ui.painter().text(pos2(rect.right() - 30.0, rect.center().y), Align2::RIGHT_CENTER, count, FontId::proportional(11.5), t.faint);
+        icons::paint(ui.painter(), pos2(rect.right() - 14.0, rect.center().y), if open { Icon::ChevronUp } else { Icon::ChevronDown }, 14.0, t.faint);
+        if head.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
+            if st.lib_packages_open.contains(&m) {
+                st.lib_packages_open.retain(|x| *x != m);
+            } else {
+                st.lib_packages_open.push(m);
+            }
+        }
+        if !open {
+            continue;
+        }
+        let mut all = st.lib_packages_all.contains(&m);
+        for (k, (name, count)) in list.iter().enumerate() {
+            let selected = st.lib_package.as_ref().is_some_and(|p| p.manager == m && p.name == *name);
+            if !all && k >= SHOWN && !selected {
+                continue;
+            }
+            if side_item(ui, Icon::Package, m.color(), name, *count, selected).clicked() {
+                st.lib_package = if selected { None } else { Some(Package { manager: m, name: (*name).to_owned() }) };
+            }
+        }
+        if list.len() > SHOWN {
+            let before = all;
+            more_link(ui, &mut all, list.len());
+            if all != before {
+                if all {
+                    st.lib_packages_all.push(m);
+                } else {
+                    st.lib_packages_all.retain(|x| *x != m);
+                }
+            }
+        }
+        ui.add_space(6.0);
+    }
+}
+
+/// Les images Docker des projets affichés (Dockerfile, docker-compose) : les plus utilisées
+/// d'abord, 5 puis « Tout voir ». Un clic filtre. Le bloc n'apparaît que s'il y a des images.
+fn docker_block(ui: &mut Ui, data: &Data, st: &mut UiState) {
+    use crate::packages::{Manager, Package};
+    let (archived, attention) = (st.lib_archived, st.lib_attention);
+    let mut counts: std::collections::HashMap<&str, usize> = Default::default();
+    for p in data.projects.iter().filter(|p| in_view(archived, attention, p)) {
+        for pk in p.packages.iter().filter(|pk| pk.manager == Manager::Docker) {
+            *counts.entry(pk.name.as_str()).or_default() += 1;
+        }
+    }
+    if counts.is_empty() {
+        return;
+    }
+    let mut list: Vec<(&str, usize)> = counts.into_iter().collect();
+    list.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
+    widgets::caps(ui, tr("Images Docker"));
+    ui.add_space(6.0);
+    let mut all = st.lib_packages_all.contains(&Manager::Docker);
+    for (k, (name, count)) in list.iter().enumerate() {
+        let selected = st.lib_package.as_ref().is_some_and(|p| p.manager == Manager::Docker && p.name == *name);
+        if !all && k >= SHOWN && !selected {
+            continue;
+        }
+        if side_item(ui, Icon::Container, Manager::Docker.color(), name, *count, selected).clicked() {
+            st.lib_package = if selected { None } else { Some(Package { manager: Manager::Docker, name: (*name).to_owned() }) };
+        }
+    }
+    if list.len() > SHOWN {
+        let before = all;
+        more_link(ui, &mut all, list.len());
+        if all != before {
+            if all {
+                st.lib_packages_all.push(Manager::Docker);
+            } else {
+                st.lib_packages_all.retain(|x| *x != Manager::Docker);
+            }
+        }
+    }
+}
+
+/// La taxonomie, repliée : un clic l'ouvre (combien de domaines et de tags, et où les régler).
+fn taxonomy_block(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
+    let t = Tokens::get(ui.ctx());
+    let open = st.lib_taxonomy_open;
+    let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 34.0), Sense::click());
+    resp.widget_info(|| egui::WidgetInfo::selected(egui::Role::Button, true, open, tr("Taxonomie")));
+    if resp.hovered() {
+        ui.painter().rect_filled(rect, CornerRadius::same(8), tint(t.ink, 0.05));
+    }
+    icons::paint(ui.painter(), pos2(rect.left() + 20.0, rect.center().y), Icon::Network, 16.0, t.muted);
+    ui.painter().text(pos2(rect.left() + 40.0, rect.center().y), Align2::LEFT_CENTER, tr("Taxonomie"), FontId::new(13.5, theme::semibold()), t.ink);
+    icons::paint(ui.painter(), pos2(rect.right() - 16.0, rect.center().y), if open { Icon::ChevronUp } else { Icon::ChevronDown }, 15.0, t.faint);
+    if resp.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
+        st.lib_taxonomy_open = !open;
+    }
+    if !open {
+        return;
+    }
+    Frame::new().fill(tint(t.accent, 0.06)).stroke(Stroke::new(1.0, tint(t.accent, 0.25))).corner_radius(10).inner_margin(Margin::same(14)).show(ui, |ui| {
+        ui.set_width(ui.available_width());
+        ui.spacing_mut().item_spacing.y = 6.0;
+        ui.label(RichText::new(tf("{0} domaines · {1} tags dans l'ontologie", &[("0", &data.domains.len()), ("1", &data.ontology.concepts.len())])).size(12.5).color(t.muted));
+        if widgets::link(ui, tr("Ontologie"), Some(Icon::ArrowRight), 13.0).clicked() {
+            act.push(Action::GoConfig(CfgSection::Ontology));
+        }
+        if widgets::link(ui, tr("Régler l'IA"), Some(Icon::ArrowRight), 13.0).clicked() {
+            act.push(Action::GoConfig(CfgSection::Ai));
+        }
+    });
 }
 
 /// Un filtre actif, montré en pastille retirable dans la barre d'outils.
@@ -218,6 +373,7 @@ enum Filter {
     Domain,
     Attention,
     Archived,
+    Package,
 }
 
 fn main(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
@@ -232,6 +388,9 @@ fn main(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
     }
     if st.lib_archived {
         filters.push((Filter::Archived, tr("Archivés").into(), t.muted));
+    }
+    if let Some(pk) = &st.lib_package {
+        filters.push((Filter::Package, format!("{} · {}", pk.manager.label(), pk.name), pk.manager.color()));
     }
 
     // ---- Ligne 1 : le titre et le compte à gauche, la vue à droite. Toujours sur une ligne :
@@ -279,10 +438,12 @@ fn main(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
         Some(Filter::Domain) => st.lib_domain = None,
         Some(Filter::Attention) => st.lib_attention = None,
         Some(Filter::Archived) => st.lib_archived = false,
+        Some(Filter::Package) => st.lib_package = None,
         None => {}
     }
     if clear_all {
         (st.lib_domain, st.lib_attention, st.lib_archived) = (None, None, false);
+        st.lib_package = None;
         st.lib_search.clear();
     }
     ui.add_space(10.0);
@@ -334,7 +495,7 @@ fn selection_bar(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Actio
                     st.lib_multi.clear();
                 }
                 let domains: Vec<(usize, &str)> = data.domains.iter().enumerate().map(|(i, d)| (i, d.name.as_str())).collect();
-                if let Some(d) = widgets::menu_button(ui, Some(Icon::Tag), tr("Domaine"), widgets::Kind::Secondary, &domains) {
+                if let Some(d) = widgets::menu_button(ui, Some(Icon::Tag), tr("Ajouter un domaine"), widgets::Kind::Secondary, &domains) {
                     act.push(Action::Bulk(group.clone(), BulkOp::Domain(d)));
                 }
                 let mut targets: Vec<(Option<Attention>, &str)> = Attention::ALL.iter().map(|a| (Some(*a), a.label())).collect();

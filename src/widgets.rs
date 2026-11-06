@@ -772,7 +772,7 @@ pub fn launcher_tile(ui: &mut Ui, l: &Launcher, favorite: bool, flash: f32) -> R
     let tile = Rect::from_center_size(pos2(rect.center().x, rect.top() + 24.0), vec2(30.0, 30.0));
     let (tile_bg, icon_color) = if favorite { (tint(t.on_accent, 0.14), t.on_accent) } else { (tint(l.color, 0.18), l.color) };
     p.rect_filled(tile, CornerRadius::same(7), tile_bg);
-    icons::paint(p, tile.center(), l.icon, 16.0, icon_color);
+    paint_launcher_icon(ui, l, tile, 16.0, icon_color);
     let font = FontId::new(11.0, theme::medium());
     let label = elide_end(p, &l.name, &font, rect.width() - 8.0);
     p.text(pos2(rect.center().x, rect.bottom() - 13.0), Align2::CENTER_CENTER, label, font, fg);
@@ -780,6 +780,25 @@ pub fn launcher_tile(ui: &mut Ui, l: &Launcher, favorite: bool, flash: f32) -> R
         p.rect_stroke(rect.expand(2.0 + 4.0 * (1.0 - flash)), CornerRadius::same(R_CTRL + 4), Stroke::new(2.0, tint(t.accent, flash)), StrokeKind::Outside);
     }
     resp.on_hover_cursor(CursorIcon::PointingHand)
+}
+
+/// L'icône d'un lanceur dans `rect` : son logo SVG s'il en a un, sinon son icône Lucide.
+pub fn paint_launcher_icon(ui: &Ui, l: &crate::model::Launcher, rect: Rect, size: f32, color: Color32) {
+    if l.svg.is_empty() {
+        icons::paint(ui.painter(), rect.center(), l.icon, size, color);
+        return;
+    }
+    let uri = format!("bytes://lanceur-{:x}.svg", crate::store::text_hash(&l.svg));
+    let logo = Rect::from_center_size(rect.center(), vec2(size + 4.0, size + 4.0));
+    egui::Image::from_bytes(uri, l.svg.as_bytes().to_vec()).fit_to_exact_size(logo.size()).paint_at(ui, logo);
+}
+
+/// Une tuile carrée (comme `icon_tile`) pour un lanceur : son logo ou son icône.
+pub fn launcher_icon_tile(ui: &mut Ui, l: &crate::model::Launcher, size: f32) -> Response {
+    let (rect, resp) = ui.allocate_exact_size(vec2(size, size), Sense::hover());
+    ui.painter().rect_filled(rect, CornerRadius::same((size * 0.24) as u8), tint(l.color, 0.16));
+    paint_launcher_icon(ui, l, rect, size * 0.56, l.color);
+    resp
 }
 
 /// La tuile « + » au bout de la rangée de lanceurs.

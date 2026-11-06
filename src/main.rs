@@ -23,8 +23,10 @@
 
 mod app;
 mod classify;
+mod context;
 #[cfg(any(target_os = "linux", test))]
 mod desktop;
+mod devtools;
 #[cfg(test)]
 mod fixture;
 mod github;
@@ -39,6 +41,7 @@ mod model;
 mod ollama;
 mod ollaya;
 mod ontology;
+mod packages;
 mod panel;
 mod release;
 mod scan;
@@ -46,6 +49,7 @@ mod screens;
 mod search;
 mod select;
 mod store;
+mod tags;
 mod theme;
 mod update;
 mod widgets;

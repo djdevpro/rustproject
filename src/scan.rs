@@ -431,6 +431,12 @@ fn read_manifests(dir: &Path, names: &[String]) -> Manifest {
     if has("go.mod") {
         push(&mut m.stack, "Go");
     }
+    // Les autres écosystèmes, d'après leur manifeste.
+    for (file, label) in [("pom.xml", "Java"), ("build.gradle", "Java"), ("build.gradle.kts", "Kotlin"), ("Gemfile", "Ruby"), ("Package.swift", "Swift"), ("mix.exs", "Elixir"), ("deno.json", "Deno"), ("vcpkg.json", "C++"), ("conanfile.txt", "C++")] {
+        if has(file) {
+            push(&mut m.stack, label);
+        }
+    }
     if names.iter().any(|n| n.to_lowercase().ends_with(".sln") || n.to_lowercase().ends_with(".csproj")) {
         push(&mut m.stack, ".NET");
     }

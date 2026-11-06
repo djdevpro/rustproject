@@ -229,20 +229,12 @@ fn summary(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<A
     widgets::info_row(ui, Icon::Calendar, tr("Prochaine revue"), |ui| {
         widgets::muted(ui, &project.review);
     });
-    // Les concepts de l'ontologie auxquels Ollaya (ou l'utilisateur) l'a rattaché.
-    let concepts = data.concepts_of(p);
-    if !concepts.is_empty() {
-        gap(ui);
-        widgets::info_row(ui, Icon::Network, tr("Concepts"), |ui| {
-            ui.horizontal_wrapped(|ui| {
-                ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
-                for (c, w) in concepts {
-                    let facet = data.ontology.facet(c.facet).map(|f| f.name.as_str()).unwrap_or("");
-                    widgets::tag(ui, &c.name).on_hover_text(format!("{facet} · {} · {:.0} %", data.ontology.path(c.id), w * 100.0));
-                }
-            });
-        });
-    }
+    // Ses tags (par facette, ses domaines d'abord) et ses mots-clés.
+    gap(ui);
+    widgets::info_row(ui, Icon::Tag, tr("Tags"), |ui| {
+        ui.spacing_mut().item_spacing.y = 6.0;
+        crate::tags::summary(ui, data, p);
+    });
 }
 
 fn activity(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<Action>) {
@@ -426,8 +418,9 @@ fn edit(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<Acti
     widgets::labeled(ui, tr("Objectif"), |ui| {
         widgets::named(ui.add(egui::TextEdit::multiline(&mut d.objective).desired_rows(3).desired_width(w).margin(Margin::symmetric(12, 8))), egui::Role::MultilineTextInput, tr("Objectif"))
     });
-    let domains: Vec<(usize, &str)> = data.domains.iter().enumerate().map(|(i, dm)| (i, dm.name.as_str())).collect();
-    widgets::labeled(ui, tr("Domaine (proposé par l'IA)"), |ui| widgets::combo(ui, tr("Domaine du projet"), &mut d.domain, &domains, w - 4.0));
+    // Les tags (plusieurs domaines, l'ontologie) et les mots-clés : enregistrés tout de suite.
+    crate::tags::editor(ui, data, p, &mut st.tag_query, &mut st.tag_new, act);
+    crate::tags::keywords_editor(ui, data, p, &mut st.keyword_input, act);
     // L'icône (un bouton qui ouvre le sélecteur), à gauche des dossiers.
     ui.horizontal_top(|ui| {
         ui.spacing_mut().item_spacing.x = 12.0;

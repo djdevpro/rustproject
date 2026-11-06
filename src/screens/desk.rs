@@ -63,10 +63,10 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
                 }
             });
         });
-        // Quatre cartes tiennent dans la largeur (moins si la fenêtre est étroite) ; au-delà, on
-        // fait défiler : molette, barre, ou en glissant à la souris.
+        // Autant de cartes compactes que la largeur en permet (huit au plus) ; au-delà, on fait
+        // défiler : molette, barre, ou en glissant à la souris.
         let gap = theme::GAP;
-        let slots = (((width + gap) / (230.0 + gap)).floor() as usize).clamp(1, 4);
+        let slots = (((width + gap) / (FOCUS_CARD_MIN_W + gap)).floor() as usize).clamp(1, 8);
         let card_w = ((width - gap * (slots - 1) as f32) / slots as f32).floor();
         if focus.is_empty() {
             widgets::card(&t).show(ui, |ui| {
@@ -284,52 +284,35 @@ fn search_results(ui: &mut Ui, data: &Data, st: &UiState, hits: &[crate::search:
     });
 }
 
-/// Une carte de projet en focus (cliquable en entier).
+/// Une carte de projet en focus, compacte (cliquable en entier) : le nom, ce qu'on vise (ou la
+/// description), l'état et la dernière activité. Le détail est dans le panneau.
 fn focus_card(ui: &mut Ui, data: &Data, i: usize, selected: bool, reorder: bool, width: f32, act: &mut Vec<Action>) {
     let t = Tokens::get(ui.ctx());
     let p = &data.projects[i];
-    let (rect, resp) = ui.allocate_exact_size(vec2(width, 206.0), Sense::click());
+    let (rect, resp) = ui.allocate_exact_size(vec2(width, FOCUS_CARD_H), Sense::click());
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, &p.name));
     let hover = ui.ctx().animate_bool(resp.id.with("hover"), resp.hovered());
     let painter = ui.painter().clone();
     let stroke = if selected { Stroke::new(2.0, t.accent) } else { Stroke::new(1.0, mix(t.line, t.line_strong, hover)) };
     painter.rect(rect, CornerRadius::same(theme::R_CARD), mix(t.surface, t.raised, hover * 0.6), stroke, StrokeKind::Inside);
-    let x0 = rect.left() + 18.0;
-    let inner_w = width - 36.0;
-    let mut y = rect.top() + 18.0;
-    icons::paint(&painter, pos2(x0 + 13.0, y + 13.0), p.icon, 26.0, t.accent_ink);
-    widgets::paint_text(&painter, pos2(x0 + 38.0, y + 1.0), &p.name, FontId::new(19.5, theme::bold()), t.ink_strong, inner_w - 38.0 - if reorder { 56.0 } else { 0.0 });
-    y += 38.0;
-    widgets::paint_text(&painter, pos2(x0, y), &tf("Résultat visé : {0}", &[("0", &p.outcome)]), FontId::proportional(13.5), t.muted, inner_w);
+    let x0 = rect.left() + 14.0;
+    let inner_w = width - 28.0;
+    let mut y = rect.top() + 14.0;
+    icons::paint(&painter, pos2(x0 + 10.0, y + 11.0), p.icon, 20.0, t.accent_ink);
+    widgets::paint_text(&painter, pos2(x0 + 28.0, y + 1.0), &p.name, FontId::new(16.5, theme::bold()), t.ink_strong, inner_w - 28.0 - if reorder { 56.0 } else { 0.0 });
     y += 30.0;
-    let w = widgets::paint_chip(&painter, &t, pos2(x0, y + 12.0), p.status.label(), widgets::status_tone(p.status));
+    // Ce qu'on vise ; à défaut, la description (jamais une étiquette vide).
+    let line = if p.outcome.trim().is_empty() { p.description.clone() } else { tf("Résultat visé : {0}", &[("0", &p.outcome)]) };
+    widgets::paint_text(&painter, pos2(x0, y), &line, FontId::proportional(12.5), t.muted, inner_w);
+    y += 21.0;
+    // Pas d'état sur ces cartes : la fiche le montre, ici il encombrait.
     if p.idle_days > 0 {
-        let g = painter.layout_no_wrap(idle_text(p.idle_days), FontId::proportional(12.5), t.faint);
-        painter.galley(pos2(x0 + w + 10.0, y + 12.0 - g.size().y / 2.0), g, t.faint);
+        widgets::paint_text(&painter, pos2(x0, y), &idle_text(p.idle_days), FontId::proportional(12.0), t.faint, inner_w);
     }
-    y += 38.0;
-    // Avancement des étapes.
-    let (done, total) = p.steps_done();
-    let bar = Rect::from_min_size(pos2(x0, y + 4.0), vec2(inner_w - 44.0, 6.0));
-    painter.rect_filled(bar, CornerRadius::same(3), t.neutral_bg);
-    if total > 0 && done > 0 {
-        painter.rect_filled(Rect::from_min_size(bar.min, vec2(bar.width() * done as f32 / total as f32, bar.height())), CornerRadius::same(3), t.accent);
-    }
-    let g = painter.layout_no_wrap(format!("{done}/{total}"), FontId::new(12.5, theme::semibold()), t.muted);
-    painter.galley(pos2(rect.right() - 18.0 - g.size().x, y + 7.0 - g.size().y / 2.0), g, t.muted);
-    y += 22.0;
-    icons::paint(&painter, pos2(x0 + 8.0, y + 9.0), Icon::Zap, 14.0, t.faint);
-    widgets::paint_text(&painter, pos2(x0 + 22.0, y), &p.next_action, FontId::proportional(13.0), t.ink, inner_w - 22.0);
-    // « → Détails », en bas.
-    let by = rect.bottom() - 28.0;
-    let color = mix(t.muted, t.accent_ink, hover.max(if selected { 1.0 } else { 0.0 }));
-    icons::paint(&painter, pos2(x0 + 8.0, by + 9.0), Icon::ArrowRight, 16.0, color);
-    let g = painter.layout_no_wrap(tr("Détails").to_owned(), FontId::new(14.0, theme::semibold()), color);
-    painter.galley(pos2(x0 + 24.0, by + 9.0 - g.size().y / 2.0), g, color);
     // Mode « Réorganiser » : flèches pour déplacer la carte.
     if reorder {
         for (k, (icon, delta, tip)) in [(Icon::ChevronLeft, -1, tr("Vers la gauche")), (Icon::ChevronRight, 1, tr("Vers la droite"))].into_iter().enumerate() {
-            let r = Rect::from_min_size(pos2(rect.right() - 64.0 + 30.0 * k as f32, rect.top() + 14.0), vec2(28.0, 28.0));
+            let r = Rect::from_min_size(pos2(rect.right() - 62.0 + 30.0 * k as f32, rect.top() + 10.0), vec2(28.0, 28.0));
             let b = ui.interact(r, Id::unique(("focus-move", i, k)), Sense::click()).on_hover_text(tip);
             painter.rect(r, CornerRadius::same(7), if b.hovered() { t.raised } else { t.input }, Stroke::new(1.0, t.line_strong), StrokeKind::Inside);
             icons::paint(&painter, r.center(), icon, 16.0, t.ink);
@@ -342,6 +325,11 @@ fn focus_card(ui: &mut Ui, data: &Data, i: usize, selected: bool, reorder: bool,
         act.push(Action::Select(i));
     }
 }
+
+/// La hauteur d'une carte en focus, et sa largeur minimale (autant de cartes que la largeur en
+/// permet, huit au plus).
+const FOCUS_CARD_H: f32 = 84.0;
+const FOCUS_CARD_MIN_W: f32 = 180.0;
 
 /// Une ligne « au fil de l'eau ».
 fn flow_row(ui: &mut Ui, data: &Data, i: usize, selected: bool, act: &mut Vec<Action>) {
@@ -482,7 +470,7 @@ pub fn add_project(ctx: &egui::Context, data: &Data, a: &mut AddProjectState, ac
             ui.vertical(|ui| {
                 ui.spacing_mut().item_spacing.y = 2.0;
                 widgets::title(ui, tr("Ajouter un projet"), 24.0);
-                let how = if data.config.ai_mode == crate::model::AiMode::Ollama && !data.config.ollama_model.is_empty() { tf("Ollama ({0})", &[("0", &data.config.ollama_model)]) } else { tr("les règles locales").to_owned() };
+                let how = if data.config.ollama_on && !data.config.ollama_model.is_empty() { tf("Ollama ({0})", &[("0", &data.config.ollama_model)]) } else { tr("les règles locales").to_owned() };
                 widgets::muted(ui, &tf("Choisis un dossier : il est analysé par {how}, puis tu valides la fiche.", &[("how", &how)]));
             });
             ui.with_layout(Layout::right_to_left(Align::Min), |ui| {

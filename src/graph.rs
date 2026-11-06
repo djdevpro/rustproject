@@ -1,9 +1,11 @@
 //! Le graphe de la Bibliothèque : une simulation de forces (dans l'esprit de d3-force), sans
 //! dépendance.
 //!
-//! - Chaque domaine est un nœud « moyeu » ; chaque projet est un nœud relié à son domaine.
+//! - Chaque domaine est un nœud « moyeu » ; chaque projet est un nœud relié à son domaine
+//!   principal, et plus légèrement à ses autres domaines (ses tags de la facette « Domaine »).
 //! - Des liens plus légers relient les projets rangés ensemble (même dossier parent, ou une fiche
-//!   rangée dans le dossier d'une autre) et ceux de domaines différents qui partagent leurs technos.
+//!   rangée dans le dossier d'une autre), ceux de domaines différents qui partagent leurs technos,
+//!   et ceux qui partagent des tags peu courants (Nature, Finalité, sous-domaines…).
 //! - Les nœuds se repoussent, les liens tirent comme des ressorts, une légère gravité garde
 //!   l'ensemble au centre, et les nœuds ne se chevauchent pas.
 //! - La « température » `alpha` baisse à chaque pas : le graphe s'anime puis se pose. Attraper un
@@ -26,12 +28,16 @@ pub enum Key {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EdgeKind {
-    /// Projet → son domaine.
+    /// Projet → son domaine principal.
     Domain,
+    /// Projet → un autre de ses domaines.
+    AlsoDomain,
     /// Rangés ensemble : même dossier parent, ou fiche rangée dans le dossier d'une autre.
     Family,
     /// Domaines différents, technos en commun.
     Stack,
+    /// Des tags en commun, surtout des tags peu courants.
+    Tags,
 }
 
 #[derive(Clone, Debug)]
@@ -39,7 +45,10 @@ pub struct Node {
     pub key: Key,
     /// Index dans `data.projects` (projet) ou `data.domains` (domaine).
     pub index: usize,
+    /// Le domaine principal.
     pub domain: usize,
+    /// Les autres domaines d'un projet.
+    pub also: Vec<usize>,
     pub pos: Vec2,
     pub vel: Vec2,
     /// Rayon en unités du monde (≈ points à 100 %).
@@ -129,6 +138,7 @@ impl Sim {
             for &i in &visible {
                 let p = &data.projects[i];
                 (i, p.id, p.domain, &p.stack, p.folders.first(), project_radius(p.idle_days).to_bits()).hash(&mut h);
+                p.tags.iter().filter(|t| t.weight >= crate::ontology::LINK_MIN).map(|t| t.concept).collect::<Vec<_>>().hash(&mut h);
             }
             h.finish()
         };
@@ -145,6 +155,13 @@ impl Sim {
             let d = data.projects[i].domain.min(data.domains.len().saturating_sub(1));
             per_domain.entry(d).or_default().push(i);
         }
+        // Les autres domaines de chaque projet : un moyeu existe aussi pour eux.
+        let also_of: HashMap<usize, Vec<usize>> = visible.iter().map(|&i| (i, data.domains_of(i).into_iter().skip(1).filter(|&d| d < data.domains.len()).collect())).collect();
+        for list in also_of.values() {
+            for &d in list {
+                per_domain.entry(d).or_default();
+            }
+        }
         let hubs = per_domain.len().max(1) as f32;
         let ring = 150.0 + 70.0 * hubs.sqrt();
         let mut nodes = Vec::with_capacity(visible.len() + per_domain.len());
@@ -154,7 +171,7 @@ impl Sim {
             let (pos, vel) = old.get(&key).copied().unwrap_or((polar(k as f32 * std::f32::consts::TAU / hubs - 1.2, if hubs > 1.0 { ring } else { 0.0 }), Vec2::ZERO));
             hub_of.insert(d, nodes.len());
             let count = members.len() as f32;
-            nodes.push(Node { key, index: d, domain: d, pos, vel, radius: hub_radius(members.len()), charge: -(220.0 + 18.0 * count), fixed: false });
+            nodes.push(Node { key, index: d, domain: d, also: Vec::new(), pos, vel, radius: hub_radius(members.len()), charge: -(220.0 + 18.0 * count), fixed: false });
         }
         let mut node_of: HashMap<usize, usize> = HashMap::new();
         for (&d, members) in &per_domain {
@@ -170,7 +187,7 @@ impl Sim {
                 };
                 let (pos, vel) = old.get(&key).copied().unwrap_or_else(|| (spawn(), Vec2::ZERO));
                 node_of.insert(i, nodes.len());
-                nodes.push(Node { key, index: i, domain: d, pos, vel, radius: project_radius(p.idle_days), charge: -45.0, fixed: false });
+                nodes.push(Node { key, index: i, domain: d, also: also_of.get(&i).cloned().unwrap_or_default(), pos, vel, radius: project_radius(p.idle_days), charge: -45.0, fixed: false });
             }
         }
 
@@ -181,6 +198,14 @@ impl Sim {
             let rest = nodes[hub].radius + 34.0 + 3.0 * (members.len() as f32).sqrt();
             for i in members {
                 edges.push((hub, node_of[i], EdgeKind::Domain, rest, 0.7));
+            }
+        }
+        // Ses autres domaines : un lien qui tire à peine (le projet reste dans sa grappe).
+        for (&i, list) in &also_of {
+            for d in list {
+                if let Some(&hub) = hub_of.get(d) {
+                    edges.push((hub, node_of[&i], EdgeKind::AlsoDomain, 150.0, 0.02));
+                }
             }
         }
         // Rangés ensemble.
@@ -236,6 +261,60 @@ impl Sim {
             for &(_, b) in list.iter().take(2) {
                 if a < b {
                     edges.push((a, b, EdgeKind::Stack, 170.0, 0.012));
+                }
+            }
+        }
+        // Des tags en commun : un tag rare compte plus qu'un tag que tout le monde a (pondération
+        // IDF). Les deux plus proches voisins de chacun, ceux qui se ressemblent vraiment.
+        let domain_facet = data.ontology.domain_facet();
+        let tag_sets: Vec<Vec<u64>> = nodes
+            .iter()
+            .map(|n| {
+                if n.is_hub() {
+                    return Vec::new();
+                }
+                data.projects[n.index]
+                    .tags
+                    .iter()
+                    .filter(|t| t.weight >= crate::ontology::LINK_MIN)
+                    .filter(|t| data.ontology.concept(t.concept).is_some_and(|c| !(Some(c.facet) == domain_facet && c.parent.is_none())))
+                    .map(|t| t.concept)
+                    .collect()
+            })
+            .collect();
+        let mut df: HashMap<u64, usize> = HashMap::new();
+        for set in &tag_sets {
+            for c in set {
+                *df.entry(*c).or_default() += 1;
+            }
+        }
+        let projects = tag_sets.iter().filter(|s| !s.is_empty()).count().max(1) as f32;
+        let idf = |c: &u64| (1.0 + projects / df.get(c).copied().unwrap_or(1) as f32).ln();
+        let mut best: Vec<Vec<(f32, usize)>> = vec![Vec::new(); nodes.len()];
+        for a in 0..nodes.len() {
+            for b in (a + 1)..nodes.len() {
+                let (sa, sb) = (&tag_sets[a], &tag_sets[b]);
+                if sa.is_empty() || sb.is_empty() {
+                    continue;
+                }
+                let shared: Vec<&u64> = sa.iter().filter(|c| sb.contains(c)).collect();
+                if shared.len() < 2 {
+                    continue;
+                }
+                let inter: f32 = shared.iter().map(|c| idf(c)).sum();
+                let union: f32 = sa.iter().chain(sb.iter().filter(|c| !sa.contains(c))).map(idf).sum();
+                let score = inter / union.max(0.001);
+                if score >= 0.45 {
+                    best[a].push((score, b));
+                    best[b].push((score, a));
+                }
+            }
+        }
+        for (a, list) in best.iter_mut().enumerate() {
+            list.sort_by(|x, y| y.0.total_cmp(&x.0).then(x.1.cmp(&y.1)));
+            for &(_, b) in list.iter().take(2) {
+                if a < b {
+                    edges.push((a, b, EdgeKind::Tags, 180.0, 0.008));
                 }
             }
         }

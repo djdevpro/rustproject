@@ -18,6 +18,8 @@ sha2 = "0.10.9"
 strsim = "0.11.1"
 sys-locale = "0.3.2"
 ureq = { version = "3.5.1", features = ["json"] }
+# Les logos SVG des lanceurs (rendus par resvg).
+egui_extras = { version = "0.37", default-features = false, features = ["svg"] }
 
 # L'icône de l'exécutable Windows (build.rs).
 [build-dependencies]

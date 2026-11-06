@@ -408,12 +408,18 @@ fn drag(h: &mut Harness<'static, AtelierApp>, label: &str, dx: f32) {
 #[test]
 fn glisser_pour_faire_defiler() {
     let mut h = harness();
-    // Cinq projets en focus : la rangée déborde.
-    h.state_mut().data.projects[4].attention = Attention::Focus;
+    // Dix projets en focus : la rangée de cartes compactes déborde.
+    for i in 4..10 {
+        h.state_mut().data.projects[i].attention = Attention::Focus;
+    }
     h.run();
-    let before = h.get_by_label("Tempo").rect().left();
-    drag(&mut h, "Tempo", -240.0);
-    let after = h.get_by_label("Tempo").rect().left();
+    // Une carte en focus qui n'est pas ouverte dans le panneau (son nom n'y est qu'une fois).
+    let selected = h.state().st.selected;
+    let card = h.state().data.focus().into_iter().find(|&i| Some(i) != selected).unwrap();
+    let first = h.state().data.projects[card].name.clone();
+    let before = h.query_all_by_label(&first).map(|n| n.rect().left()).fold(f32::MAX, f32::min);
+    drag(&mut h, &first, -240.0);
+    let after = h.query_all_by_label(&first).map(|n| n.rect().left()).fold(f32::MAX, f32::min);
     assert!(after < before - 100.0, "la rangée focus doit défiler : {before} → {after}");
     // Glisser n'est pas cliquer : la carte n'a pas été sélectionnée.
     assert_eq!(h.state().st.selected, Some(2));
@@ -521,7 +527,7 @@ fn premier_lancement_scan_reel_et_enregistrement() {
         .build_eframe(move |cc| {
             let mut data = crate::model::Data::fresh();
             // Sans IA : les règles locales créent les fiches dès la fin du scan.
-            data.config.ai_mode = crate::model::AiMode::Off;
+            (data.config.ollama_on, data.config.mcp_on) = (false, false);
             data.config.roots = vec![crate::model::ScanRoot { path: root_str.clone(), ..Default::default() }];
             AtelierApp::with_data(cc, data, Some(crate::store::Store::open(&path_for_app)))
         });
@@ -671,7 +677,6 @@ fn overflowing(h: &Harness<'static, AtelierApp>, width: f32) -> Vec<String> {
 #[test]
 fn aucun_ecran_ne_deborde_dans_une_petite_fenetre() {
     use crate::app::{CfgSection, LibView};
-    use crate::model::AiMode;
     let long_models = || {
         Some(Ok(["qwen3-embedding:4b", "winnow:latest", "un-modele-au-nom-vraiment-tres-long-pour-voir:latest-instruct-q4_K_M"]
             .map(|n| crate::ollama::ModelInfo { name: n.into(), size: 12_700_000_000, family: "qwen3".into(), parameters: "4B".into() })
@@ -705,11 +710,11 @@ fn aucun_ecran_ne_deborde_dans_une_petite_fenetre() {
     }
     check("À revisiter".into(), &|app| app.st.screen = Screen::Revisit);
     for section in CfgSection::ALL {
-        for mode in [AiMode::Ollama, AiMode::Mcp, AiMode::Off] {
-            check(format!("Configuration {section:?} ({mode:?})"), &|app| {
+        for (ollama, mcp) in [(true, true), (true, false), (false, true), (false, false)] {
+            check(format!("Configuration {section:?} (Ollama {ollama}, MCP {mcp})"), &|app| {
                 app.st.screen = Screen::Config;
                 app.st.cfg = section;
-                app.data.config.ai_mode = mode;
+                (app.data.config.ollama_on, app.data.config.mcp_on) = (ollama, mcp);
             });
         }
     }
@@ -782,8 +787,11 @@ fn selection_multiple_et_glisser_groupe() {
     let from = project_row(&h, &names[0]).center();
     let to = side_attention(&h, &domain_name);
     drag_between(&mut h, from, to);
+    // Déposé sur un domaine : le groupe le reçoit en plus, son domaine principal ne change pas.
     for n in &names[..3] {
-        assert_eq!(h.state().data.projects.iter().find(|p| p.name == *n).unwrap().domain, domain);
+        let i = h.state().data.projects.iter().position(|p| p.name == *n).unwrap();
+        assert!(h.state().data.has_domain(i, domain), "{n} a reçu le domaine");
+        assert_ne!(h.state().data.projects[i].domain, domain, "{n} garde son domaine principal");
     }
     h.key_press(egui::Key::Escape);
     h.run();
@@ -881,3 +889,166 @@ fn chemin_modifie_relance_le_scan() {
     assert!(scan.dirs.iter().any(|d| d.name == "outil"), "le nouveau dossier est relevé");
     let _ = std::fs::remove_dir_all(&base);
 }
+
+/// Plusieurs domaines par projet : le principal, ceux des tags ; un tag retiré ne revient pas au
+/// classement suivant ; l'étoile garde l'ancien domaine principal en plus.
+#[test]
+fn domaines_multiples_et_tags() {
+    let mut data = crate::model::demo();
+    data.ensure_ontology();
+    let (p, main) = (0, data.projects[0].domain);
+    let other = (0..data.domains.len()).find(|&d| d != main).unwrap();
+    assert_eq!(data.domains_of(p), vec![main]);
+    data.add_domain(p, other);
+    assert_eq!(data.domains_of(p), vec![main, other], "le principal d'abord");
+    assert!(data.has_domain(p, other) && data.projects[p].domain == main, "le principal ne change pas");
+    // L'étoile : l'autre devient principal, l'ancien reste.
+    data.set_main_domain(p, other, true);
+    assert_eq!(data.domains_of(p), vec![other, main]);
+    // Retirer le domaine principal : le suivant prend sa place.
+    let c = data.domain_concept(other).unwrap();
+    data.untag(p, c);
+    assert_eq!(data.domains_of(p), vec![main]);
+    // Le seul domaine ne se retire pas.
+    let c_main = data.domain_concept(main).unwrap();
+    data.untag(p, c_main);
+    assert_eq!(data.domains_of(p), vec![main]);
+    // Un tag retiré reste noté : un classement qui le propose ne le remet pas.
+    data.add_domain(p, other);
+    data.untag(p, c);
+    let fp = data.ontology.fingerprint();
+    data.apply_scores(p, &[(c, 0.9)], fp);
+    assert!(!data.has_domain(p, other), "retiré pour de bon");
+    // Créer un tag au premier niveau de « Domaine » crée un domaine.
+    let facet = data.ontology.facet_named(crate::ontology::DOMAIN_FACET).unwrap();
+    let before = data.domains.len();
+    let id = data.create_concept(facet, "Jeux de société", None);
+    assert_eq!(data.domains.len(), before + 1);
+    data.tag(p, id);
+    assert!(data.domains_of(p).contains(&before));
+    // L'autocomplétion : par le nom, sans ce qui est déjà rattaché.
+    assert!(data.suggest_concepts(p, "jeux", 5).iter().all(|c| c.id != id), "déjà rattaché : pas proposé");
+    assert_eq!(data.suggest_concepts(1, "jeux de", 5).first().map(|c| c.id), Some(id));
+}
+
+/// Les mots-clés font trouver un projet que sa description ne décrit pas (« emploi »).
+#[test]
+fn mots_cles_dans_la_recherche() {
+    let mut data = crate::model::demo();
+    let p = data.projects.iter().position(|p| !crate::search::fold(&p.search_text("")).contains("emploi")).unwrap();
+    let id = data.projects[p].id;
+    let found = |data: &crate::model::Data| crate::search::rank(data, "emploi", None, &Default::default()).iter().any(|h| data.projects[h.index].id == id);
+    assert!(!found(&data));
+    data.projects[p].keywords = crate::classify::clean_keywords(vec!["emploi".into(), " Entretien d'embauche ".into(), "EMPLOI".into(), String::new()]);
+    assert_eq!(data.projects[p].keywords, vec!["emploi".to_owned(), "Entretien d'embauche".to_owned()], "nettoyés, sans doublon");
+    assert!(found(&data), "trouvé par ses mots-clés");
+    assert!(crate::search::embed_text(&data, &data.projects[p]).contains("Entretien d'embauche"), "ils entrent dans l'embedding");
+}
+
+/// Un logo SVG : collé ou déposé, il remplace l'icône ; il est gardé dans le fichier ; un texte
+/// qui n'est pas du SVG est refusé.
+#[test]
+fn logo_svg_des_lanceurs() {
+    const LOGO: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#e07a5f"/></svg>"##;
+    assert!(crate::launchers::check_svg("pas du svg").is_err());
+    assert_eq!(crate::launchers::check_svg(&format!("  {LOGO}\n")).unwrap(), LOGO);
+    let mut h = harness();
+    let id = h.state().data.default_launchers[0];
+    h.state_mut().data.launchers[id].svg = LOGO.into();
+    let json = serde_json::to_string(&h.state().data).unwrap();
+    let back: crate::model::Data = serde_json::from_str(&json).unwrap();
+    assert_eq!(back.launchers[id].svg, LOGO, "gardé dans le fichier");
+    // Le panneau dessine le logo à la place de l'icône (sans erreur de chargement).
+    h.run_steps(3);
+    let name = h.state().data.launchers[id].name.clone();
+    assert!(h.query_by_label(&name).is_some());
+}
+
+/// L'onglet « Modifier » : taper un mot propose les tags de l'ontologie ; un clic en ajoute un.
+#[test]
+fn ajouter_un_tag_depuis_la_fiche() {
+    let mut h = harness();
+    h.state_mut().data.ensure_ontology();
+    let p = h.state().st.selected.unwrap();
+    let main = h.state().data.projects[p].domain;
+    let other = (0..h.state().data.domains.len()).find(|&d| d != main).unwrap();
+    let name = h.state().data.domains[other].name.clone();
+    h.state_mut().st.tab = PanelTab::Edit;
+    h.state_mut().st.tag_query = name.chars().take(5).collect();
+    h.run();
+    // La proposition est plus bas dans le panneau (hors de l'écran) : clic par l'accessibilité.
+    h.query_all_by_label_contains(&name).find(|n| n.rect().left() > 900.0).expect("le domaine est proposé").click_accesskit();
+    h.run();
+    assert!(h.state().data.has_domain(p, other), "ajouté comme domaine en plus");
+    assert_eq!(h.state().data.projects[p].domain, main, "le principal ne change pas");
+}
+
+
+/// Les paquets : un bloc par gestionnaire dans la colonne de la Bibliothèque ; un clic filtre ;
+/// la recherche trouve les projets par le nom d'un paquet (« expo »).
+#[test]
+fn filtrer_et_chercher_par_paquet() {
+    use crate::packages::{Manager, Package};
+    let mut h = harness();
+    let expo = Package { manager: Manager::Npm, name: "expo".into() };
+    for i in [0, 2] {
+        h.state_mut().data.projects[i].packages = vec![expo.clone(), Package { manager: Manager::Npm, name: "react".into() }];
+    }
+    h.state_mut().data.projects[1].packages = vec![Package { manager: Manager::Cargo, name: "egui".into() }];
+    let names: Vec<String> = [0, 2].iter().map(|&i| h.state().data.projects[i].name.clone()).collect();
+    click(&mut h, "Bibliothèque");
+    click(&mut h, "Liste");
+    // Les gestionnaires sont repliés : on ouvre npm.
+    assert!(h.query_all_by_label("expo").all(|n| n.rect().right() >= 260.0), "npm replié par défaut");
+    let npm = side_attention(&h, "npm");
+    click_with(&mut h, egui::Rect::from_center_size(npm, egui::vec2(10.0, 10.0)), egui::Modifiers::NONE);
+    let item = side_attention(&h, "expo");
+    click_with(&mut h, egui::Rect::from_center_size(item, egui::vec2(10.0, 10.0)), egui::Modifiers::NONE);
+    assert_eq!(h.state().st.lib_package.as_ref(), Some(&expo));
+    let shown: Vec<String> = h.state().data.projects.iter().filter(|p| h.query_all_by_label(&p.name).any(|n| n.rect().width() > 300.0)).map(|p| p.name.clone()).collect();
+    for n in &names {
+        assert!(shown.contains(n), "{n} utilise expo");
+    }
+    assert!(!shown.contains(&h.state().data.projects[1].name), "pas d'expo dans celui-ci");
+    // La recherche par le nom du paquet.
+    let hits = crate::search::rank(&h.state().data, "expo", None, &Default::default());
+    let found: Vec<String> = hits.iter().map(|x| h.state().data.projects[x.index].name.clone()).collect();
+    for n in &names {
+        assert!(found.contains(n), "{n} trouvé par « expo » : {found:?}");
+    }
+}
+
+
+
+/// Ouvrir la fenêtre de mise à jour lance la vérification tout de suite.
+#[test]
+fn ouvrir_la_mise_a_jour_verifie_tout_de_suite() {
+    let mut h = harness();
+    // Aucun réseau : un serveur qui ne répond pas, la vérification échoue vite.
+    h.state_mut().st.updater.api = "http://127.0.0.1:9".into();
+    h.state_mut().dry_run = false;
+    assert_eq!(h.state().st.updater.phase, UpdatePhase::Idle);
+    click_now(&mut h, "Mise à jour");
+    assert!(matches!(h.state().st.modal, Some(Modal::Update)));
+    assert_ne!(h.state().st.updater.phase, UpdatePhase::Idle, "la vérification est partie");
+    h.state_mut().dry_run = true;
+}
+
+
+/// F12 ouvre les outils de développement ; l'onglet « État » décrit l'application.
+#[test]
+fn outils_de_developpement() {
+    let mut h = harness();
+    assert!(!h.state().st.devtools.open);
+    // L'onglet « État » (les écrans d'egui utilisent des pictogrammes absents des polices de test).
+    h.state_mut().st.devtools.tab = crate::devtools::Tab::State;
+    h.key_press(egui::Key::F12);
+    h.run();
+    assert!(h.state().st.devtools.open, "F12 ouvre les outils");
+    assert!(h.query_by_label("Inspecteur").is_some(), "les onglets");
+    assert!(h.query_by_label("Copier l'état").is_some());
+    h.key_press(egui::Key::F12);
+    h.run();
+    assert!(!h.state().st.devtools.open, "F12 les referme");
+}
+

@@ -155,6 +155,7 @@ pub fn proposal(repo: &Repo) -> Proposal {
         idle_days: repo.pushed_at.as_deref().map(days_since_iso).unwrap_or(0),
         key_files: Vec::new(),
         confidence: 0.6,
+        keywords: Vec::new(),
     }
 }
 

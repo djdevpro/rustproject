@@ -126,8 +126,10 @@ pub fn folder_context(data: &Data, p: &crate::model::Project) -> String {
 /// Le texte d'un projet pour les embeddings : sa fiche, et les noms de ses dossiers
 /// (« ImmoFormation › Qualiopi » dit ce que la fiche ne dit pas toujours).
 pub fn embed_text(data: &Data, p: &crate::model::Project) -> String {
-    let domain = data.domains.get(p.domain).map(|d| d.name.as_str()).unwrap_or("");
-    format!("{}. Dossier : {}", p.search_text(domain), folder_context(data, p))
+    // Tous ses domaines (le principal d'abord), ses mots-clés : c'est ce qui donne le sens.
+    let domains = data.index_of(p.id).map(|i| data.domains_of(i)).unwrap_or_else(|| vec![p.domain]);
+    let domain = domains.iter().filter_map(|&d| data.domains.get(d)).map(|d| d.name.as_str()).collect::<Vec<_>>().join(", ");
+    format!("{}. Dossier : {}", p.search_text(&domain), folder_context(data, p))
 }
 
 /// Le seuil sémantique d'une requête : chaque modèle a son échelle (qwen3 donne ≈ 0,3 entre deux
@@ -209,12 +211,15 @@ pub fn rank(data: &Data, query: &str, query_vec: Option<&[f32]>, index: &Semanti
         .iter()
         .enumerate()
         .filter_map(|(i, p)| {
-            let domain = data.domains.get(p.domain).map(|d| d.name.as_str()).unwrap_or("");
+            let domain = data.domains_of(i).iter().filter_map(|&d| data.domains.get(d)).map(|d| d.name.as_str()).collect::<Vec<_>>().join(" ");
             let text = format!("{} {} {} {} {} {}", p.name, p.description, p.kind, p.stack.join(" "), domain, p.outcome);
-            // Le nom compte double ; les noms de dossiers (« ImmoFormation › site internet ») un peu moins.
+            // Le nom compte double ; les mots-clés presque autant ; les noms de dossiers
+            // (« ImmoFormation › site internet ») un peu moins.
             let folders = folder_context(data, p);
-            let fields = [(p.name.as_str(), 1.0), (text.as_str(), 0.9), (folders.as_str(), 0.85)];
-            let per_alt: Vec<f32> = alts.iter().map(|a| fields.iter().map(|(f, w)| lexical_alt(a, f) * w).fold(0.0, f32::max)).collect();
+            let keywords = p.keywords.join(" · ");
+            let fields = [(p.name.as_str(), 1.0), (keywords.as_str(), 0.95), (text.as_str(), 0.9), (folders.as_str(), 0.85)];
+            // Un nom de paquet (« expo ») : les projets qui l'utilisent.
+            let per_alt: Vec<f32> = alts.iter().map(|a| fields.iter().map(|(f, w)| lexical_alt(a, f) * w).fold(0.0, f32::max).max(crate::packages::match_score(a, &p.packages) * 0.95)).collect();
             // « formation ou immo » : un projet qui répond aux deux passe devant ceux qui n'ont que l'un.
             let matched = per_alt.iter().filter(|s| **s >= LEXICAL_MIN).count();
             let bonus = 0.04 * matched.saturating_sub(1) as f32;
@@ -349,7 +354,7 @@ mod tests {
     #[test]
     fn recherche_par_l_ontologie() {
         let mut data = crate::model::demo();
-        let facet = data.ontology.facet_named(crate::ontology::DOMAIN_FACET).unwrap();
+        let facet = data.ontology.domain_facet().unwrap();
         let concept = data.ontology.add_concept(facet, "Immobilier", "Logement, agences, biens.");
         data.ontology.concepts.iter_mut().find(|c| c.id == concept).unwrap().synonyms = vec!["logement".into(), "appartement".into()];
         let immo = data.projects.iter().position(|p| p.name == "ImmoFormation").unwrap();

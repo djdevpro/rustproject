@@ -37,6 +37,11 @@ pub fn gallery(ctx: &egui::Context, data: &Data, g: &mut GalleryState, act: &mut
     let mut open = true;
     let target_name = g.project.map(|p| data.projects[p].name.clone());
     let preview_project = g.project.or(data.focus().first().copied()).map(|p| &data.projects[p]);
+    // Onglet « Sur mesure » : un fichier .svg déposé devient le logo du lanceur.
+    if g.tab == GalleryTab::Custom {
+        take_dropped_svg(ctx, &mut g.draft);
+        drop_hint(ctx);
+    }
     let modal = egui::Modal::new(Id::unique("gallery")).backdrop_color(theme::scrim(&t)).frame(modal_frame(&t)).show(ctx, |ui| {
         ui.set_width(820.0);
         let subtitle = match &target_name {
@@ -200,10 +205,120 @@ fn tile(ui: &mut Ui, l: &crate::model::Launcher, added: bool, width: f32) -> boo
     }
 }
 
+/// Le plus gros logo SVG accepté (le code du fichier).
+const SVG_MAX: usize = 300_000;
+
+/// Vérifie le code d'un logo SVG : du SVG, pas trop lourd. Renvoie le code nettoyé.
+pub fn check_svg(text: &str) -> Result<String, String> {
+    let text = text.trim().trim_start_matches('\u{feff}');
+    if !text.contains("<svg") {
+        return Err(tr("Ce n'est pas du SVG (il faut une balise <svg>).").into());
+    }
+    if text.len() > SVG_MAX {
+        return Err(tf("Logo trop lourd : {0} Ko au plus.", &[("0", &(SVG_MAX / 1000))]));
+    }
+    Ok(text.to_owned())
+}
+
+/// Lit un fichier .svg déposé ou choisi.
+fn read_svg(path: &std::path::Path) -> Result<String, String> {
+    let is_svg = path.extension().is_some_and(|e| e.eq_ignore_ascii_case("svg"));
+    if !is_svg {
+        return Err(tr("Seuls les fichiers .svg sont acceptés.").into());
+    }
+    let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    check_svg(&text)
+}
+
+/// Le logo SVG d'un lanceur : choisir un fichier, coller le code, ou déposer un fichier sur la
+/// fenêtre (voir `editor`). Le logo remplace l'icône ; on revient à l'icône en le retirant.
+fn svg_logo(ui: &mut Ui, d: &mut LauncherDraft, width: f32) {
+    let t = Tokens::get(ui.ctx());
+    widgets::labeled(ui, tr("Logo (SVG)"), |ui| {
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 8.0;
+            if !d.svg.is_empty() {
+                let l = d.to_launcher();
+                widgets::launcher_icon_tile(ui, &l, 34.0);
+                if widgets::button_sized(ui, Some(Icon::X), tr("Retirer le logo"), Kind::Secondary, 32.0, None).clicked() {
+                    d.svg.clear();
+                }
+            }
+            if widgets::button_sized(ui, Some(Icon::FileUp), tr("Choisir un fichier SVG…"), Kind::Secondary, 32.0, None).clicked()
+                && let Some(path) = rfd::FileDialog::new().set_title(tr("Logo du lanceur (SVG)")).add_filter("SVG", &["svg"]).pick_file()
+            {
+                match read_svg(&path) {
+                    Ok(svg) => (d.svg, d.svg_error) = (svg, None),
+                    Err(e) => d.svg_error = Some(e),
+                }
+            }
+            if d.svg_paste.is_none() && widgets::button_sized(ui, Some(Icon::ClipboardPaste), tr("Coller le code SVG"), Kind::Secondary, 32.0, None).clicked() {
+                d.svg_paste = Some(String::new());
+            }
+        });
+        if let Some(code) = d.svg_paste.as_mut() {
+            widgets::named(ui.add(egui::TextEdit::multiline(code).code_editor().desired_rows(4).desired_width(width).hint_text("<svg viewBox=\"0 0 24 24\">…</svg>")), egui::Role::MultilineTextInput, tr("Code SVG du logo"));
+            let mut close = false;
+            ui.horizontal(|ui| {
+                if widgets::button_sized(ui, Some(Icon::Check), tr("Utiliser ce logo"), Kind::Primary, 30.0, None).clicked() {
+                    match check_svg(code) {
+                        Ok(svg) => {
+                            (d.svg, d.svg_error) = (svg, None);
+                            close = true;
+                        }
+                        Err(e) => d.svg_error = Some(e),
+                    }
+                }
+                if widgets::button_sized(ui, None, tr("Annuler"), Kind::Ghost, 30.0, None).clicked() {
+                    close = true;
+                }
+            });
+            if close {
+                d.svg_paste = None;
+            }
+        }
+        if let Some(e) = &d.svg_error {
+            ui.label(RichText::new(e).size(12.5).color(t.danger));
+        }
+        ui.label(RichText::new(tr("Ou dépose un fichier .svg sur cette fenêtre. Le logo remplace l'icône.")).size(12.0).color(t.faint));
+    });
+}
+
+/// Un fichier .svg déposé sur la fenêtre devient le logo du lanceur en cours d'édition.
+fn take_dropped_svg(ctx: &egui::Context, d: &mut LauncherDraft) {
+    let dropped = ctx.input(|i| i.raw.dropped_files.clone());
+    for file in dropped {
+        let path = file.path();
+        let result = if path.as_os_str().is_empty() {
+            file.bytes().and_then(|bytes| check_svg(&String::from_utf8_lossy(&bytes)))
+        } else {
+            read_svg(path)
+        };
+        match result {
+            Ok(svg) => (d.svg, d.svg_error) = (svg, None),
+            Err(e) => d.svg_error = Some(e),
+        }
+    }
+}
+
+/// Pendant qu'on survole la fenêtre avec un fichier : un cadre invite à le déposer.
+fn drop_hint(ctx: &egui::Context) {
+    if ctx.input(|i| i.raw.hovered_files.is_empty()) {
+        return;
+    }
+    let t = Tokens::get(ctx);
+    let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Tooltip, Id::unique("svg-drop-hint")));
+    let rect = ctx.viewport_rect().shrink(24.0);
+    painter.rect(rect, CornerRadius::same(16), tint(t.accent, 0.10), Stroke::new(2.0, t.accent), StrokeKind::Inside);
+    painter.text(rect.center(), egui::Align2::CENTER_CENTER, tr("Dépose le fichier .svg : il devient le logo du lanceur"), FontId::new(18.0, theme::semibold()), t.ink_strong);
+}
+
 /// L'éditeur seul (depuis la configuration : création ou modification).
 pub fn editor(ctx: &egui::Context, data: &Data, launcher: Option<usize>, draft: &mut LauncherDraft, act: &mut Vec<Action>) -> bool {
     let t = Tokens::get(ctx);
     let mut open = true;
+    take_dropped_svg(ctx, draft);
+    drop_hint(ctx);
     let preview = data.focus().first().map(|&p| &data.projects[p]);
     let modal = egui::Modal::new(Id::unique("launcher-editor")).backdrop_color(theme::scrim(&t)).frame(modal_frame(&t)).show(ctx, |ui| {
         ui.set_width(820.0);
@@ -294,6 +409,7 @@ pub fn editor_form(ui: &mut Ui, d: &mut LauncherDraft, preview: Option<&Project>
                     }
                 });
             });
+            svg_logo(ui, d, form_w);
             widgets::labeled(ui, tr("Couleur"), |ui| {
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 2.0;

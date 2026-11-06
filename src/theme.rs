@@ -360,6 +360,10 @@ pub fn install_fonts(ctx: &egui::Context) {
     if let Some(bytes) = cjk {
         fonts.font_data.insert("CJK".to_owned(), FontData::from_static(bytes).into());
     }
+    let symbols = system_font("seguisym.ttf").or_else(|| system_font("/usr/share/fonts/truetype/noto/NotoSansSymbols2-Regular.ttf"));
+    if let Some(bytes) = symbols {
+        fonts.font_data.insert("Symbols".to_owned(), FontData::from_static(bytes).into());
+    }
     fonts.font_data.insert(
         "Lucide".to_owned(),
         FontData::from_static(lucide_icons::LUCIDE_FONT_BYTES).tweak(FontTweak { y_offset_factor: 0.07, ..Default::default() }).into(),
@@ -381,6 +385,10 @@ pub fn install_fonts(ctx: &egui::Context) {
             stack.push("CJK".to_owned());
         }
         stack.push("Lucide".to_owned());
+        // Les pictogrammes (⟳, 🔃…) des écrans d'inspection d'egui (outils de développement).
+        if symbols.is_some() {
+            stack.push("Symbols".to_owned());
+        }
         fonts.families.insert(family, stack);
     }
     fonts.families.insert(icons(), vec!["Lucide".to_owned()]);

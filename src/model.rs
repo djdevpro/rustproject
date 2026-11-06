@@ -225,6 +225,12 @@ pub struct Project {
     pub tags: Vec<crate::ontology::Tag>,
     /// L'empreinte de l'ontologie lors du dernier classement par Ollaya (0 = jamais classé).
     pub tags_hash: u64,
+    /// Les mots qu'on taperait pour le retrouver (sujet, public, usage, secteur) : écrits par
+    /// l'IA (Ollama ou l'agent MCP) ou à la main. Ils entrent dans la recherche et l'embedding.
+    pub keywords: Vec<String>,
+    /// Les paquets qu'il utilise (dépendances directes de ses manifestes), relus à chaque
+    /// lancement et après chaque scan.
+    pub packages: Vec<crate::packages::Package>,
 }
 
 impl Default for Project {
@@ -261,6 +267,8 @@ impl Default for Project {
             added_by: AddedBy::Manual,
             tags: Vec::new(),
             tags_hash: 0,
+            keywords: Vec::new(),
+            packages: Vec::new(),
         }
     }
 }
@@ -278,7 +286,7 @@ impl Project {
 
     /// Le texte qui représente le projet pour la recherche sémantique.
     pub fn search_text(&self, domain: &str) -> String {
-        format!("{}. {}. {}. {}. {}. {}", self.name, self.description, self.kind, domain, self.stack.join(", "), self.outcome)
+        format!("{}. {}. {}. {}. {}. {}. {}", self.name, self.description, self.kind, domain, self.stack.join(", "), self.outcome, self.keywords.join(", "))
     }
 }
 
@@ -358,6 +366,9 @@ pub struct Launcher {
     pub shortcut: String,
     pub description: String,
     pub group: Group,
+    /// Un logo SVG (le code du fichier), à la place de l'icône : déposé, collé ou choisi.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub svg: String,
 }
 
 /// Les variables utilisables dans une commande, avec leur explication.
@@ -453,7 +464,16 @@ pub struct Config {
     pub github_enabled: bool,
     /// Le compte GitHub dont on liste les dépôts (vide : le compte actif de la CLI gh).
     pub github_account: String,
+    /// Ancien choix exclusif (Ollama, agent MCP ou sans IA) : remplacé par `ollama_on` et
+    /// `mcp_on`, qui cohabitent. Lu une fois, à la reprise d'un ancien fichier.
     pub ai_mode: AiMode,
+    /// Rust Project interroge Ollama : le modèle d'embeddings (recherche par le sens) et, s'il
+    /// est choisi, le modèle de langage (classement, mots-clés).
+    pub ollama_on: bool,
+    /// Un agent IA (Claude Code…) pilote Rust Project par le protocole MCP.
+    pub mcp_on: bool,
+    /// `ollama_on` et `mcp_on` sont réglés (sinon, ils viennent de `ai_mode`).
+    pub ai_flags: bool,
     pub ollama_url: String,
     /// Modèle de langage (classement, descriptions).
     pub ollama_model: String,
@@ -494,10 +514,37 @@ pub const MARKERS_VERSION: u32 = 2;
 
 /// Les marqueurs par défaut : tous cochés.
 pub fn default_markers() -> Vec<(String, bool)> {
-    [".git", "Cargo.toml", "package.json", "pyproject.toml", "requirements.txt", "composer.json", "go.mod", "*.sln", "CLAUDE.md", "AGENTS.md", "AGENT.md", "README.md"]
-        .map(|m| (m.to_string(), true))
-        .to_vec()
+    DEFAULT_MARKERS.map(|m| (m.to_string(), true)).to_vec()
 }
+
+/// Ce qui fait reconnaître un projet : les manifestes de chaque gestionnaire de paquets, puis les
+/// consignes d'agent et le README.
+const DEFAULT_MARKERS: [&str; 24] = [
+    ".git",
+    "Cargo.toml",
+    "package.json",
+    "pyproject.toml",
+    "requirements.txt",
+    "Pipfile",
+    "composer.json",
+    "go.mod",
+    "pom.xml",
+    "build.gradle",
+    "build.gradle.kts",
+    "*.sln",
+    "*.csproj",
+    "Gemfile",
+    "pubspec.yaml",
+    "Package.swift",
+    "mix.exs",
+    "deno.json",
+    "vcpkg.json",
+    "conanfile.txt",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "AGENT.md",
+    "README.md",
+];
 
 /// Un dossier de départ pour le sélecteur : le dossier Documents (ou le dossier personnel).
 /// (Ce n'est qu'un point de départ : aucun dossier source n'est ajouté sans l'utilisateur.)
@@ -563,6 +610,9 @@ impl Default for Config {
             github_enabled: true,
             github_account: String::new(),
             ai_mode: AiMode::Ollama,
+            ollama_on: true,
+            mcp_on: true,
+            ai_flags: true,
             ollama_url: "http://localhost:11434".into(),
             ollama_model: String::new(),
             ollama_embed_model: String::new(),
@@ -636,6 +686,20 @@ impl Data {
     pub fn normalize(&mut self) {
         // Ancien fichier sans ontologie : les domaines deviennent la facette « Domaine ».
         self.ensure_ontology();
+        // Les marqueurs ajoutés depuis (autres gestionnaires de paquets) : cochés, sans toucher à
+        // ceux que l'utilisateur a décochés.
+        for m in DEFAULT_MARKERS {
+            if !self.config.markers.iter().any(|(n, _)| n.eq_ignore_ascii_case(m)) {
+                self.config.markers.push((m.to_owned(), true));
+            }
+        }
+        // Ancien choix exclusif de l'IA : Ollama et l'agent MCP cohabitent désormais.
+        if !self.config.ai_flags {
+            let off = self.config.ai_mode == AiMode::Off;
+            self.config.ollama_on = !off;
+            self.config.mcp_on = !off;
+            self.config.ai_flags = true;
+        }
         let mut seen = std::collections::HashSet::new();
         self.next_id = self.next_id.max(self.projects.iter().map(|p| p.id).max().unwrap_or(0) + 1);
         for p in &mut self.projects {
@@ -780,6 +844,7 @@ pub fn path_key(path: &str) -> String {
 #[allow(clippy::too_many_arguments)]
 fn launcher(name: &str, icon: Icon, color: u32, kind: LauncherKind, command: &str, in_terminal: bool, group: Group, description: &str) -> Launcher {
     Launcher {
+        svg: String::new(),
         name: name.into(),
         icon,
         color: rgb(color),

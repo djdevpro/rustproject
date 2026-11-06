@@ -7,7 +7,7 @@ use egui::{Align, FontFamily, FontId, Frame, Id, Layout, Margin, RichText, Scrol
 use crate::app::{Action, UiState};
 use crate::i18n::{tf, tr};
 use crate::icons::{self, Icon};
-use crate::model::{AiMode, Data, path_key};
+use crate::model::{Data, path_key};
 use crate::scan::{Found, ScanResult};
 use crate::select::MultiSelect;
 use crate::theme::{self, Tokens, tint};
@@ -555,7 +555,7 @@ fn create_step(ui: &mut Ui, data: &Data, st: &UiState, s: &mut SetupState, act: 
     } else {
         heading(ui, &tf("Créer {0} fiches", &[("0", &keep.len())]), tr("Choisis qui les remplit. Tu pourras tout modifier ensuite, fiche par fiche."));
     }
-    let ollama = data.config.ai_mode == AiMode::Ollama && !data.config.ollama_model.trim().is_empty();
+    let ollama = data.config.ollama_on && !data.config.ollama_model.trim().is_empty();
     if !ollama {
         s.with_ai = false;
     }
@@ -570,7 +570,7 @@ fn create_step(ui: &mut Ui, data: &Data, st: &UiState, s: &mut SetupState, act: 
         if choice(ui, s.with_ai, Icon::Sparkles, &ai, ai_help, ollama) {
             s.with_ai = true;
         }
-        if data.config.ai_mode == AiMode::Mcp {
+        if data.config.mcp_on {
             ui.add_space(6.0);
             widgets::muted(ui, tr("Ton agent MCP peut aussi s'en charger : demande-lui de ranger tes nouveaux projets."));
         }
