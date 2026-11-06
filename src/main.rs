@@ -16,9 +16,10 @@
 //! - `mcp.rs`      : le serveur MCP (`rust-project --mcp`).
 //! - `launch.rs`   : lancement réel des lanceurs.
 
-// Sous Windows, la version publiée s'ouvre sans console ; `--mcp` garde l'entrée et la sortie
-// standard que lui passe le client. Les builds de développement gardent la console pour les logs.
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+// Sous Windows, l'application s'ouvre sans console (publiée ou en développement) ; `--mcp` garde
+// l'entrée et la sortie standard que lui passe le client. Lancée depuis un terminal, elle y écrit
+// ses messages (voir `attach_parent_console`).
+#![cfg_attr(not(test), windows_subsystem = "windows")]
 
 mod app;
 mod classify;
@@ -56,6 +57,8 @@ fn main() -> eframe::Result {
     if std::env::args().any(|a| a == "--mcp") {
         std::process::exit(mcp::serve());
     }
+    #[cfg(windows)]
+    attach_parent_console();
     #[cfg(target_os = "linux")]
     desktop::install();
     // L'icône de la fenêtre (barre des tâches, Alt+Tab) ; sans elle, eframe met la sienne.
@@ -82,4 +85,18 @@ fn main() -> eframe::Result {
             }))
         }),
     )
+}
+
+/// Lancée depuis un terminal (`cargo run`…), l'application y écrit ses messages ; d'un double-clic,
+/// il n'y a pas de terminal et rien ne s'ouvre.
+#[cfg(windows)]
+fn attach_parent_console() {
+    unsafe extern "system" {
+        fn AttachConsole(process_id: u32) -> i32;
+    }
+    const ATTACH_PARENT_PROCESS: u32 = u32::MAX;
+    // SAFETY : simple appel système, sans pointeur ; un échec (pas de terminal parent) est normal.
+    unsafe {
+        AttachConsole(ATTACH_PARENT_PROCESS);
+    }
 }
