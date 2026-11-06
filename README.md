@@ -17,7 +17,7 @@ Rust Project is a desktop app for Windows and Linux that keeps track of your sid
 
 ## Install
 
-Download the file for your system from the [releases page](https://github.com/djdevpro/rustproject/releases), `rust-project-<version>-windows-x64.exe` for Windows or `rust-project-<version>-linux-x64` for Linux, and run it. On Linux, make it executable first with `chmod +x`. Rust Project updates itself after that.
+Download the file for your system from the [releases page](https://github.com/djdevpro/rustproject/releases), `rust-project-<version>-windows-x64.exe` for Windows or `rust-project-<version>-linux-x64` for Linux, and run it. On Linux, make it executable first with `chmod +x`. It runs on any desktop based on glibc 2.35 or later (Ubuntu 22.04, Debian 12, Fedora 36), with X11 or Wayland. A minimal system may need the `libxkbcommon-x11-0` and `libegl1` packages. Rust Project updates itself after that.
 
 ## Build
 
