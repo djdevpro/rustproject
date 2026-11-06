@@ -1,74 +1,97 @@
-"""Bannière du README : le nom, une phrase, et la carte en graphe (capture de la fixture).
+"""Bannière du README : le nom, une phrase, trois verbes, et le bureau de l'application.
 
 Usage : python docs/banner.py docs   (après `cargo test captures_readme -- --ignored`)
 """
+import glob
+import os
 import sys
+
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 docs = sys.argv[1]
-W, H = 1600, 520
-FONT = r"C:\Windows\Fonts\SegUIVar.ttf"
+W, H = 2000, 667
+SEGOE = r"C:\Windows\Fonts\SegUIVar.ttf"
+LUCIDE = glob.glob(os.path.expanduser("~/.cargo/registry/src/*/lucide-icons-*/lucide.ttf"))[0]
+
+BG = (17, 16, 15)
+INK = (243, 239, 232)
+AMBER = (240, 164, 67)
+FRAME = (70, 58, 44)
+
 
 def font(size, style):
-    f = ImageFont.truetype(FONT, size)
+    f = ImageFont.truetype(SEGOE, size)
     f.set_variation_by_name(style)
     return f
 
-BG = (18, 17, 16)
-INK = (243, 239, 232)
-MUTED = (176, 168, 156)
-FAINT = (120, 113, 104)
-AMBER = (240, 164, 67)
-LINE = (58, 52, 45)
 
 img = Image.new("RGB", (W, H), BG)
-d = ImageDraw.Draw(img)
 
-# Une lueur ambre très douce derrière la capture, et la trame de points de la carte.
+# Trame de points discrète, comme la carte de l'application.
+d = ImageDraw.Draw(img)
+for y in range(16, H, 28):
+    for x in range(16, W, 28):
+        d.ellipse((x - 1, y - 1, x + 1, y + 1), fill=(30, 28, 26))
+
+# Une lueur ambre derrière la fenêtre, plus forte vers le haut.
 glow = Image.new("L", (W, H), 0)
-ImageDraw.Draw(glow).ellipse((880, -120, 1700, 640), fill=60)
-glow = glow.filter(ImageFilter.GaussianBlur(140))
-img.paste(Image.new("RGB", (W, H), (60, 40, 18)), (0, 0), glow)
-d = ImageDraw.Draw(img)
-for y in range(18, H, 26):
-    for x in range(18, W, 26):
-        d.ellipse((x - 1, y - 1, x + 1, y + 1), fill=(32, 30, 28))
+ImageDraw.Draw(glow).ellipse((900, -260, 2100, 420), fill=120)
+glow = glow.filter(ImageFilter.GaussianBlur(160))
+img.paste(Image.new("RGB", (W, H), (92, 58, 20)), (0, 0), glow)
 
-# La carte : la zone du graphe, aux coins arrondis, avec une ombre, fondue à gauche.
-shot = Image.open(f"{docs}/carte.png").convert("RGB").crop((300, 232, 1440, 828))
-target_h = 430
-shot = shot.resize((int(shot.width * target_h / shot.height), target_h), Image.LANCZOS)
-x0, y0 = W - shot.width + 60, (H - target_h) // 2
+# La fenêtre : le bureau, coins arrondis, coupée par le bas de la bannière.
+shot = Image.open(f"{docs}/bureau.png").convert("RGB")
+scale = 1020 / shot.width
+shot = shot.resize((1020, int(shot.height * scale)), Image.LANCZOS)
+x0, y0 = W - shot.width - 42, 154
+radius = 22
 shadow = Image.new("L", (W, H), 0)
-ImageDraw.Draw(shadow).rounded_rectangle((x0 + 10, y0 + 24, x0 + shot.width + 10, y0 + target_h + 24), 22, fill=150)
-img.paste((0, 0, 0), (0, 0), shadow.filter(ImageFilter.GaussianBlur(28)))
+ImageDraw.Draw(shadow).rounded_rectangle((x0 - 6, y0 + 10, x0 + shot.width + 6, H + 60), radius, fill=170)
+img.paste((0, 0, 0), (0, 0), shadow.filter(ImageFilter.GaussianBlur(26)))
 mask = Image.new("L", shot.size, 0)
-ImageDraw.Draw(mask).rounded_rectangle((0, 0, shot.width - 1, shot.height - 1), 18, fill=255)
-fade = Image.new("L", shot.size, 255)
-fd = ImageDraw.Draw(fade)
-for i in range(220):
-    fd.line((i, 0, i, shot.height), fill=int(255 * (i / 220) ** 1.6))
-mask = Image.composite(mask, Image.new("L", shot.size, 0), fade)
+ImageDraw.Draw(mask).rounded_rectangle((0, 0, shot.width - 1, shot.height + radius), radius, fill=255)
 img.paste(shot, (x0, y0), mask)
 d = ImageDraw.Draw(img)
-d.rounded_rectangle((x0, y0, x0 + shot.width - 1, y0 + target_h - 1), 18, outline=LINE, width=1)
-# Le bord gauche de la capture se fond dans le fond.
-grad = Image.new("L", (240, target_h + 4), 0)
-gd = ImageDraw.Draw(grad)
-for i in range(240):
-    gd.line((i, 0, i, target_h + 4), fill=int(255 * (1 - i / 240) ** 1.4))
-img.paste(Image.new("RGB", grad.size, BG), (x0 - 2, y0 - 2), grad)
+d.rounded_rectangle((x0, y0, x0 + shot.width - 1, H + radius), radius, outline=FRAME, width=2)
+# Un liseré de lumière sur le bord haut.
+edge = Image.new("L", (W, H), 0)
+ImageDraw.Draw(edge).rounded_rectangle((x0 + 40, y0 - 3, x0 + shot.width - 40, y0 + 3), 3, fill=90)
+img.paste((255, 196, 120), (0, 0), edge.filter(ImageFilter.GaussianBlur(6)))
 
-# Le texte.
+# Le texte, à gauche.
 d = ImageDraw.Draw(img)
-left = 96
-d.rounded_rectangle((left, 128, left + 190, 158), 15, fill=(46, 33, 16), outline=(120, 82, 34))
-d.text((left + 95, 143), "Windows and Linux", font=font(17, "Semibold Text"), fill=AMBER, anchor="mm")
-d.text((left - 3, 178), "Rust Project", font=font(92, "Bold Display"), fill=INK)
-d.rectangle((left, 306, left + 64, 311), fill=AMBER)
-d.text((left, 348), "All your side projects in one place.", font=font(34, "Semibold Display"), fill=INK)
-d.text((left, 398), "It finds them on your disk, sorts them", font=font(25, "Regular"), fill=MUTED)
-d.text((left, 430), "and opens them in one click.", font=font(25, "Regular"), fill=MUTED)
+left = 98
+room = x0 - left - 60  # la place avant la fenêtre
+
+
+def fitted(text, size, style):
+    """La plus grande taille (jusqu'à `size`) qui tient avant la fenêtre."""
+    while size > 20 and d.textlength(text, font=font(size, style)) > room:
+        size -= 2
+    return font(size, style)
+
+
+title = fitted("Rust Project", 120, "Bold Display")
+box = d.textbbox((left - 4, 0), "Rust Project", font=title, anchor="ls")
+top = 300  # ligne de base du titre
+d.text((left - 4, top), "Rust Project", font=title, fill=INK, anchor="ls")
+bar_y = top + box[3] + 26
+d.rectangle((left, bar_y, left + 102, bar_y + 10), fill=AMBER)
+tag = fitted("All your side projects in one place.", 46, "Semibold Display")
+d.text((left, bar_y + 46), "All your side projects in one place.", font=tag, fill=INK, anchor="lt")
+
+# Trois verbes avec leurs icônes (celles de l'application, police Lucide).
+icons = ImageFont.truetype(LUCIDE, 42)
+label = font(33, "Semibold Display")
+x, cy = left, bar_y + 178
+for i, (glyph, word) in enumerate([("\ue151", "Discover"), ("\ue529", "Organize"), ("\ue5a4", "Open")]):
+    if i:
+        d.line((x, cy - 22, x, cy + 22), fill=(70, 66, 60), width=2)
+        x += 34
+    d.text((x, cy), glyph, font=icons, fill=AMBER, anchor="lm")
+    x += 56
+    d.text((x, cy), word, font=label, fill=INK, anchor="lm")
+    x += d.textlength(word, font=label) + 34
 
 img.save(f"{docs}/banner.png", optimize=True)
 print("ok", img.size)
