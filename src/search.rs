@@ -103,16 +103,17 @@ pub fn folder_context(data: &Data, p: &crate::model::Project) -> String {
     let roots: Vec<String> = data.config.roots.iter().map(|r| crate::model::path_key(&r.path)).collect();
     let mut parts: Vec<String> = Vec::new();
     for f in &p.folders {
-        let path = std::path::Path::new(f.trim());
+        // Séparateurs `\` ou `/` : les chemins viennent de Windows comme de Linux.
+        let f = f.trim();
         let mut names = Vec::new();
-        if let Some(parent) = path.parent()
-            && !roots.contains(&crate::model::path_key(&parent.to_string_lossy()))
-            && let Some(name) = parent.file_name()
+        if let Some(parent) = crate::model::parent_path(f)
+            && !roots.contains(&crate::model::path_key(parent))
+            && !crate::model::file_name(parent).is_empty()
         {
-            names.push(name.to_string_lossy().into_owned());
+            names.push(crate::model::file_name(parent).to_owned());
         }
-        if let Some(name) = path.file_name() {
-            names.push(name.to_string_lossy().into_owned());
+        if !crate::model::file_name(f).is_empty() {
+            names.push(crate::model::file_name(f).to_owned());
         }
         let text = names.join(" › ");
         if !text.is_empty() && !parts.contains(&text) {

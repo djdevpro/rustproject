@@ -689,6 +689,22 @@ impl Data {
 }
 
 /// Clé de comparaison d'un chemin : minuscules, `/` → `\`, sans séparateur final.
+/// Le dossier parent d'un chemin, quels que soient ses séparateurs (`C:\a\b` comme `/a/b`) :
+/// `Path` ne découpe que selon ceux du système, or les données viennent de Windows comme de Linux.
+pub fn parent_path(path: &str) -> Option<&str> {
+    let p = path.trim().trim_end_matches(['\\', '/']);
+    let i = p.rfind(['\\', '/'])?;
+    Some(if i == 0 { &p[..1] } else { &p[..i] })
+}
+
+/// Le dernier nom d'un chemin (`site` pour `C:\a\site` comme pour `/a/site`). Vide pour une
+/// racine (`C:`, `/`).
+pub fn file_name(path: &str) -> &str {
+    let p = path.trim().trim_end_matches(['\\', '/']);
+    let name = p.rsplit(['\\', '/']).next().unwrap_or(p);
+    if name.ends_with(':') { "" } else { name }
+}
+
 pub fn path_key(path: &str) -> String {
     path.trim().replace('/', "\\").trim_end_matches('\\').to_lowercase()
 }

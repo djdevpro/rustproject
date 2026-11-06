@@ -13,7 +13,6 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::hash::{DefaultHasher, Hash, Hasher};
-use std::path::Path;
 
 use egui::{Vec2, vec2};
 
@@ -189,7 +188,7 @@ impl Sim {
         let folder_node: HashMap<String, usize> = visible.iter().filter_map(|&i| data.projects[i].folders.first().map(|f| (path_key(f), node_of[&i]))).collect();
         let mut by_parent: BTreeMap<String, Vec<usize>> = BTreeMap::new();
         for &i in &visible {
-            let Some(parent) = data.projects[i].folders.first().and_then(|f| Path::new(f).parent()).map(|p| path_key(&p.to_string_lossy())) else { continue };
+            let Some(parent) = data.projects[i].folders.first().and_then(|f| crate::model::parent_path(f)).map(path_key) else { continue };
             if parent.is_empty() {
                 continue;
             }
