@@ -1,0 +1,97 @@
+name: Release
+
+# Une nouvelle version, quand on le décide : Actions > Release > Run workflow.
+# La version vient du dernier tag (v0.1.0, v0.1.1...), Cargo.toml sert seulement pour la première.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version suivante
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      notes:
+        description: Points de version séparés par des points-virgules (vide pour reprendre les messages des commits)
+        type: string
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Version
+        id: version
+        shell: bash
+        run: |
+          last=$(git tag --list 'v*' --sort=-v:refname | head -n1)
+          if [ -z "$last" ]; then
+            next=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          else
+            IFS=. read -r major minor patch <<< "${last#v}"
+            patch=${patch%%-*}
+            case "${{ inputs.bump }}" in
+              major) next="$((major + 1)).0.0" ;;
+              minor) next="$major.$((minor + 1)).0" ;;
+              *) next="$major.$minor.$((patch + 1))" ;;
+            esac
+          fi
+          echo "last=$last" >> "$GITHUB_OUTPUT"
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+          echo "Version $next (précédente ${last:-aucune})"
+
+      - name: Notes
+        shell: bash
+        env:
+          NOTES: ${{ inputs.notes }}
+          LAST: ${{ steps.version.outputs.last }}
+        run: |
+          if [ -n "$NOTES" ]; then
+            echo "$NOTES" | tr ';' '\n' | sed 's/^ *//; s/ *$//' | grep -v '^$' | sed 's/^/- /' > notes.md
+          elif [ -n "$LAST" ]; then
+            git log "$LAST..HEAD" --no-merges --pretty='- %s' > notes.md
+          else
+            git log --no-merges --pretty='- %s' -n 20 > notes.md
+          fi
+          [ -s notes.md ] || echo "- Corrections" > notes.md
+          cat notes.md
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      # Les tests du moteur. Les captures d'interface demandent un GPU et tournent en local.
+      - name: Tests
+        run: cargo test --release -- ::tests:: --skip screens::
+
+      - name: Build
+        env:
+          ATELIER_VERSION: ${{ steps.version.outputs.version }}
+        run: cargo build --release
+
+      - name: Package
+        shell: bash
+        run: |
+          v=${{ steps.version.outputs.version }}
+          mkdir dist
+          cp target/release/atelier.exe "dist/atelier-$v-windows-x64.exe"
+          cd dist
+          sha256sum -- * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=${{ steps.version.outputs.version }}
+          gh release create "v$v" dist/* --title "Atelier $v" --notes-file notes.md --target "$GITHUB_SHA"
