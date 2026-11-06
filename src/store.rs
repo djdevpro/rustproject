@@ -1,4 +1,4 @@
-//! L'enregistrement : un fichier JSON lisible (`%APPDATA%\Rust Project\rust-project.json`), écrit de façon
+//! L'enregistrement : un fichier JSON lisible (`%USERPROFILE%\.rust-project\rust-project.json`), écrit de façon
 //! atomique (fichier temporaire, puis renommage). L'interface et le serveur MCP partagent ce
 //! fichier : chacun relit ce que l'autre a écrit.
 
@@ -10,19 +10,17 @@ use serde::{Deserialize, Serialize};
 
 use crate::model::Data;
 
-/// L'ancien nom de l'application (Atelier) : au premier lancement de Rust Project, ses données
-/// (`atelier.json`, `embeddings.json`) sont copiées dans le nouveau dossier. L'ancien dossier
-/// reste en place, comme sauvegarde.
-fn migrate_from_atelier(old_dir: &Path, path: &Path) {
-    let old = old_dir.join("atelier.json");
+/// Reprend les données d'un ancien emplacement (`old` et l'`embeddings.json` voisin), une seule
+/// fois : rien n'est fait si le nouveau fichier existe déjà. L'ancien fichier reste en sauvegarde.
+fn migrate(old: &Path, path: &Path) {
     if path.exists() || !old.exists() {
         return;
     }
     if let Some(dir) = path.parent() {
         let _ = std::fs::create_dir_all(dir);
     }
-    let _ = std::fs::copy(&old, path);
-    let embeddings = old_dir.join("embeddings.json");
+    let _ = std::fs::copy(old, path);
+    let embeddings = old.with_file_name("embeddings.json");
     if embeddings.exists() {
         let _ = std::fs::copy(embeddings, path.with_file_name("embeddings.json"));
     }
@@ -35,20 +33,32 @@ pub struct Store {
 }
 
 impl Store {
-    /// `ATELIER_DATA` s'il est défini (tests, plusieurs bases), sinon `%APPDATA%\Rust Project\rust-project.json`.
+    /// `ATELIER_DATA` s'il est défini (tests, plusieurs bases), sinon le dossier de l'utilisateur.
     pub fn default_path() -> PathBuf {
         if let Ok(p) = std::env::var("ATELIER_DATA") {
             return PathBuf::from(p);
         }
-        // Windows : %APPDATA%. Linux : $XDG_DATA_HOME, sinon ~/.local/share.
-        let base = std::env::var("APPDATA")
+        // Windows : `%USERPROFILE%\.rust-project`, pas `%APPDATA%`. Pour une application du Store
+        // comme Claude Desktop, Windows détourne les écritures dans AppData vers un dossier privé :
+        // le serveur MCP qu'elle lance et l'interface n'y verraient pas les mêmes données.
+        if cfg!(windows)
+            && let Ok(home) = std::env::var("USERPROFILE")
+        {
+            let path = PathBuf::from(home).join(".rust-project").join("rust-project.json");
+            if let Ok(appdata) = std::env::var("APPDATA") {
+                let appdata = PathBuf::from(appdata);
+                migrate(&appdata.join("Rust Project").join("rust-project.json"), &path);
+                migrate(&appdata.join("Atelier").join("atelier.json"), &path);
+            }
+            return path;
+        }
+        // Linux : $XDG_DATA_HOME, sinon ~/.local/share.
+        let base = std::env::var("XDG_DATA_HOME")
             .map(PathBuf::from)
-            .or_else(|_| std::env::var("XDG_DATA_HOME").map(PathBuf::from))
             .or_else(|_| std::env::var("HOME").map(|h| PathBuf::from(h).join(".local").join("share")))
             .unwrap_or_else(|_| std::env::temp_dir());
-        let dir = base.join("Rust Project");
-        let path = dir.join("rust-project.json");
-        migrate_from_atelier(&base.join("Atelier"), &path);
+        let path = base.join("Rust Project").join("rust-project.json");
+        migrate(&base.join("Atelier").join("atelier.json"), &path);
         path
     }
 
@@ -146,10 +156,10 @@ pub fn text_hash(text: &str) -> u64 {
 mod tests {
     use super::*;
 
-    /// Les données d'Atelier passent dans le dossier de Rust Project, une seule fois, sans rien
-    /// écraser, et l'ancien dossier reste en place.
+    /// Les données d'un ancien emplacement (Atelier, AppData) passent dans le nouveau, une seule
+    /// fois, sans rien écraser, et l'ancien dossier reste en place.
     #[test]
-    fn reprise_des_donnees_d_atelier() {
+    fn reprise_des_anciennes_donnees() {
         let base = std::env::temp_dir().join(format!("rust-project-migration-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&base);
         let old = base.join("Atelier");
@@ -157,13 +167,13 @@ mod tests {
         std::fs::write(old.join("atelier.json"), "{\"projects\":[]}").unwrap();
         std::fs::write(old.join("embeddings.json"), "{}").unwrap();
         let path = base.join("Rust Project").join("rust-project.json");
-        migrate_from_atelier(&old, &path);
+        migrate(&old.join("atelier.json"), &path);
         assert_eq!(std::fs::read_to_string(&path).unwrap(), "{\"projects\":[]}");
         assert!(path.with_file_name("embeddings.json").exists());
         assert!(old.join("atelier.json").exists(), "l'ancien fichier reste en sauvegarde");
         // Une seconde fois : le nouveau fichier n'est jamais écrasé.
         std::fs::write(&path, "nouveau").unwrap();
-        migrate_from_atelier(&old, &path);
+        migrate(&old.join("atelier.json"), &path);
         assert_eq!(std::fs::read_to_string(&path).unwrap(), "nouveau");
         let _ = std::fs::remove_dir_all(&base);
     }

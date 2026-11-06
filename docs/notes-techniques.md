@@ -12,9 +12,12 @@ cargo test                     # tous les tests : moteur + interface (sans GPU)
 
 ## Où sont les données
 
-- `%APPDATA%\Rust Project\atelier.json` : projets, étapes, notes, réglages. Écrit à chaque changement,
-  de façon atomique (fichier temporaire puis renommage). Variable `ATELIER_DATA` pour en changer.
-- `%APPDATA%\Rust Project\embeddings.json` : l'index de la recherche sémantique.
+- `%USERPROFILE%\.rust-project\rust-project.json` : projets, étapes, notes, réglages. Écrit à chaque
+  changement, de façon atomique (fichier temporaire puis renommage). Variable `ATELIER_DATA` pour en changer.
+  Pas dans `%APPDATA%` : Windows y détourne les écritures des applications du Store (Claude Desktop
+  et le serveur MCP qu'il lance) vers un dossier privé. Les anciennes données d'AppData sont reprises
+  au premier lancement.
+- `%USERPROFILE%\.rust-project\embeddings.json` : l'index de la recherche sémantique.
 - L'interface relit le fichier chaque seconde : ce que l'agent MCP écrit apparaît tout seul.
 - Configuration › Données : bascule vers des données de démonstration (rien n'est enregistré).
 
