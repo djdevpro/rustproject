@@ -147,10 +147,11 @@ fn project_card(ui: &mut Ui, data: &Data, st: &mut UiState, i: usize, pa: &Proje
     let t = Tokens::get(ui.ctx());
     let p = &data.projects[i];
     let open = st.live_open.contains(&pa.id);
-    Frame::new().fill(mix(t.surface, t.bg, 0.45)).stroke(Stroke::new(1.0, t.line)).corner_radius(12).inner_margin(Margin::symmetric(12, 12)).show(ui, |ui| {
+    let expanded = st.live_expanded == Some(pa.id);
+    let border = if expanded { t.accent } else { t.line };
+    Frame::new().fill(mix(t.surface, t.bg, 0.45)).stroke(Stroke::new(1.0, border)).corner_radius(12).inner_margin(Margin::symmetric(12, 12)).show(ui, |ui| {
         ui.set_width(ui.available_width());
         ui.spacing_mut().item_spacing.y = 6.0;
-        let expanded = st.live_expanded == Some(pa.id);
         if project_header(ui, p, pa.last, expanded).clicked() {
             st.live_expanded = if expanded { None } else { Some(pa.id) };
             ui.ctx().request_repaint();
@@ -237,10 +238,8 @@ fn project_header(ui: &mut Ui, project: &crate::model::Project, last: u64, expan
         resp.request_focus();
     }
     let hover = ui.ctx().animate_bool(resp.id.with("hover"), resp.hovered());
-    ui.painter().rect_filled(rect, 6, tint(t.ink, 0.07 * hover));
-    if resp.has_focus() {
-        ui.painter().rect_stroke(rect, 6, Stroke::new(1.0, t.accent), egui::StrokeKind::Inside);
-    }
+    let highlight = if resp.has_focus() { 1.0 } else { hover };
+    ui.painter().rect_filled(rect, 6, tint(t.ink, 0.07 * highlight));
     let cy = rect.center().y;
     crate::logo::paint(ui, project, pos2(rect.left() + 10.0, cy), 20.0, t.accent_ink);
     icons::paint(ui.painter(), pos2(rect.right() - 10.0, cy), if expanded { Icon::ChevronDown } else { Icon::ChevronRight }, 16.0, t.muted);
