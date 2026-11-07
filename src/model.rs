@@ -393,9 +393,10 @@ pub struct Launcher {
 }
 
 /// Les variables utilisables dans une commande, avec leur explication.
-pub const VARIABLES: [(&str, &str); 5] = [
+pub const VARIABLES: [(&str, &str); 6] = [
     ("{dossier}", "Chemin du dossier principal du projet"),
     ("{dossier_url}", "Le même chemin, encodé pour un lien (claude://…)"),
+    ("{etapes_url}", "Les étapes à faire, encodées pour un lien (le premier message de Claude Code)"),
     ("{nom}", "Nom du projet"),
     ("{remote}", "URL du dépôt Git distant (détectée)"),
     ("{port}", "Port de dev (3000 par défaut)"),
@@ -407,11 +408,26 @@ impl Launcher {
         let folder = project.folders.first().map(String::as_str).unwrap_or("");
         let remote = project.remote.clone().unwrap_or_default();
         self.command
+            .replace("{etapes_url}", &url_encode(&project.todo_prompt()))
             .replace("{dossier_url}", &url_encode(folder))
             .replace("{dossier}", folder)
             .replace("{nom}", &project.name)
             .replace("{remote}", &remote)
             .replace("{port}", "3000")
+    }
+}
+
+impl Project {
+    /// Le premier message d'une conversation Claude Code ouverte sur le projet : ses étapes à
+    /// faire (une seule : son texte, plusieurs : une liste), sinon sa prochaine action. Vide s'il
+    /// n'y a rien à faire.
+    pub fn todo_prompt(&self) -> String {
+        let todo: Vec<&str> = self.steps.iter().filter(|s| !s.done).map(|s| s.text.trim()).filter(|t| !t.is_empty()).collect();
+        match todo.as_slice() {
+            [] => self.next_action.trim().to_owned(),
+            [one] => (*one).to_owned(),
+            many => many.iter().map(|t| format!("- {t}")).collect::<Vec<_>>().join("\n"),
+        }
     }
 }
 
@@ -740,6 +756,10 @@ impl Data {
         // Ancien lanceur « Claude Code » resté tel quel (`claude` dans un terminal) : il ouvre
         // désormais Claude Desktop. Un lanceur modifié à la main n'est pas touché.
         for l in &mut self.launchers {
+            // Le lien sans les étapes : on les ajoute.
+            if l.kind == LauncherKind::Url && l.command.trim() == CLAUDE_DESKTOP_V1 {
+                l.command = CLAUDE_DESKTOP.into();
+            }
             if l.name == "Claude Code" && l.kind == LauncherKind::Command && l.command.trim() == "claude" {
                 l.kind = LauncherKind::Url;
                 l.command = CLAUDE_DESKTOP.into();
@@ -880,7 +900,10 @@ fn launcher(name: &str, icon: Icon, color: u32, kind: LauncherKind, command: &st
 
 /// Une nouvelle conversation Claude Code dans Claude Desktop, sur le dossier du projet
 /// (Claude Desktop demande de confirmer le dossier à chaque fois).
-const CLAUDE_DESKTOP: &str = "claude://code/new?folder={dossier_url}";
+/// Les étapes à faire du projet préremplissent la conversation (`q`, lu par Claude Desktop).
+const CLAUDE_DESKTOP: &str = "claude://code/new?folder={dossier_url}&q={etapes_url}";
+/// Le lien d'avant, sans les étapes.
+const CLAUDE_DESKTOP_V1: &str = "claude://code/new?folder={dossier_url}";
 
 pub fn gallery() -> Vec<Launcher> {
     use Group as G;

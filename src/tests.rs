@@ -86,6 +86,7 @@ fn lancement_direct() {
     std::fs::create_dir_all(&dir).unwrap();
     let p = h.state().st.selected.unwrap();
     h.state_mut().data.projects[p].folders = vec![dir.display().to_string()];
+    h.state_mut().data.projects[p].steps = vec![crate::model::Step { text: "Écrire les tests".into(), done: false }, crate::model::Step { text: "Déjà fait".into(), done: true }];
     h.run_steps(1);
     // Un lanceur part directement : pas de notification, juste la commande (et l'éclat de la tuile).
     click_now(&mut h, "VS Code");
@@ -94,10 +95,11 @@ fn lancement_direct() {
     assert!(h.state().toasts.is_empty(), "pas de notification quand tout va bien");
     assert!(h.state().st.flash.is_some());
 
-    // Claude Code : une nouvelle conversation dans Claude Desktop, sur le dossier (encodé).
+    // Claude Code : une nouvelle conversation dans Claude Desktop, sur le dossier (encodé), avec
+    // l'étape à faire comme premier message.
     click_now(&mut h, "Claude Code");
     let line = h.state().launched.last().cloned().unwrap();
-    let url = format!("claude://code/new?folder={}", crate::model::url_encode(&dir.display().to_string()));
+    let url = format!("claude://code/new?folder={}&q=%C3%89crire%20les%20tests", crate::model::url_encode(&dir.display().to_string()));
     let expected = if cfg!(windows) {
         format!(r#"start "" "{url}""#)
     } else if cfg!(target_os = "macos") {
@@ -743,7 +745,7 @@ fn ancien_lanceur_claude_code_vers_claude_desktop() {
     data.launchers = vec![old, custom];
     data.normalize();
     assert_eq!(data.launchers[0].kind, LauncherKind::Url);
-    assert_eq!(data.launchers[0].command, "claude://code/new?folder={dossier_url}");
+    assert_eq!(data.launchers[0].command, "claude://code/new?folder={dossier_url}&q={etapes_url}");
     assert!(!data.launchers[0].in_terminal);
     assert_eq!(data.launchers[1].command, "claude --model opus");
     assert_eq!(crate::model::url_encode(r"C:\Mes projets\é"), "C%3A%5CMes%20projets%5C%C3%A9");
