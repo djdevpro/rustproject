@@ -1,0 +1,117 @@
+/* The illustrations rest in grayscale. Only meaningful details gain color. */
+.feature-art .discovery-folder,
+.feature-art .discovery-glyph,
+.feature-art .discovery-filename,
+.feature-art .ontology-node-rim,
+.feature-art .ontology-node-light,
+.feature-art .terminal-prompt,
+.feature-art .terminal-command,
+.feature-art .terminal-cursor,
+.feature-art .storage-shell,
+.feature-art .storage-led,
+.feature-art .mcp-port,
+.feature-art .mcp-signal,
+.feature-art .search-relevance,
+.feature-art .search-score {
+  transition:
+    fill 0.4s ease,
+    stroke 0.4s ease;
+}
+.feature-art .storage-gradient stop {
+  transition: stop-color 0.45s ease;
+}
+.feature-art .discovery-glyph {
+  stroke: #747474;
+}
+.feature-art .ontology-node-rim {
+  stroke: #595959;
+}
+.feature-art .storage-shell {
+  stroke: #555;
+}
+
+.feature-strip article:is(:hover, :focus-within) .discovery-folder {
+  stroke: #dfba68;
+}
+.feature-strip article:is(:hover, :focus-within) .discovery-glyph {
+  stroke: #d6d8dc;
+}
+.feature-strip article:is(:hover, :focus-within) .discovery-filename {
+  fill: #d9dbdf;
+}
+
+.ontology-node-0 {
+  --node-hover-color: #a7b9e4;
+}
+.ontology-node-1 {
+  --node-hover-color: #dfbd7d;
+}
+.ontology-node-2 {
+  --node-hover-color: #b79bd5;
+}
+.ontology-node-3 {
+  --node-hover-color: #8bbeb5;
+}
+.ontology-node-4 {
+  --node-hover-color: #90aecb;
+}
+.feature-strip article:is(:hover, :focus-within) .ontology-node-light {
+  fill: var(--node-hover-color);
+}
+.feature-strip article:is(:hover, :focus-within) .ontology-node-rim {
+  stroke: var(--node-hover-color);
+}
+
+.feature-strip article:is(:hover, :focus-within) .terminal-prompt {
+  stroke: #6be58a;
+}
+.feature-strip article:is(:hover, :focus-within) .terminal-command {
+  fill: #88d89e;
+}
+.feature-strip article:is(:hover, :focus-within) .terminal-cursor {
+  fill: #6be58a;
+}
+
+.storage-gradient-0 {
+  --storage-top: #223345;
+  --storage-bottom: #151d27;
+}
+.storage-gradient-1 {
+  --storage-top: #26394b;
+  --storage-bottom: #18222d;
+}
+.storage-gradient-2 {
+  --storage-top: #2b4053;
+  --storage-bottom: #1a2632;
+}
+.feature-strip article:is(:hover, :focus-within) .storage-top-stop {
+  stop-color: var(--storage-top);
+}
+.feature-strip article:is(:hover, :focus-within) .storage-bottom-stop {
+  stop-color: var(--storage-bottom);
+}
+.feature-strip article:is(:hover, :focus-within) .storage-shell {
+  stroke: #6989aa;
+}
+.feature-strip article:is(:hover, :focus-within) .storage-led {
+  fill: #a6c8e8;
+}
+
+.feature-strip article:is(:hover, :focus-within) .mcp-port {
+  fill: #9dc7d6;
+}
+.feature-strip article:is(:hover, :focus-within) .mcp-signal {
+  stroke: #9dc7d6;
+}
+.feature-strip article:is(:hover, :focus-within) .search-relevance {
+  stroke: #b5abda;
+}
+.feature-strip article:is(:hover, :focus-within) .search-score {
+  fill: #beb6df;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feature-art svg * {
+    transition: none !important;
+  }
+}

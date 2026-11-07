@@ -1,0 +1,125 @@
+/* Fixed export canvas, composed with the actual landing and application UI. */
+html:has(.repository-banner),
+body:has(.repository-banner) {
+  width: 2000px;
+  min-width: 2000px;
+  height: 667px;
+  margin: 0;
+  overflow: hidden;
+  background: var(--landing-bg);
+}
+
+.repository-banner {
+  width: 2000px;
+  height: 667px;
+  overflow: hidden;
+  color: #efefef;
+  background: var(--landing-bg);
+}
+
+#root > .repository-banner::before {
+  inset: 0;
+  height: 667px;
+  background:
+    radial-gradient(
+      ellipse at 64% 52%,
+      rgb(255 255 255 / 8.5%),
+      rgb(255 255 255 / 2.5%) 38%,
+      transparent 72%
+    ),
+    linear-gradient(
+      54deg,
+      transparent 6%,
+      rgb(255 255 255 / 2%) 14%,
+      rgb(255 255 255 / 11%) 23%,
+      rgb(255 255 255 / 3%) 30%,
+      transparent 38%,
+      rgb(255 255 255 / 2%) 46%,
+      rgb(255 255 255 / 9%) 55%,
+      rgb(255 255 255 / 3%) 62%,
+      transparent 70%,
+      rgb(255 255 255 / 6%) 83%,
+      transparent 96%
+    );
+  filter: blur(32px);
+  mask-image: linear-gradient(
+    90deg,
+    transparent 12%,
+    #000 42%,
+    #000 76%,
+    transparent 100%
+  );
+}
+
+.banner-copy {
+  position: absolute;
+  left: 86px;
+  top: 155px;
+  width: 720px;
+}
+
+.banner-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.banner-brand img {
+  width: 92px;
+  height: 92px;
+  object-fit: contain;
+}
+
+.banner-brand h1 {
+  margin: 0;
+  font-size: 76px;
+  line-height: 1.08;
+  font-weight: 600;
+  letter-spacing: -2.8px;
+}
+
+.banner-tagline {
+  margin: 35px 0 0;
+  font-size: 43px;
+  line-height: var(--landing-title-leading);
+  font-weight: 400;
+  letter-spacing: -1.2px;
+  color: #e5e5e5;
+}
+
+.banner-stack {
+  margin: 22px 0 0;
+  font-size: 23px;
+  line-height: var(--landing-text-leading);
+  color: #a2a2a2;
+}
+
+.banner-product {
+  position: absolute;
+  top: 74px;
+  left: 820px;
+  width: 1120px;
+}
+
+.banner-window {
+  --screen-scale: 0.7554054054;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background:
+    linear-gradient(#121212, #121212) padding-box,
+    linear-gradient(135deg, #ffffff60, #ffffff18 40%, #ffffff35 75%, #ffffff14) border-box;
+  box-shadow:
+    0 24px 64px #00000066,
+    0 0 80px #ffffff0b;
+  overflow: hidden;
+}
+
+.repository-banner .demo-section:not(.expanded) .app-scroll {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.repository-banner .demo-section:not(.expanded) .native-window {
+  height: 686px;
+}

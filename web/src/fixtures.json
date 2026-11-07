@@ -1,0 +1,2414 @@
+{
+  "projects": [
+    {
+      "id": 1,
+      "name": "Atlas",
+      "icon": "layers",
+      "description": "Desktop dashboard that maps every side project on disk.",
+      "outcome": "Graph view v2",
+      "objective": "Take Atlas to \"Graph view v2\".",
+      "last_point": "The base works, it needs finishing and polish.",
+      "next_action": "Profile the layout pass.",
+      "steps": [
+        {
+          "text": "Profile the layout pass",
+          "done": false
+        },
+        {
+          "text": "Ship the graph view",
+          "done": true
+        },
+        {
+          "text": "Write the release notes",
+          "done": false
+        }
+      ],
+      "status": "Active",
+      "attention": "Focus",
+      "domain": 0,
+      "kind": "Desktop app",
+      "stack": ["Rust", "egui"],
+      "folders": ["D:\\Projects\\Atlas"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 0,
+      "review": "Every week",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1793955600,
+          "kind": "Commit",
+          "text": "Last commit, profile the layout pass"
+        },
+        {
+          "at": 1793782800,
+          "kind": "Edit",
+          "text": "Next action set to \"Profile the layout pass\""
+        },
+        {
+          "at": 1793523600,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1791363600,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/atlas",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 2,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 11,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 2,
+      "name": "Scribe Agent",
+      "icon": "sparkles",
+      "description": "Agent that turns meeting notes into tasks.",
+      "outcome": "Weekly digest",
+      "objective": "Take Scribe Agent to \"Weekly digest\".",
+      "last_point": "The base works, it needs finishing and polish.",
+      "next_action": "Add calendar import.",
+      "steps": [
+        {
+          "text": "Add calendar import",
+          "done": false
+        },
+        {
+          "text": "Summarize action items",
+          "done": true
+        },
+        {
+          "text": "Send the weekly digest",
+          "done": false
+        }
+      ],
+      "status": "Active",
+      "attention": "Focus",
+      "domain": 1,
+      "kind": "AI agent",
+      "stack": ["Python", "Claude"],
+      "folders": ["D:\\Projects\\Scribe Agent"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 0,
+      "review": "Every week",
+      "confidence": 0.9,
+      "order": 1,
+      "activity": [
+        {
+          "at": 1793955600,
+          "kind": "Commit",
+          "text": "Last commit, add calendar import"
+        },
+        {
+          "at": 1793782800,
+          "kind": "Edit",
+          "text": "Next action set to \"Add calendar import\""
+        },
+        {
+          "at": 1793523600,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1791363600,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/scribe-agent",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 3,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 12,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 3,
+      "name": "Pocket Tutor",
+      "icon": "graduation-cap",
+      "description": "Course builder for language teachers.",
+      "outcome": "First paid course",
+      "objective": "Take Pocket Tutor to \"First paid course\".",
+      "last_point": "The base works, it needs finishing and polish.",
+      "next_action": "Record lesson three.",
+      "steps": [
+        {
+          "text": "Record lesson three",
+          "done": false
+        },
+        {
+          "text": "Price the first course",
+          "done": true
+        },
+        {
+          "text": "Invite ten testers",
+          "done": false
+        }
+      ],
+      "status": "Active",
+      "attention": "Focus",
+      "domain": 2,
+      "kind": "Course platform",
+      "stack": ["Next.js", "TypeScript"],
+      "folders": ["D:\\Projects\\Pocket Tutor"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 1,
+      "review": "Every week",
+      "confidence": 0.9,
+      "order": 2,
+      "activity": [
+        {
+          "at": 1793869200,
+          "kind": "Commit",
+          "text": "Last commit, record lesson three"
+        },
+        {
+          "at": 1793696400,
+          "kind": "Edit",
+          "text": "Next action set to \"Record lesson three\""
+        },
+        {
+          "at": 1793437200,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1791277200,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/pocket-tutor",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 4,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 13,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 4,
+      "name": "Ledgerly",
+      "icon": "receipt-text",
+      "description": "Invoicing app for freelancers with automatic reminders.",
+      "outcome": "Public beta",
+      "objective": "Take Ledgerly to \"Public beta\".",
+      "last_point": "The base works, it needs finishing and polish.",
+      "next_action": "Wire the Stripe webhooks.",
+      "steps": [
+        {
+          "text": "Wire the Stripe webhooks",
+          "done": false
+        },
+        {
+          "text": "Send payment reminders",
+          "done": true
+        },
+        {
+          "text": "Open the public beta",
+          "done": false
+        }
+      ],
+      "status": "Active",
+      "attention": "Focus",
+      "domain": 3,
+      "kind": "SaaS",
+      "stack": ["SvelteKit", "Postgres"],
+      "folders": ["D:\\Clients\\Ledgerly"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 2,
+      "review": "Every week",
+      "confidence": 0.9,
+      "order": 3,
+      "activity": [
+        {
+          "at": 1793782800,
+          "kind": "Commit",
+          "text": "Last commit, wire the stripe webhooks"
+        },
+        {
+          "at": 1793610000,
+          "kind": "Edit",
+          "text": "Next action set to \"Wire the Stripe webhooks\""
+        },
+        {
+          "at": 1793350800,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1791190800,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/ledgerly",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 5,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 11,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 5,
+      "name": "Shipyard",
+      "icon": "ship",
+      "description": "Deploy tool for a small fleet of servers.",
+      "outcome": "Zero downtime deploys",
+      "objective": "Take Shipyard to \"Zero downtime deploys\".",
+      "last_point": "The base works, it needs finishing and polish.",
+      "next_action": "Write the rollback command.",
+      "steps": [
+        {
+          "text": "Write the rollback command",
+          "done": false
+        }
+      ],
+      "status": "Active",
+      "attention": "Flow",
+      "domain": 0,
+      "kind": "Command line tool",
+      "stack": ["Go"],
+      "folders": ["D:\\Projects\\Shipyard"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 3,
+      "review": "Every week",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1793696400,
+          "kind": "Commit",
+          "text": "Last commit, write the rollback command"
+        },
+        {
+          "at": 1793523600,
+          "kind": "Edit",
+          "text": "Next action set to \"Write the rollback command\""
+        },
+        {
+          "at": 1793264400,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1791104400,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/shipyard",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 2,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 10,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 6,
+      "name": "Promptbook",
+      "icon": "network",
+      "description": "MCP server that shares prompt templates across tools.",
+      "outcome": "Template registry",
+      "objective": "Take Promptbook to \"Template registry\".",
+      "last_point": "The base works, it needs finishing and polish.",
+      "next_action": "Document the tools.",
+      "steps": [
+        {
+          "text": "Document the tools",
+          "done": false
+        }
+      ],
+      "status": "Active",
+      "attention": "Flow",
+      "domain": 1,
+      "kind": "MCP server",
+      "stack": ["TypeScript", "MCP"],
+      "folders": ["D:\\Projects\\Promptbook"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 4,
+      "review": "Every week",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1793610000,
+          "kind": "Commit",
+          "text": "Last commit, document the tools"
+        },
+        {
+          "at": 1793437200,
+          "kind": "Edit",
+          "text": "Next action set to \"Document the tools\""
+        },
+        {
+          "at": 1793178000,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1791018000,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/promptbook",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 3,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 12,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 7,
+      "name": "Lumen API",
+      "icon": "code",
+      "description": "REST API for a photo marketplace.",
+      "outcome": "Payments live",
+      "objective": "Take Lumen API to \"Payments live\".",
+      "last_point": "The base works, it needs finishing and polish.",
+      "next_action": "Test the upload limits.",
+      "steps": [
+        {
+          "text": "Test the upload limits",
+          "done": false
+        }
+      ],
+      "status": "Active",
+      "attention": "Flow",
+      "domain": 3,
+      "kind": "API",
+      "stack": ["Bun", "TypeScript"],
+      "folders": ["D:\\Projects\\Lumen\\api"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 5,
+      "review": "Every week",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1793523600,
+          "kind": "Commit",
+          "text": "Last commit, test the upload limits"
+        },
+        {
+          "at": 1793350800,
+          "kind": "Edit",
+          "text": "Next action set to \"Test the upload limits\""
+        },
+        {
+          "at": 1793091600,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1790931600,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/lumen-api",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 5,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 12,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 8,
+      "name": "Lumen Web",
+      "icon": "laptop",
+      "description": "Storefront for the Lumen photo marketplace.",
+      "outcome": "Payments live",
+      "objective": "Take Lumen Web to \"Payments live\".",
+      "last_point": "The base works, it needs finishing and polish.",
+      "next_action": "Polish the checkout page.",
+      "steps": [
+        {
+          "text": "Polish the checkout page",
+          "done": false
+        }
+      ],
+      "status": "Active",
+      "attention": "Flow",
+      "domain": 3,
+      "kind": "Web app",
+      "stack": ["React", "TypeScript"],
+      "folders": ["D:\\Projects\\Lumen\\web"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 5,
+      "review": "Every week",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1793523600,
+          "kind": "Commit",
+          "text": "Last commit, polish the checkout page"
+        },
+        {
+          "at": 1793350800,
+          "kind": "Edit",
+          "text": "Next action set to \"Polish the checkout page\""
+        },
+        {
+          "at": 1793091600,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1790931600,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/lumen-web",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 5,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 11,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 9,
+      "name": "Inbox Bot",
+      "icon": "mail",
+      "description": "Sorts a shared inbox and drafts replies.",
+      "outcome": "Half the replies drafted",
+      "objective": "Take Inbox Bot to \"Half the replies drafted\".",
+      "last_point": "The base works, it needs finishing and polish.",
+      "next_action": "Tune the triage rules.",
+      "steps": [
+        {
+          "text": "Tune the triage rules",
+          "done": false
+        }
+      ],
+      "status": "Active",
+      "attention": "Flow",
+      "domain": 1,
+      "kind": "AI agent",
+      "stack": ["Python", "Claude"],
+      "folders": ["D:\\Projects\\Inbox Bot"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 6,
+      "review": "Every week",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1793437200,
+          "kind": "Commit",
+          "text": "Last commit, tune the triage rules"
+        },
+        {
+          "at": 1793264400,
+          "kind": "Edit",
+          "text": "Next action set to \"Tune the triage rules\""
+        },
+        {
+          "at": 1793005200,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1790845200,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/inbox-bot",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 3,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 12,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 10,
+      "name": "Podsmith",
+      "icon": "mic",
+      "description": "Turns podcast episodes into searchable transcripts.",
+      "outcome": "Search across episodes",
+      "objective": "Take Podsmith to \"Search across episodes\".",
+      "last_point": "The base works, it needs finishing and polish.",
+      "next_action": "Cut the latency in half.",
+      "steps": [
+        {
+          "text": "Cut the latency in half",
+          "done": false
+        }
+      ],
+      "status": "Active",
+      "attention": "Flow",
+      "domain": 5,
+      "kind": "Transcription",
+      "stack": ["Python", "Whisper"],
+      "folders": ["D:\\Projects\\Podsmith"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 7,
+      "review": "Every week",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1793350800,
+          "kind": "Commit",
+          "text": "Last commit, cut the latency in half"
+        },
+        {
+          "at": 1793178000,
+          "kind": "Edit",
+          "text": "Next action set to \"Cut the latency in half\""
+        },
+        {
+          "at": 1792918800,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1790758800,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/podsmith",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 7,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 12,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 11,
+      "name": "Cartograph",
+      "icon": "git-branch",
+      "description": "Charts git activity across many repositories.",
+      "outcome": "Yearly report",
+      "objective": "Take Cartograph to \"Yearly report\".",
+      "last_point": "The base works, it needs finishing and polish.",
+      "next_action": "Add a weekly view.",
+      "steps": [
+        {
+          "text": "Add a weekly view",
+          "done": false
+        }
+      ],
+      "status": "Active",
+      "attention": "Flow",
+      "domain": 0,
+      "kind": "Command line tool",
+      "stack": ["Rust"],
+      "folders": ["D:\\Projects\\Cartograph"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 8,
+      "review": "Every week",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1793264400,
+          "kind": "Commit",
+          "text": "Last commit, add a weekly view"
+        },
+        {
+          "at": 1793091600,
+          "kind": "Edit",
+          "text": "Next action set to \"Add a weekly view\""
+        },
+        {
+          "at": 1792832400,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1790672400,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/cartograph",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 2,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 10,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 12,
+      "name": "Voxel Garden",
+      "icon": "box",
+      "description": "Cozy farming game made of voxels.",
+      "outcome": "Playable demo",
+      "objective": "Take Voxel Garden to \"Playable demo\".",
+      "last_point": "The base works, it needs finishing and polish.",
+      "next_action": "Finish the watering loop.",
+      "steps": [
+        {
+          "text": "Finish the watering loop",
+          "done": false
+        }
+      ],
+      "status": "Active",
+      "attention": "Flow",
+      "domain": 4,
+      "kind": "Game",
+      "stack": ["Godot", "GDScript"],
+      "folders": ["D:\\Projects\\Games\\Voxel Garden"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 9,
+      "review": "Every week",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1793178000,
+          "kind": "Commit",
+          "text": "Last commit, finish the watering loop"
+        },
+        {
+          "at": 1793005200,
+          "kind": "Edit",
+          "text": "Next action set to \"Finish the watering loop\""
+        },
+        {
+          "at": 1792746000,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1790586000,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/voxel-garden",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 6,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 13,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 13,
+      "name": "Field Notes",
+      "icon": "notebook-pen",
+      "description": "Offline notebook with Markdown and sketches.",
+      "outcome": "Sync between laptops",
+      "objective": "Take Field Notes to \"Sync between laptops\".",
+      "last_point": "The base works, it needs finishing and polish.",
+      "next_action": "Handle edit conflicts.",
+      "steps": [
+        {
+          "text": "Handle edit conflicts",
+          "done": false
+        }
+      ],
+      "status": "Active",
+      "attention": "Flow",
+      "domain": 6,
+      "kind": "Note app",
+      "stack": ["Tauri", "React"],
+      "folders": ["D:\\Projects\\Field Notes"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 10,
+      "review": "Every week",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1793091600,
+          "kind": "Commit",
+          "text": "Last commit, handle edit conflicts"
+        },
+        {
+          "at": 1792918800,
+          "kind": "Edit",
+          "text": "Next action set to \"Handle edit conflicts\""
+        },
+        {
+          "at": 1792659600,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1790499600,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/field-notes",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 8,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 11,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 14,
+      "name": "Grammar Lab",
+      "icon": "book-open",
+      "description": "Short grammar drills with spaced repetition.",
+      "outcome": "Fifty drills",
+      "objective": "Take Grammar Lab to \"Fifty drills\".",
+      "last_point": "The base works, it needs finishing and polish.",
+      "next_action": "Write the irregular verbs set.",
+      "steps": [
+        {
+          "text": "Write the irregular verbs set",
+          "done": false
+        }
+      ],
+      "status": "Active",
+      "attention": "Flow",
+      "domain": 2,
+      "kind": "Learning site",
+      "stack": ["Astro"],
+      "folders": ["D:\\Projects\\Grammar Lab"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 12,
+      "review": "Every week",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1792918800,
+          "kind": "Commit",
+          "text": "Last commit, write the irregular verbs set"
+        },
+        {
+          "at": 1792746000,
+          "kind": "Edit",
+          "text": "Next action set to \"Write the irregular verbs set\""
+        },
+        {
+          "at": 1792486800,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1790326800,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/grammar-lab",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 4,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 13,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 15,
+      "name": "Tiny Orbit",
+      "icon": "orbit",
+      "description": "Browser toy that simulates small planetary systems.",
+      "outcome": "Share links",
+      "objective": "Take Tiny Orbit to \"Share links\".",
+      "last_point": "The base works, it needs finishing and polish.",
+      "next_action": "Save a system to the URL.",
+      "steps": [
+        {
+          "text": "Save a system to the URL",
+          "done": false
+        }
+      ],
+      "status": "Active",
+      "attention": "Flow",
+      "domain": 4,
+      "kind": "Web toy",
+      "stack": ["Three.js", "TypeScript"],
+      "folders": ["D:\\Projects\\Games\\Tiny Orbit"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 14,
+      "review": "Every week",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1792746000,
+          "kind": "Commit",
+          "text": "Last commit, save a system to the url"
+        },
+        {
+          "at": 1792573200,
+          "kind": "Edit",
+          "text": "Next action set to \"Save a system to the URL\""
+        },
+        {
+          "at": 1792314000,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1790154000,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/tiny-orbit",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 6,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 13,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 16,
+      "name": "Waveform Kit",
+      "icon": "audio-waveform",
+      "description": "Audio visualizer components for the web.",
+      "outcome": "Version 1.0",
+      "objective": "Take Waveform Kit to \"Version 1.0\".",
+      "last_point": "The base works, it needs finishing and polish.",
+      "next_action": "Add a spectrum view.",
+      "steps": [
+        {
+          "text": "Add a spectrum view",
+          "done": false
+        }
+      ],
+      "status": "Active",
+      "attention": "Flow",
+      "domain": 5,
+      "kind": "Library",
+      "stack": ["Rust", "WebAssembly"],
+      "folders": ["D:\\Projects\\Waveform Kit"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 16,
+      "review": "Every week",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1792573200,
+          "kind": "Commit",
+          "text": "Last commit, add a spectrum view"
+        },
+        {
+          "at": 1792400400,
+          "kind": "Edit",
+          "text": "Next action set to \"Add a spectrum view\""
+        },
+        {
+          "at": 1792141200,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1789981200,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/waveform-kit",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 7,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 10,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 17,
+      "name": "Quill",
+      "icon": "pen-line",
+      "description": "Personal blog about building tools.",
+      "outcome": "One post a month",
+      "objective": "Take Quill to \"One post a month\".",
+      "last_point": "The base works, it needs finishing and polish.",
+      "next_action": "Draft the post about Atlas.",
+      "steps": [
+        {
+          "text": "Draft the post about Atlas",
+          "done": false
+        }
+      ],
+      "status": "Active",
+      "attention": "Flow",
+      "domain": 6,
+      "kind": "Blog",
+      "stack": ["Hugo"],
+      "folders": ["D:\\Projects\\Quill"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 18,
+      "review": "Every week",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1792400400,
+          "kind": "Commit",
+          "text": "Last commit, draft the post about atlas"
+        },
+        {
+          "at": 1792227600,
+          "kind": "Edit",
+          "text": "Next action set to \"Draft the post about Atlas\""
+        },
+        {
+          "at": 1791968400,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1789808400,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/quill",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 8,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 13,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 18,
+      "name": "Mentor Match",
+      "icon": "users",
+      "description": "Pairs junior developers with volunteer mentors.",
+      "outcome": "First ten pairs",
+      "objective": "Take Mentor Match to \"First ten pairs\".",
+      "last_point": "The base works, it needs finishing and polish.",
+      "next_action": "Call the meetup organizers.",
+      "steps": [
+        {
+          "text": "Call the meetup organizers",
+          "done": false
+        }
+      ],
+      "status": "Paused",
+      "attention": "Flow",
+      "domain": 2,
+      "kind": "Web app",
+      "stack": ["Laravel", "Vue"],
+      "folders": ["D:\\Clients\\Mentor Match"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 20,
+      "review": "Every week",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1792227600,
+          "kind": "Commit",
+          "text": "Last commit, call the meetup organizers"
+        },
+        {
+          "at": 1792054800,
+          "kind": "Edit",
+          "text": "Next action set to \"Call the meetup organizers\""
+        },
+        {
+          "at": 1791795600,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1789635600,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/mentor-match",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 4,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 11,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 19,
+      "name": "Trailmix",
+      "icon": "mountain",
+      "description": "Hiking log with elevation charts.",
+      "outcome": "Season recap",
+      "objective": "Take Trailmix to \"Season recap\".",
+      "last_point": "Parked until the idea gets clearer.",
+      "next_action": "Import GPX files.",
+      "steps": [
+        {
+          "text": "Import GPX files",
+          "done": false
+        }
+      ],
+      "status": "Paused",
+      "attention": "Reserve",
+      "domain": 6,
+      "kind": "Web app",
+      "stack": ["SvelteKit"],
+      "folders": ["D:\\Projects\\Trailmix"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 80,
+      "review": "When it comes back",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1787043600,
+          "kind": "Commit",
+          "text": "Last commit, import gpx files"
+        },
+        {
+          "at": 1786870800,
+          "kind": "Edit",
+          "text": "Next action set to \"Import GPX files\""
+        },
+        {
+          "at": 1786611600,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1784451600,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/trailmix",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 8,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 11,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 20,
+      "name": "Pixel Board",
+      "icon": "grid3x3",
+      "description": "Shared pixel canvas for live events.",
+      "outcome": "Event mode",
+      "objective": "Take Pixel Board to \"Event mode\".",
+      "last_point": "Parked until the idea gets clearer.",
+      "next_action": "Rate limit the brushes.",
+      "steps": [
+        {
+          "text": "Rate limit the brushes",
+          "done": false
+        }
+      ],
+      "status": "Paused",
+      "attention": "Reserve",
+      "domain": 3,
+      "kind": "Web app",
+      "stack": ["Elixir", "Phoenix"],
+      "folders": ["D:\\Projects\\Pixel Board"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 95,
+      "review": "When it comes back",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1785747600,
+          "kind": "Commit",
+          "text": "Last commit, rate limit the brushes"
+        },
+        {
+          "at": 1785574800,
+          "kind": "Edit",
+          "text": "Next action set to \"Rate limit the brushes\""
+        },
+        {
+          "at": 1785315600,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1783155600,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/pixel-board",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 5,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 11,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 21,
+      "name": "Moodboard AI",
+      "icon": "palette",
+      "description": "Builds moodboards from a short brief.",
+      "outcome": "Export to Figma",
+      "objective": "Take Moodboard AI to \"Export to Figma\".",
+      "last_point": "Parked until the idea gets clearer.",
+      "next_action": "Pick an image model.",
+      "steps": [
+        {
+          "text": "Pick an image model",
+          "done": false
+        }
+      ],
+      "status": "Paused",
+      "attention": "Reserve",
+      "domain": 1,
+      "kind": "Web app",
+      "stack": ["Next.js", "TypeScript"],
+      "folders": ["D:\\Projects\\Moodboard AI"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 110,
+      "review": "When it comes back",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1784451600,
+          "kind": "Commit",
+          "text": "Last commit, pick an image model"
+        },
+        {
+          "at": 1784278800,
+          "kind": "Edit",
+          "text": "Next action set to \"Pick an image model\""
+        },
+        {
+          "at": 1784019600,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1781859600,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/moodboard-ai",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 3,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 11,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 22,
+      "name": "Habit Loop",
+      "icon": "repeat",
+      "description": "Habit tracker that explains why streaks break.",
+      "outcome": "Store release",
+      "objective": "Take Habit Loop to \"Store release\".",
+      "last_point": "Parked until the idea gets clearer.",
+      "next_action": "Design the weekly review.",
+      "steps": [
+        {
+          "text": "Design the weekly review",
+          "done": false
+        }
+      ],
+      "status": "Paused",
+      "attention": "Reserve",
+      "domain": 2,
+      "kind": "Mobile app",
+      "stack": ["Kotlin"],
+      "folders": ["D:\\Projects\\Habit Loop"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 120,
+      "review": "When it comes back",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1783587600,
+          "kind": "Commit",
+          "text": "Last commit, design the weekly review"
+        },
+        {
+          "at": 1783414800,
+          "kind": "Edit",
+          "text": "Next action set to \"Design the weekly review\""
+        },
+        {
+          "at": 1783155600,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1780995600,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/habit-loop",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 4,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 11,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 23,
+      "name": "Retro Arcade",
+      "icon": "gamepad2",
+      "description": "Arcade remakes written to learn Rust.",
+      "outcome": "Three games",
+      "objective": "Take Retro Arcade to \"Three games\".",
+      "last_point": "Parked until the idea gets clearer.",
+      "next_action": "Port the breakout clone.",
+      "steps": [
+        {
+          "text": "Port the breakout clone",
+          "done": false
+        }
+      ],
+      "status": "Paused",
+      "attention": "Reserve",
+      "domain": 4,
+      "kind": "Game",
+      "stack": ["Rust", "Bevy"],
+      "folders": ["D:\\Projects\\Games\\Retro Arcade"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 140,
+      "review": "When it comes back",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1781859600,
+          "kind": "Commit",
+          "text": "Last commit, port the breakout clone"
+        },
+        {
+          "at": 1781686800,
+          "kind": "Edit",
+          "text": "Next action set to \"Port the breakout clone\""
+        },
+        {
+          "at": 1781427600,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1779267600,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/retro-arcade",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 6,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 13,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 24,
+      "name": "Recipe Vault",
+      "icon": "cooking-pot",
+      "description": "Family recipe book with shopping lists.",
+      "outcome": "Shared lists",
+      "objective": "Take Recipe Vault to \"Shared lists\".",
+      "last_point": "Parked until the idea gets clearer.",
+      "next_action": "Scan the old notebooks.",
+      "steps": [
+        {
+          "text": "Scan the old notebooks",
+          "done": false
+        }
+      ],
+      "status": "Paused",
+      "attention": "Reserve",
+      "domain": 6,
+      "kind": "Mobile app",
+      "stack": ["Flutter"],
+      "folders": ["D:\\Projects\\Recipe Vault"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 160,
+      "review": "When it comes back",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1780131600,
+          "kind": "Commit",
+          "text": "Last commit, scan the old notebooks"
+        },
+        {
+          "at": 1779958800,
+          "kind": "Edit",
+          "text": "Next action set to \"Scan the old notebooks\""
+        },
+        {
+          "at": 1779699600,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1777539600,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/recipe-vault",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 8,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 11,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 25,
+      "name": "Sound Sketch",
+      "icon": "music",
+      "description": "Pocket synth for quick melody ideas.",
+      "outcome": "First prototype",
+      "objective": "Take Sound Sketch to \"First prototype\".",
+      "last_point": "Parked until the idea gets clearer.",
+      "next_action": "Try the audio engine.",
+      "steps": [
+        {
+          "text": "Try the audio engine",
+          "done": false
+        }
+      ],
+      "status": "Idea",
+      "attention": "Reserve",
+      "domain": 5,
+      "kind": "Mobile app",
+      "stack": ["Swift"],
+      "folders": ["D:\\Projects\\Sound Sketch"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 200,
+      "review": "When it comes back",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1776675600,
+          "kind": "Commit",
+          "text": "Last commit, try the audio engine"
+        },
+        {
+          "at": 1776502800,
+          "kind": "Edit",
+          "text": "Next action set to \"Try the audio engine\""
+        },
+        {
+          "at": 1776243600,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1774083600,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/sound-sketch",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 7,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 11,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 26,
+      "name": "Chess Coach",
+      "icon": "crown",
+      "description": "Explains chess mistakes in plain words.",
+      "outcome": "Game review",
+      "objective": "Take Chess Coach to \"Game review\".",
+      "last_point": "Parked until the idea gets clearer.",
+      "next_action": "Read the engine docs.",
+      "steps": [
+        {
+          "text": "Read the engine docs",
+          "done": false
+        }
+      ],
+      "status": "Idea",
+      "attention": "Reserve",
+      "domain": 2,
+      "kind": "AI tutor",
+      "stack": ["Python"],
+      "folders": ["D:\\Projects\\Chess Coach"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 210,
+      "review": "When it comes back",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1775811600,
+          "kind": "Commit",
+          "text": "Last commit, read the engine docs"
+        },
+        {
+          "at": 1775638800,
+          "kind": "Edit",
+          "text": "Next action set to \"Read the engine docs\""
+        },
+        {
+          "at": 1775379600,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1773219600,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/chess-coach",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 4,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 13,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 27,
+      "name": "Crawler",
+      "icon": "bug",
+      "description": "Site crawler that flags broken links.",
+      "outcome": "Weekly report",
+      "objective": "Take Crawler to \"Weekly report\".",
+      "last_point": "Parked until the idea gets clearer.",
+      "next_action": "Nothing planned.",
+      "steps": [
+        {
+          "text": "Nothing planned",
+          "done": false
+        }
+      ],
+      "status": "Done",
+      "attention": "Reserve",
+      "domain": 0,
+      "kind": "Command line tool",
+      "stack": ["Python"],
+      "folders": ["D:\\Projects\\Crawler"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 300,
+      "review": "When it comes back",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1768035600,
+          "kind": "Commit",
+          "text": "Last commit, nothing planned"
+        },
+        {
+          "at": 1767862800,
+          "kind": "Edit",
+          "text": "Next action set to \"Nothing planned\""
+        },
+        {
+          "at": 1767603600,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1765443600,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/crawler",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 2,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 10,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 28,
+      "name": "Echo Room",
+      "icon": "radio",
+      "description": "Room reverb simulator.",
+      "outcome": "First impulse response",
+      "objective": "Take Echo Room to \"First impulse response\".",
+      "last_point": "Parked until the idea gets clearer.",
+      "next_action": "Read about ray tracing for sound.",
+      "steps": [
+        {
+          "text": "Read about ray tracing for sound",
+          "done": false
+        }
+      ],
+      "status": "Idea",
+      "attention": "Reserve",
+      "domain": 5,
+      "kind": "Simulator",
+      "stack": ["Rust"],
+      "folders": ["D:\\Projects\\Echo Room"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 400,
+      "review": "When it comes back",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1759395600,
+          "kind": "Commit",
+          "text": "Last commit, read about ray tracing for sound"
+        },
+        {
+          "at": 1759222800,
+          "kind": "Edit",
+          "text": "Next action set to \"Read about ray tracing for sound\""
+        },
+        {
+          "at": 1758963600,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1756803600,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/echo-room",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 7,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 10,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 29,
+      "name": "Old Portfolio",
+      "icon": "archive",
+      "description": "Previous portfolio site, replaced by Quill.",
+      "outcome": "Archived",
+      "objective": "Take Old Portfolio to \"Archived\".",
+      "last_point": "Parked until the idea gets clearer.",
+      "next_action": "Nothing planned.",
+      "steps": [
+        {
+          "text": "Nothing planned",
+          "done": false
+        }
+      ],
+      "status": "Archived",
+      "attention": "Reserve",
+      "domain": 6,
+      "kind": "Website",
+      "stack": ["Jekyll"],
+      "folders": ["D:\\Projects\\Old Portfolio"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 600,
+      "review": "When it comes back",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1742115600,
+          "kind": "Commit",
+          "text": "Last commit, nothing planned"
+        },
+        {
+          "at": 1741942800,
+          "kind": "Edit",
+          "text": "Next action set to \"Nothing planned\""
+        },
+        {
+          "at": 1741683600,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1739523600,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/old-portfolio",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 8,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 13,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    },
+    {
+      "id": 30,
+      "name": "Weather Widget",
+      "icon": "cloud-sun",
+      "description": "Weather widget for a client site.",
+      "outcome": "Archived",
+      "objective": "Take Weather Widget to \"Archived\".",
+      "last_point": "Parked until the idea gets clearer.",
+      "next_action": "Nothing planned.",
+      "steps": [
+        {
+          "text": "Nothing planned",
+          "done": false
+        }
+      ],
+      "status": "Archived",
+      "attention": "Reserve",
+      "domain": 3,
+      "kind": "Widget",
+      "stack": ["JavaScript"],
+      "folders": ["D:\\Projects\\Weather Widget"],
+      "links": [],
+      "notes": ["Ideas to sort later."],
+      "key_files": ["README.md"],
+      "launchers": [],
+      "hidden": [],
+      "favorite": null,
+      "idle_days": 900,
+      "review": "When it comes back",
+      "confidence": 0.9,
+      "order": 0,
+      "activity": [
+        {
+          "at": 1716195600,
+          "kind": "Commit",
+          "text": "Last commit, nothing planned"
+        },
+        {
+          "at": 1716022800,
+          "kind": "Edit",
+          "text": "Next action set to \"Nothing planned\""
+        },
+        {
+          "at": 1715763600,
+          "kind": "Ai",
+          "text": "Classified and summarized in one sentence"
+        },
+        {
+          "at": 1713603600,
+          "kind": "Scan",
+          "text": "Found in D:\\Projects"
+        }
+      ],
+      "source": "Local",
+      "remote": "https://github.com/example/weather-widget",
+      "added_by": "Manual",
+      "tags": [
+        {
+          "concept": 5,
+          "weight": 1.0,
+          "manual": false
+        },
+        {
+          "concept": 11,
+          "weight": 0.86,
+          "manual": false
+        }
+      ],
+      "tags_hash": 0
+    }
+  ],
+  "domains": [
+    {
+      "name": "Developer tools",
+      "icon": "wrench",
+      "color": [108, 156, 240, 255]
+    },
+    {
+      "name": "AI & agents",
+      "icon": "sparkles",
+      "color": [185, 140, 240, 255]
+    },
+    {
+      "name": "Learning",
+      "icon": "graduation-cap",
+      "color": [240, 164, 67, 255]
+    },
+    {
+      "name": "Web & SaaS",
+      "icon": "globe",
+      "color": [63, 193, 176, 255]
+    },
+    {
+      "name": "Games & 3D",
+      "icon": "box",
+      "color": [239, 127, 95, 255]
+    },
+    {
+      "name": "Audio & voice",
+      "icon": "audio-waveform",
+      "color": [127, 207, 111, 255]
+    },
+    {
+      "name": "Writing & personal",
+      "icon": "newspaper",
+      "color": [217, 180, 90, 255]
+    }
+  ],
+  "launchers": [
+    {
+      "name": "Claude Code",
+      "icon": "sparkles",
+      "color": [224, 122, 95, 255],
+      "kind": "Command",
+      "command": "claude",
+      "in_terminal": true,
+      "shortcut": "Ctrl+1",
+      "description": "Une session Claude Code dans le dossier",
+      "group": "Ai"
+    },
+    {
+      "name": "VS Code",
+      "icon": "code",
+      "color": [59, 156, 255, 255],
+      "kind": "App",
+      "command": "code \"{dossier}\"",
+      "in_terminal": false,
+      "shortcut": "Ctrl+2",
+      "description": "Ouvre le dossier dans Visual Studio Code",
+      "group": "Editor"
+    },
+    {
+      "name": "Terminal",
+      "icon": "square-terminal",
+      "color": [154, 163, 173, 255],
+      "kind": "App",
+      "command": "start \"Terminal\" /D \"{dossier}\" powershell -NoExit",
+      "in_terminal": false,
+      "shortcut": "Ctrl+3",
+      "description": "PowerShell ouvert dans le dossier",
+      "group": "Terminal"
+    },
+    {
+      "name": "Explorer",
+      "icon": "folder-open",
+      "color": [244, 193, 77, 255],
+      "kind": "Folder",
+      "command": "explorer \"{dossier}\"",
+      "in_terminal": false,
+      "shortcut": "",
+      "description": "Le dossier dans l'explorateur Windows",
+      "group": "Tools"
+    }
+  ],
+  "default_launchers": [0, 1, 2, 3],
+  "config": {
+    "roots": [
+      {
+        "path": "D:\\Projects",
+        "enabled": true,
+        "depth": 3,
+        "found": 34,
+        "last_scan": 1793955000
+      },
+      {
+        "path": "D:\\Clients",
+        "enabled": true,
+        "depth": 2,
+        "found": 3,
+        "last_scan": 1793955000
+      }
+    ],
+    "excludes": [
+      "node_modules",
+      "target",
+      ".git",
+      "dist",
+      "build",
+      ".venv",
+      "venv",
+      "__pycache__",
+      ".next",
+      "vendor",
+      "bin",
+      "obj"
+    ],
+    "markers": [
+      [".git", true],
+      ["Cargo.toml", true],
+      ["package.json", true],
+      ["pyproject.toml", true],
+      ["requirements.txt", true],
+      ["composer.json", true],
+      ["go.mod", true],
+      ["*.sln", true],
+      ["CLAUDE.md", true],
+      ["AGENTS.md", true],
+      ["AGENT.md", true],
+      ["README.md", true]
+    ],
+    "freq": "Startup",
+    "skip_nested": true,
+    "group_monorepos": true,
+    "ignore_older": false,
+    "ignore_older_days": 730,
+    "auto_add": true,
+    "github_enabled": true,
+    "ai_mode": "Ollama",
+    "ollama_url": "http://localhost:11434",
+    "ollama_model": "",
+    "ollama_embed_model": "",
+    "ollaya_url": "http://127.0.0.1:11435",
+    "ollaya_model": "",
+    "read_depth": "Manifests",
+    "limit_focus": false,
+    "focus_limit": 4,
+    "auto_reserve": true,
+    "reserve_after": 45,
+    "reviews_per_day": 1,
+    "theme": "Dark",
+    "accent": "Amber",
+    "compact": false,
+    "zoom": 1.0,
+    "demo_data": true,
+    "update_auto": true,
+    "update_beta": false,
+    "language": null,
+    "markers_version": 2,
+    "ignored": []
+  },
+  "next_id": 31,
+  "ontology": {
+    "facets": [
+      {
+        "id": 1,
+        "name": "Domain",
+        "description": "What the project is about and who it serves."
+      },
+      {
+        "id": 9,
+        "name": "Kind",
+        "description": "What gets built, whatever the subject."
+      }
+    ],
+    "concepts": [
+      {
+        "id": 2,
+        "facet": 1,
+        "name": "Developer tools",
+        "definition": "Projects about developer tools.",
+        "synonyms": [],
+        "parent": null,
+        "manual": false
+      },
+      {
+        "id": 3,
+        "facet": 1,
+        "name": "AI & agents",
+        "definition": "Projects about ai & agents.",
+        "synonyms": [],
+        "parent": null,
+        "manual": false
+      },
+      {
+        "id": 4,
+        "facet": 1,
+        "name": "Learning",
+        "definition": "Projects about learning.",
+        "synonyms": [],
+        "parent": null,
+        "manual": false
+      },
+      {
+        "id": 5,
+        "facet": 1,
+        "name": "Web & SaaS",
+        "definition": "Projects about web & saas.",
+        "synonyms": [],
+        "parent": null,
+        "manual": false
+      },
+      {
+        "id": 6,
+        "facet": 1,
+        "name": "Games & 3D",
+        "definition": "Projects about games & 3d.",
+        "synonyms": [],
+        "parent": null,
+        "manual": false
+      },
+      {
+        "id": 7,
+        "facet": 1,
+        "name": "Audio & voice",
+        "definition": "Projects about audio & voice.",
+        "synonyms": [],
+        "parent": null,
+        "manual": false
+      },
+      {
+        "id": 8,
+        "facet": 1,
+        "name": "Writing & personal",
+        "definition": "Projects about writing & personal.",
+        "synonyms": [],
+        "parent": null,
+        "manual": false
+      },
+      {
+        "id": 10,
+        "facet": 9,
+        "name": "Tool",
+        "definition": "Command line tools, libraries and developer utilities.",
+        "synonyms": [],
+        "parent": null,
+        "manual": false
+      },
+      {
+        "id": 11,
+        "facet": 9,
+        "name": "App",
+        "definition": "Desktop, mobile and web applications people use daily.",
+        "synonyms": [],
+        "parent": null,
+        "manual": false
+      },
+      {
+        "id": 12,
+        "facet": 9,
+        "name": "Service",
+        "definition": "APIs, servers and agents that run without a screen.",
+        "synonyms": [],
+        "parent": null,
+        "manual": false
+      },
+      {
+        "id": 13,
+        "facet": 9,
+        "name": "Content",
+        "definition": "Courses, blogs, games and other things made to be read or played.",
+        "synonyms": [],
+        "parent": null,
+        "manual": false
+      }
+    ],
+    "next_id": 14,
+    "generated_at": 0,
+    "generated_by": ""
+  }
+}
