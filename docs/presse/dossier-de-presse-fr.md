@@ -136,7 +136,7 @@ Les captures montrent des projets fictifs, avec l'interface en anglais.
 4. **Aller plus loin.** Installez Ollama et choisissez un modèle dans Configuration › IA. Vous pouvez aussi connecter Claude Code :
 
    ```bash
-   claude mcp add rust-project -- "<chemin vers l'exécutable>" --mcp
+   claude mcp add --scope user rust-project -- "<chemin vers l'exécutable>" --mcp
    ```
 
 ## État du projet

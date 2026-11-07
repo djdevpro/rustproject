@@ -790,6 +790,7 @@ fn mcp_card(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action
     let t = Tokens::get(ui.ctx());
     let exe = std::env::current_exe().map(|p| p.display().to_string()).unwrap_or_else(|_| "rust-project.exe".into());
     widgets::settings_card(ui, tr("Agent MCP"), Some(tr("Rust Project est aussi un serveur MCP : `rust-project --mcp`. L'agent lit et écrit le même fichier que cette fenêtre, qui se met à jour toute seule.")), |ui| {
+        claude_status(ui, st, &exe, act);
         let code = |ui: &mut Ui, label: &str, text: String, act: &mut Vec<Action>| {
             widgets::field_label(ui, label);
             ui.horizontal_top(|ui| {
@@ -803,7 +804,7 @@ fn mcp_card(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action
                 }
             });
         };
-        code(ui, "Dans Claude Code", format!(r#"claude mcp add rust-project -- "{exe}" --mcp"#), act);
+        code(ui, tr("Dans Claude Code, pour tous tes projets"), crate::mcp_setup::command(&exe), act);
         let json = format!(r#"{{ "mcpServers": {{ "rust-project": {{ "command": "{}", "args": ["--mcp"] }} }} }}"#, exe.replace('\\', "\\\\"));
         code(ui, tr("Autres clients (configuration JSON)"), json, act);
         widgets::field_label(ui, tr("Outils proposés à l'agent"));
@@ -822,6 +823,45 @@ fn mcp_card(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action
         }
     });
     let _ = data;
+}
+
+/// Rust Project dans Claude Code : déclaré pour tous les projets (vers cet exécutable), ou pas
+/// encore, avec le bouton qui le fait.
+fn claude_status(ui: &mut Ui, st: &mut UiState, exe: &str, act: &mut Vec<Action>) {
+    let t = Tokens::get(ui.ctx());
+    let setup = st.claude_mcp.get_or_insert_with(crate::mcp_setup::read).clone();
+    let ok = setup.is_ok(exe);
+    let (icon, color, text, button) = if ok {
+        (Icon::CircleCheck, t.good_fg, tr("Déclaré dans Claude Code pour tous tes projets.").to_owned(), None)
+    } else if let Some(other) = setup.global.as_deref().filter(|_| setup.local.is_empty()) {
+        (Icon::TriangleAlert, t.accent_ink, tf("Claude Code lance un autre exécutable (une ancienne version ?) : {0}", &[("0", &other)]), Some(tr("Mettre à jour")))
+    } else if !setup.local.is_empty() {
+        let n = setup.local.len();
+        (Icon::TriangleAlert, t.accent_ink, tf("Déclaré seulement dans {0} dossier(s) : ailleurs, Claude Code ne le voit pas.", &[("0", &n)]), Some(tr("Passer en global")))
+    } else {
+        (Icon::Info, t.muted, tr("Pas encore déclaré dans Claude Code.").to_owned(), Some(tr("Ajouter à Claude Code")))
+    };
+    Frame::new().fill(theme::mix(t.surface, t.bg, 0.45)).stroke(Stroke::new(1.0, t.line)).corner_radius(10).inner_margin(Margin::symmetric(14, 12)).show(ui, |ui| {
+        ui.set_width(ui.available_width());
+        ui.horizontal(|ui| {
+            icons::show(ui, icon, 18.0, color);
+            let w = ui.available_width() - if button.is_some() { 230.0 } else { 110.0 };
+            ui.allocate_ui(vec2(w.max(120.0), 20.0), |ui| ui.add(egui::Label::new(RichText::new(&text).size(13.5).color(t.ink)).wrap()));
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                if widgets::link(ui, tr("Revérifier"), Some(Icon::RefreshCw), 12.5).clicked() {
+                    st.claude_mcp = None;
+                }
+                if let Some(label) = button {
+                    if st.claude_mcp_busy {
+                        ui.add(egui::Spinner::new().size(16.0).color(t.accent));
+                    } else if widgets::button(ui, Some(Icon::Plug), label, Kind::Primary).on_hover_text(crate::mcp_setup::command(exe)).clicked() {
+                        act.push(Action::InstallClaudeMcp);
+                    }
+                }
+            });
+        });
+    });
+    ui.label(RichText::new(tr("Global : disponible dans tous tes projets. Les sessions de Claude Code déjà ouvertes le voient après redémarrage.")).size(12.0).color(t.faint));
 }
 
 /// Du code (commande, JSON, chemin) qui revient à la ligne n'importe où : un chemin sans espace

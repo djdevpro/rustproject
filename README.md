@@ -32,7 +32,7 @@ cargo run -- --fixture fixtures/demo-en.json
 ## Connect an agent
 
 ```bash
-claude mcp add rust-project -- "C:\path\to\rust-project.exe" --mcp
+claude mcp add --scope user rust-project -- "C:\path\to\rust-project.exe" --mcp
 ```
 
 ## Release

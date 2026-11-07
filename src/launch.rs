@@ -74,6 +74,34 @@ pub fn open_url(url: &str) -> Plan {
     Plan { line, dir: None }
 }
 
+/// Ouvre un fichier avec l'application que le système lui associe (l'éditeur par défaut).
+pub fn open_file(path: &str) -> Plan {
+    let path = path.replace('"', "");
+    let line = if cfg!(windows) {
+        format!(r#"start "" "{path}""#)
+    } else if cfg!(target_os = "macos") {
+        format!(r#"open "{path}""#)
+    } else {
+        format!(r#"xdg-open "{path}""#)
+    };
+    Plan { line, dir: None }
+}
+
+/// Montre un fichier dans l'explorateur, sélectionné.
+pub fn reveal_file(path: &str) -> Plan {
+    let path = path.replace('"', "");
+    let line = if cfg!(windows) {
+        // `explorer` répond toujours 1 : on le fait suivre d'un succès.
+        format!(r#"explorer /select,"{path}" & exit /b 0"#)
+    } else if cfg!(target_os = "macos") {
+        format!(r#"open -R "{path}""#)
+    } else {
+        let dir = Path::new(&path).parent().map(|d| d.display().to_string()).unwrap_or_default();
+        format!(r#"xdg-open "{dir}""#)
+    };
+    Plan { line, dir: None }
+}
+
 /// Entre apostrophes pour `sh`.
 fn sh_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', r"'\''"))

@@ -405,6 +405,12 @@ pub enum Action {
     SuggestKeywords(Option<Vec<u64>>),
     /// Ouvrir une adresse dans le navigateur (page GitHub d'un projet…).
     OpenUrl(String),
+    /// Ouvrir un fichier avec l'application par défaut du système (« En ce moment »).
+    OpenFile(String),
+    /// Montrer un fichier dans l'explorateur.
+    RevealFile(String),
+    /// Déclarer Rust Project dans Claude Code, pour tous les projets.
+    InstallClaudeMcp,
     /// Ouvrir les outils de développement (comme F12).
     OpenDevTools,
     Deselect,
@@ -560,6 +566,16 @@ pub struct UiState {
     pub new_exclude: String,
     pub new_note: String,
     pub new_step: String,
+    // ---- « En ce moment » (panneau du bureau quand aucun projet n'est ouvert)
+    /// Le relevé des fichiers modifiés, en arrière-plan.
+    pub live: crate::recent::Watcher,
+    pub live_window: crate::recent::Window,
+    /// Le fil combiné (sinon, une carte par projet).
+    pub live_feed: bool,
+    /// Les projets dont on voit tous les fichiers (identifiants).
+    pub live_open: Vec<u64>,
+    /// Le panneau masqué (un bouton du bureau le rouvre).
+    pub live_hidden: bool,
     pub now: f64,
     /// Le dernier lancement (projet, lanceur, instant) : sa tuile brille un court instant.
     pub flash: Option<(usize, usize, f64)>,
@@ -588,6 +604,9 @@ pub struct UiState {
     /// Comptes connectés à gh, et l'actif (`None` : pas encore demandé).
     pub github_accounts: Option<Result<crate::github::Accounts, String>>,
     pub github_accounts_loading: bool,
+    /// Où Claude Code connaît Rust Project (`None` : à relire), et l'ajout en cours.
+    pub claude_mcp: Option<crate::mcp_setup::ClaudeSetup>,
+    pub claude_mcp_busy: bool,
     // ---- recherche
     /// Résultats de la recherche du bureau (`None` : pas de recherche).
     pub search_hits: Option<Vec<Hit>>,
@@ -655,6 +674,11 @@ impl Default for UiState {
             new_exclude: String::new(),
             new_note: String::new(),
             new_step: String::new(),
+            live: Default::default(),
+            live_window: Default::default(),
+            live_feed: false,
+            live_open: Vec::new(),
+            live_hidden: false,
             now: 0.0,
             flash: None,
             updater: Default::default(),
@@ -674,6 +698,8 @@ impl Default for UiState {
             github_loading: false,
             github_accounts: None,
             github_accounts_loading: false,
+            claude_mcp: None,
+            claude_mcp_busy: false,
             search_hits: None,
             lib_hits: None,
             semantic_indexed: 0,
@@ -1023,6 +1049,14 @@ impl AtelierApp {
                 JobMsg::KeywordsDone => {
                     if let Some((done, _)) = self.st.keywords_job.take() {
                         self.toast(Icon::Sparkles, tf("Mots-clés proposés pour {0} projets", &[("0", &done)]), Some(tr("Ils comptent maintenant dans la recherche par le sens.").into()));
+                    }
+                }
+                JobMsg::ClaudeMcp(result) => {
+                    self.st.claude_mcp_busy = false;
+                    self.st.claude_mcp = None;
+                    match result {
+                        Ok(()) => self.toast(Icon::CircleCheck, tr("Rust Project ajouté à Claude Code"), Some(tr("Pour tous tes projets. Les sessions déjà ouvertes le verront après redémarrage.").into())),
+                        Err(why) => self.toast(Icon::TriangleAlert, tr("Ajout à Claude Code impossible"), Some(why)),
                     }
                 }
                 JobMsg::GithubAccounts(result) => {
@@ -1706,6 +1740,38 @@ impl AtelierApp {
                         }
                     }
                 }
+                Action::InstallClaudeMcp => {
+                    let exe = std::env::current_exe().map(|p| p.display().to_string()).unwrap_or_default();
+                    if self.dry_run {
+                        self.launched.push(crate::mcp_setup::command(&exe));
+                    } else if !self.st.claude_mcp_busy {
+                        self.st.claude_mcp_busy = true;
+                        let setup = self.st.claude_mcp.clone().unwrap_or_else(crate::mcp_setup::read);
+                        jobs::spawn_claude_mcp(self.bus(), exe, setup);
+                    }
+                }
+                Action::OpenFile(path) | Action::RevealFile(path) if self.dry_run => {
+                    self.launched.push(path);
+                }
+                Action::OpenFile(path) => {
+                    let plan = launch::open_file(&path);
+                    self.launched.push(plan.line.clone());
+                    let tx = self.errors_tx.clone();
+                    let repaint = ctx.clone();
+                    if let Err(why) = launch::spawn(&plan, move |err| {
+                        let _ = tx.send((tr("L'ouverture du fichier").to_owned(), err));
+                        repaint.request_repaint();
+                    }) {
+                        self.toast(Icon::TriangleAlert, tr("Impossible d'ouvrir le fichier"), Some(why));
+                    }
+                }
+                Action::RevealFile(path) => {
+                    let plan = launch::reveal_file(&path);
+                    self.launched.push(plan.line.clone());
+                    if let Err(why) = launch::spawn(&plan, |_| {}) {
+                        self.toast(Icon::TriangleAlert, tr("Impossible d'ouvrir l'explorateur"), Some(why));
+                    }
+                }
                 Action::Go(s) => self.st.screen = s,
                 Action::GoConfig(section) => {
                     self.st.screen = Screen::Config;
@@ -2327,6 +2393,18 @@ impl AtelierApp {
     }
 }
 
+/// Les projets que « En ce moment » relève : ceux qui ne sont pas archivés et ont un dossier ;
+/// avec les exclusions du scan.
+fn live_jobs(data: &Data) -> (Vec<crate::recent::Job>, Vec<String>) {
+    let jobs = data
+        .projects
+        .iter()
+        .filter(|p| p.status != Status::Archived && !p.folders.is_empty())
+        .map(|p| crate::recent::Job { id: p.id, folders: p.folders.clone() })
+        .collect();
+    (jobs, data.config.excludes.iter().map(|e| e.to_lowercase()).collect())
+}
+
 impl eframe::App for AtelierApp {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
@@ -2359,6 +2437,13 @@ impl eframe::App for AtelierApp {
         egui::Panel::top("topbar").exact_size(theme::TOPBAR_H).frame(Frame::new().fill(t.bg)).show(ui, |ui| self.top_bar(ui, edge.is_some()));
         egui::Panel::bottom("statusbar").exact_size(theme::STATUS_H).frame(Frame::new().fill(t.bg)).show(ui, |ui| self.status_bar(ui));
 
+        // « En ce moment » : sur le bureau, quand aucun projet n'est ouvert. Le relevé des fichiers
+        // ne tourne que tant qu'il est affiché.
+        let live = self.st.screen == Screen::Desk && self.st.selected.is_none() && !self.st.live_hidden && !self.data.projects.is_empty();
+        if live {
+            let data = &self.data;
+            self.st.live.poll(&ctx, self.st.now, self.st.live_window, || live_jobs(data));
+        }
         // Le panneau projet accompagne le bureau et la bibliothèque ; « À revisiter » a sa propre fiche.
         if let Some(p) = self.st.selected.filter(|_| matches!(self.st.screen, Screen::Desk | Screen::Library)) {
             egui::Panel::right("detail")
@@ -2373,6 +2458,19 @@ impl eframe::App for AtelierApp {
                     let mut inner = ui.new_child(egui::UiBuilder::new().max_rect(rect).layout(*ui.layout()));
                     inner.shrink_clip_rect(rect);
                     panel::show(&mut inner, &self.data, &mut self.st, &mut self.actions, p);
+                    ui.advance_cursor_after_rect(rect);
+                });
+        } else if live {
+            egui::Panel::right("live")
+                .exact_size(theme::PANEL_W)
+                .resizable(false)
+                .show_separator_line(false)
+                .frame(Frame::new().fill(t.bg).inner_margin(Margin { left: 0, right: 16, top: 16, bottom: 14 }))
+                .show(ui, |ui| {
+                    let rect = ui.max_rect();
+                    let mut inner = ui.new_child(egui::UiBuilder::new().max_rect(rect).layout(*ui.layout()));
+                    inner.shrink_clip_rect(rect);
+                    crate::live::show(&mut inner, &self.data, &mut self.st, &mut self.actions);
                     ui.advance_cursor_after_rect(rect);
                 });
         }

@@ -45,6 +45,8 @@ pub enum JobMsg {
     Tagged { id: u64, fingerprint: u64, result: Result<Vec<(u64, f32)>, String> },
     TaggingDone,
     OntologyProposed { model: String, result: Result<Ontology, String> },
+    /// Rust Project déclaré dans Claude Code pour tous les projets (ou pourquoi pas).
+    ClaudeMcp(Result<(), String>),
 }
 
 /// De quoi envoyer des messages et réveiller l'interface.
@@ -190,6 +192,11 @@ pub fn spawn_packages(bus: Bus, projects: Vec<(u64, Vec<String>)>) {
 }
 
 /// Les comptes connectés à gh, et l'actif.
+/// Déclare Rust Project dans Claude Code, pour tous les projets.
+pub fn spawn_claude_mcp(bus: Bus, exe: String, setup: crate::mcp_setup::ClaudeSetup) {
+    std::thread::spawn(move || bus.send(JobMsg::ClaudeMcp(crate::mcp_setup::install(&exe, &setup))));
+}
+
 pub fn spawn_github_accounts(bus: Bus) {
     std::thread::spawn(move || bus.send(JobMsg::GithubAccounts(crate::github::accounts())));
 }

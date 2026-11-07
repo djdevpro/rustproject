@@ -5,7 +5,7 @@
 //! Chaque outil relit `rust-project.json`, applique sa modification et l'enregistre : l'interface, si
 //! elle est ouverte, voit le changement et se recharge.
 //!
-//! À déclarer dans Claude Code : `claude mcp add rust-project -- "<chemin>\rust-project.exe" --mcp`
+//! À déclarer dans Claude Code : `claude mcp add --scope user rust-project -- "<chemin>\rust-project.exe" --mcp`
 
 use std::io::{BufRead, Write};
 

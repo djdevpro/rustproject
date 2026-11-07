@@ -27,12 +27,18 @@ pub fn rediscover_queue(data: &Data, st: &UiState) -> Vec<usize> {
 pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
     let t = Tokens::get(ui.ctx());
     // Barre d'outils : recherche et ajout.
+    // « En ce moment » masqué et aucun projet ouvert : un bouton pour le rouvrir.
+    let reopen_live = st.live_hidden && st.selected.is_none() && !data.projects.is_empty();
     ui.horizontal(|ui| {
-        let w = ui.available_width() - 214.0;
+        let w = ui.available_width() - 214.0 - if reopen_live { 182.0 } else { 0.0 };
         widgets::icon_input(ui, &mut st.search, Icon::Search, tr("Rechercher un projet…"), w, 46.0);
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             if widgets::button_sized(ui, Some(Icon::Plus), tr("Ajouter un projet"), Kind::Primary, 46.0, Some(200.0)).clicked() {
                 act.push(Action::OpenAddProject);
+            }
+            if reopen_live && widgets::button_sized(ui, Some(Icon::Activity), tr("En ce moment"), Kind::Secondary, 46.0, Some(170.0)).on_hover_text(tr("Ce qui bouge dans tes projets, en direct.")).clicked() {
+                st.live_hidden = false;
+                st.live.refresh();
             }
         });
     });

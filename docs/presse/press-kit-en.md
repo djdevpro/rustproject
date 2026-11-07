@@ -136,7 +136,7 @@ The screenshots show sample projects, with the interface in English.
 4. **Go further.** Install Ollama and pick a model in Configuration › AI. You can also connect Claude Code:
 
    ```bash
-   claude mcp add rust-project -- "<path to the executable>" --mcp
+   claude mcp add --scope user rust-project -- "<path to the executable>" --mcp
    ```
 
 ## Project status

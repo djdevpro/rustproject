@@ -1146,3 +1146,42 @@ fn logo_du_projet() {
     h.run();
     assert!(h.state().data.projects[p].logo.is_none(), "retour à l'icône");
 }
+
+#[test]
+fn en_ce_moment() {
+    use crate::recent::{FileHit, GitInfo, ProjectActivity, Snapshot};
+    let mut h = harness();
+    let now = crate::model::now();
+    let (id, name) = (h.state().data.projects[0].id, h.state().data.projects[0].name.clone());
+    let file = |rel: &str, age: u64| FileHit { path: format!("C:/demo/{rel}"), rel: rel.into(), mtime: now - age };
+    let files: Vec<FileHit> = ["src/main.rs", "src/app.rs", "Cargo.toml", "docs/notes.md", "build.rs"].iter().enumerate().map(|(k, r)| file(r, 60 + 300 * k as u64)).collect();
+    let snap = Snapshot { at: now, projects: vec![ProjectActivity { id, last: now - 60, count: 5, files, readme: Some("C:/demo/README.md".into()), git: Some(GitInfo { branch: "main".into(), dirty: Some(3) }) }] };
+    // Un relevé posé à la main (pas de lecture de dossiers en test).
+    h.state_mut().st.live.freeze(snap);
+    // Fermer le projet ouvert : le bureau montre « En ce moment ».
+    click(&mut h, "Fermer le panneau");
+    assert!(h.state().st.selected.is_none());
+    // Trois fichiers d'abord, puis tous.
+    assert!(h.query_by_label("Cargo.toml").is_some() && h.query_by_label("docs/notes.md").is_none());
+    click(&mut h, "Voir les 5 fichiers");
+    assert!(h.query_by_label("docs/notes.md").is_some());
+    // Un clic ouvre le fichier (application par défaut), le README aussi.
+    click(&mut h, "src/main.rs");
+    assert_eq!(h.state().launched.last().map(String::as_str), Some("C:/demo/src/main.rs"));
+    click(&mut h, "README.md");
+    assert!(h.state().launched.last().is_some_and(|l| l.ends_with("README.md")));
+    // Le fil combiné montre les mêmes fichiers.
+    click(&mut h, "Fil combiné");
+    assert!(h.query_by_label("build.rs").is_some());
+    click(&mut h, "Par projet");
+    // Ouvrir le projet, puis le fermer : retour à « En ce moment ».
+    click(&mut h, &format!("Ouvrir le projet {name}"));
+    assert_eq!(h.state().st.selected, Some(0));
+    click(&mut h, "Fermer le panneau");
+    assert!(h.state().st.selected.is_none() && h.query_by_label("build.rs").is_some());
+    // Masquer, puis rouvrir depuis le bureau.
+    click(&mut h, "Masquer « En ce moment »");
+    assert!(h.state().st.live_hidden && h.query_by_label("build.rs").is_none());
+    click(&mut h, "En ce moment");
+    assert!(!h.state().st.live_hidden);
+}

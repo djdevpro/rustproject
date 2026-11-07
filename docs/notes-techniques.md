@@ -91,7 +91,7 @@ concept « Immobilier » (synonyme, ou sens proche), puis les projets qui y sont
 ## Serveur MCP
 
 ```bash
-claude mcp add rust-project -- "C:\chemin\vers\rust-project.exe" --mcp
+claude mcp add --scope user rust-project -- "C:\chemin\vers\rust-project.exe" --mcp
 ```
 
 Le chemin exact et la configuration JSON pour d'autres clients sont dans Configuration › IA (mode
