@@ -1,0 +1,2 @@
+// Windows executable icon (Explorer, taskbar, shortcuts).
+1 ICON "rust-project.ico"

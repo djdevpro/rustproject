@@ -1,0 +1,8 @@
+/target
+/dist
+*.new.png
+*.diff.png
+*.old.png
+
+# Dossier de communication (contacts presse, brouillons) : reste en local, hors du dépôt public
+/docs/communication/

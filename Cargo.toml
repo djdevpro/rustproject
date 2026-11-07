@@ -1,0 +1,36 @@
+[package]
+name = "rust-project"
+version = "0.1.0"
+edition = "2024"
+description = "Gestionnaire de projets personnels en Rust et egui"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/djdevpro/rustproject"
+
+[dependencies]
+eframe = "0.37"
+egui = { version = "0.37", features = ["serde"] }
+# Les icônes Lucide (police + enum `Icon`), indépendantes de la version d'egui.
+lucide-icons = { version = "1.70", features = ["serde"] }
+rfd = "0.17.2"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+sha2 = "0.10.9"
+strsim = "0.11.1"
+sys-locale = "0.3.2"
+ureq = { version = "3.5.1", features = ["json"] }
+# Les logos SVG des lanceurs et des projets (rendus par resvg), et les images des projets.
+egui_extras = { version = "0.37", default-features = false, features = ["svg", "image"] }
+# Le logo image d'un projet : lu, réduit à 128 px et gardé en PNG (base64) dans le fichier.
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "ico", "gif", "bmp"] }
+base64 = "0.22"
+
+# L'icône de l'exécutable Windows (build.rs).
+[build-dependencies]
+embed-resource = "3.0"
+
+[dev-dependencies]
+egui_kittest = { version = "0.37", features = ["wgpu", "eframe"] }
+
+# egui et wgpu optimisés même en debug : l'interface reste fluide pendant qu'on code.
+[profile.dev.package."*"]
+opt-level = 2
