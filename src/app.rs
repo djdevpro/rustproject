@@ -742,8 +742,8 @@ impl AtelierApp {
         if let Some(e) = error {
             app.toast(Icon::TriangleAlert, tr("Fichier de données illisible"), Some(e));
         }
+        crate::release::cleanup_old_exes();
         if std::env::args().any(|a| a == launch::AFTER_UPDATE) {
-            crate::release::cleanup_after_update();
             app.toast(Icon::PackageCheck, tf("Rust Project {VERSION} est installé", &[("VERSION", &VERSION)]), None);
         }
         // Une seule question à GitHub au démarrage : y a-t-il une version plus récente ?

@@ -280,14 +280,30 @@ fn old_exe(exe: &Path) -> PathBuf {
     PathBuf::from(format!("{}.old", exe.display()))
 }
 
+/// Les anciens exécutables laissés par les mises à jour, à côté de celui qui tourne :
+/// `<exe>.old`, et `<exe>.<n>.old` quand le premier servait encore.
+fn old_exes(exe: &Path) -> Vec<PathBuf> {
+    let (Some(dir), Some(name)) = (exe.parent(), exe.file_name().and_then(|n| n.to_str())) else { return Vec::new() };
+    let Ok(entries) = std::fs::read_dir(dir) else { return Vec::new() };
+    entries
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.len() > name.len() && n.starts_with(name) && n.ends_with(".old")))
+        .collect()
+}
+
 /// Met le nouvel exécutable à la place de celui qui tourne (il reste utilisable jusqu'à la fin).
 pub fn install(new_exe: &Path) -> Result<(), String> {
     if is_dev_build() {
         return Err("Version de développement : installe Rust Project depuis une release pour les mises à jour".into());
     }
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    let old = old_exe(&exe);
-    let _ = std::fs::remove_file(&old);
+    let mut old = old_exe(&exe);
+    // L'ancien exécutable peut servir encore : un serveur MCP lancé par Claude avant la mise à
+    // jour précédente tourne depuis lui. On ne peut ni l'effacer ni le remplacer : un autre nom.
+    if old.exists() && std::fs::remove_file(&old).is_err() {
+        old = PathBuf::from(format!("{}.{}.old", exe.display(), crate::model::now()));
+    }
     std::fs::rename(&exe, &old).map_err(|e| format!("Impossible de remplacer {} : {e}", exe.display()))?;
     if let Err(e) = std::fs::copy(new_exe, &exe) {
         let _ = std::fs::rename(&old, &exe);
@@ -301,13 +317,16 @@ pub fn install(new_exe: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// Après un redémarrage : efface l'ancien exécutable (dès que l'ancien processus l'a lâché).
-pub fn cleanup_after_update() {
+/// Au démarrage : efface les anciens exécutables, dès que les processus qui tournaient depuis
+/// eux les ont lâchés. Ceux qui servent encore (un serveur MCP) partiront à un prochain démarrage.
+pub fn cleanup_old_exes() {
+    if is_dev_build() {
+        return;
+    }
     let Ok(exe) = std::env::current_exe() else { return };
-    let old = old_exe(&exe);
     std::thread::spawn(move || {
         for _ in 0..20 {
-            if !old.exists() || std::fs::remove_file(&old).is_ok() {
+            if old_exes(&exe).into_iter().filter(|p| std::fs::remove_file(p).is_err()).count() == 0 {
                 return;
             }
             std::thread::sleep(Duration::from_millis(500));
