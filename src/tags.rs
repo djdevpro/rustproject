@@ -40,6 +40,21 @@ fn mini(ui: &mut Ui, icon: Icon, color: Color32, name: &str) -> bool {
 fn chip(ui: &mut Ui, label: &str, color: Color32, star: Option<bool>, ai: Option<f32>, removable: bool, tip: &str) -> Option<Click> {
     let t = Tokens::get(ui.ctx());
     let mut out = None;
+    // Sa largeur, calculée avant de la poser : une `Frame` dans une rangée qui passe à la ligne ne
+    // va pas à la ligne d'elle-même, elle déborde (et le panneau avec). Le nom trop long est coupé.
+    let font = egui::FontId::proportional(12.5);
+    let pct = ai.map(|w| format!("{:.0} %", w * 100.0));
+    let extras = 16.0 + 2.0
+        + if star.is_some() { 20.0 } else { 0.0 }
+        + pct.as_ref().map_or(0.0, |p| ui.painter().layout_no_wrap(p.clone(), egui::FontId::proportional(11.0), t.faint).size().x + 4.0)
+        + if removable { 20.0 } else { 0.0 };
+    let row = ui.max_rect().width();
+    let label = widgets::elide_end(ui.painter(), label, &font, (row - extras).max(40.0));
+    let width = extras + ui.painter().layout_no_wrap(label.clone(), font, t.ink_strong).size().x;
+    if width > ui.available_size_before_wrap().x && ui.cursor().min.x > ui.max_rect().min.x + 1.0 {
+        ui.end_row();
+    }
+    let label = label.as_str();
     let fill = if ai.is_some() { Color32::TRANSPARENT } else { tint(color, 0.16) };
     let stroke = Stroke::new(1.0, tint(color, if ai.is_some() { 0.6 } else { 0.32 }));
     let resp = Frame::new().fill(fill).stroke(stroke).corner_radius(12).inner_margin(Margin { left: 8, right: 6, top: 2, bottom: 2 }).show(ui, |ui| {
@@ -59,8 +74,8 @@ fn chip(ui: &mut Ui, label: &str, color: Color32, star: Option<bool>, ai: Option
             } else {
                 ui.label(text);
             }
-            if let Some(w) = ai {
-                ui.label(RichText::new(format!("{:.0} %", w * 100.0)).size(11.0).color(t.faint));
+            if let Some(p) = &pct {
+                ui.label(RichText::new(p).size(11.0).color(t.faint));
             }
             if removable && mini(ui, Icon::X, t.muted, &tf("Retirer {0}", &[("0", &label)])) {
                 out = Some(Click::Remove);
