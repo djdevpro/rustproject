@@ -230,7 +230,7 @@ fn project_card(ui: &mut Ui, data: &Data, st: &mut UiState, i: usize, pa: &Proje
 /// Le fil combiné : les fichiers de tous les projets, par tranche de temps.
 fn feed(ui: &mut Ui, data: &Data, rows: &[(usize, &ProjectActivity)], act: &mut Vec<Action>) {
     let mut all: Vec<(usize, &FileHit)> = rows.iter().flat_map(|&(i, pa)| pa.files.iter().map(move |f| (i, f))).collect();
-    all.sort_by(|a, b| b.1.mtime.cmp(&a.1.mtime));
+    all.sort_by_key(|(_, f)| std::cmp::Reverse(f.mtime));
     let now = crate::model::now();
     let mut bucket = None;
     ui.spacing_mut().item_spacing.y = 0.0;

@@ -187,7 +187,7 @@ pub fn collect(jobs: &[Job], excludes: &[String], window: Window, now: u64) -> S
             git: first.and_then(git_info),
         });
     }
-    projects.sort_by(|a, b| b.last.cmp(&a.last));
+    projects.sort_by_key(|p| std::cmp::Reverse(p.last));
     Snapshot { at: now, projects }
 }
 

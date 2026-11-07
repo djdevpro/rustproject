@@ -421,8 +421,8 @@ fn review_step(ui: &mut Ui, data: &Data, scan: &ScanResult, s: &mut SetupState, 
     };
     // « Faire avec l'IA » : les dossiers cochés partent vers l'outil de code choisi (Claude Code
     // par défaut), qui crée les fiches par le serveur MCP.
-    if k > 0 {
-        if let Some(l) = data.ai_launcher() {
+    if k > 0
+        && let Some(l) = data.ai_launcher() {
             let name = &data.launchers[l].name;
             ui.add_space(12.0);
             ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
@@ -435,7 +435,6 @@ fn review_step(ui: &mut Ui, data: &Data, scan: &ScanResult, s: &mut SetupState, 
                 });
             });
         }
-    }
     let (back, go) = footer(ui, Some(tr("Retour")), &primary, true);
     if back {
         s.step = Step::Where;
