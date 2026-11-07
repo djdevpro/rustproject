@@ -24,7 +24,7 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>, p
         widgets::draggable(ScrollArea::vertical()).id_salt("panel-scroll").auto_shrink(false).show(ui, |ui| {
             widgets::scroll_content(ui, |ui| {
                 header(ui, data, p, act);
-                ui.add_space(16.0);
+                ui.add_space(6.0);
                 launchers(ui, data, st, p, act);
                 ui.add_space(10.0);
                 let tabs = [(PanelTab::Summary, tr("Résumé")), (PanelTab::Activity, tr("Activité")), (PanelTab::Resources, tr("Ressources")), (PanelTab::Edit, tr("Modifier"))];
@@ -45,18 +45,19 @@ fn header(ui: &mut Ui, data: &Data, p: usize, act: &mut Vec<Action>) {
     let t = Tokens::get(ui.ctx());
     let project = &data.projects[p];
     ui.horizontal_top(|ui| {
-        ui.spacing_mut().item_spacing.x = 14.0;
-        crate::logo::tile(ui, project, t.accent_ink, 52.0);
-        // Place réservée à droite pour les deux boutons (focus, fermer).
-        let text_w = (ui.available_width() - 84.0).max(80.0);
+        ui.spacing_mut().item_spacing.x = 12.0;
+        crate::logo::tile(ui, project, t.accent_ink, 46.0);
+        // Place réservée à droite pour le bouton fermer.
+        let text_w = (ui.available_width() - 44.0).max(80.0);
         ui.vertical(|ui| {
-            ui.spacing_mut().item_spacing.y = 4.0;
+            ui.spacing_mut().item_spacing.y = 6.0;
             ui.set_width(text_w);
-            ui.add(egui::Label::new(RichText::new(&project.name).font(FontId::new(26.0, crate::theme::bold())).color(t.ink_strong)).truncate());
-            // Le résultat visé, ou à défaut la description en une phrase.
-            let subtitle = if project.outcome.is_empty() { &project.description } else { &project.outcome };
-            ui.add(egui::Label::new(RichText::new(subtitle).size(15.0).color(t.muted)).truncate()).on_hover_text(&project.description);
-            ui.add_space(4.0);
+            // Le nom en entier (sur deux lignes s'il le faut). La description est juste en
+            // dessous, dans « En une phrase » ; ici, seulement le résultat visé s'il y en a un.
+            ui.add(egui::Label::new(RichText::new(&project.name).font(FontId::new(23.0, crate::theme::bold())).color(t.ink_strong)).wrap());
+            if !project.outcome.trim().is_empty() {
+                ui.label(RichText::new(tf("Résultat visé : {0}", &[("0", &project.outcome)])).size(13.5).color(t.muted));
+            }
             // L'état et l'attention se changent d'un clic sur leur pastille.
             ui.horizontal_wrapped(|ui| {
                 ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
@@ -78,8 +79,8 @@ fn header(ui: &mut Ui, data: &Data, p: usize, act: &mut Vec<Action>) {
     });
 }
 
-/// Les lanceurs en tuiles, côte à côte ; la rangée défile à l'horizontale (molette, barre, ou
-/// en glissant à la souris).
+/// Les lanceurs en boutons, avec leur nom complet : ils passent à la ligne, rien ne défile ni ne
+/// se coupe.
 fn launchers(ui: &mut Ui, data: &Data, st: &UiState, p: usize, act: &mut Vec<Action>) {
     let ids = data.launchers_of(p);
     let favorite = data.favorite_of(p);
@@ -92,9 +93,10 @@ fn launchers(ui: &mut Ui, data: &Data, st: &UiState, p: usize, act: &mut Vec<Act
             }
         });
     });
-    widgets::draggable(ScrollArea::horizontal()).id_salt(("launcher-row", p)).auto_shrink([false, true]).show(ui, |ui| {
-        ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 6.0;
+    ui.add_space(2.0);
+    {
+        ui.horizontal_wrapped(|ui| {
+            ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
             for &id in &ids {
                 let l = &data.launchers[id];
                 let is_default = data.default_launchers.contains(&id);
@@ -105,7 +107,7 @@ fn launchers(ui: &mut Ui, data: &Data, st: &UiState, p: usize, act: &mut Vec<Act
                 if flash > 0.0 {
                     ui.ctx().request_repaint();
                 }
-                let resp = widgets::launcher_tile(ui, l, Some(id) == favorite, flash);
+                let resp = widgets::launcher_pill(ui, l, Some(id) == favorite, flash);
                 if resp.clicked() {
                     act.push(Action::Launch(p, id));
                 }
@@ -134,13 +136,12 @@ fn launchers(ui: &mut Ui, data: &Data, st: &UiState, p: usize, act: &mut Vec<Act
                     }
                 });
             }
-            if widgets::add_tile(ui, tr("Ajouter un lanceur")).clicked() {
+            if widgets::add_pill(ui, tr("Ajouter un lanceur")).clicked() {
                 act.push(Action::OpenGallery(Some(p)));
             }
         });
-        // De la place sous les tuiles pour la barre de défilement horizontale.
-        ui.add_space(12.0);
-    });
+    }
+    ui.add_space(4.0);
 }
 
 fn summary(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<Action>) {

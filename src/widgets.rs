@@ -73,10 +73,10 @@ pub fn tone_colors(t: &Tokens, tone: Tone) -> (Color32, Color32, Stroke) {
     match tone {
         Tone::Good => (t.good_bg, t.good_fg, Stroke::NONE),
         Tone::Neutral => (t.neutral_bg, t.neutral_fg, Stroke::NONE),
-        Tone::Accent => (t.accent_soft, t.accent_ink, Stroke::new(1.0, t.accent)),
+        Tone::Accent => (t.accent_soft, if t.dark { t.accent_ink } else { t.on_accent }, Stroke::new(1.0, t.accent)),
         Tone::Solid => (t.accent, t.on_accent, Stroke::NONE),
-        Tone::Danger => (tint(t.danger, 0.16), t.danger, Stroke::NONE),
-        Tone::Custom(c) => (tint(c, 0.17), if t.dark { c } else { mix(c, Color32::BLACK, 0.35) }, Stroke::NONE),
+        Tone::Danger => (theme::soft(t, t.danger, 0.16), t.danger, Stroke::NONE),
+        Tone::Custom(c) => (theme::soft(t, c, 0.17), if t.dark { c } else { mix(c, Color32::BLACK, 0.5) }, Stroke::NONE),
     }
 }
 
@@ -688,7 +688,7 @@ pub fn section_header(ui: &mut Ui, text: &str, count: Option<&str>) {
 /// Carré arrondi teinté portant une icône.
 pub fn icon_tile(ui: &mut Ui, icon: Icon, color: Color32, size: f32) -> Response {
     let (rect, resp) = ui.allocate_exact_size(vec2(size, size), Sense::hover());
-    ui.painter().rect_filled(rect, CornerRadius::same((size * 0.24) as u8), tint(color, 0.16));
+    ui.painter().rect_filled(rect, CornerRadius::same((size * 0.24) as u8), theme::soft(&tok(ui), color, 0.16));
     icons::paint(ui.painter(), rect.center(), icon, size * 0.56, color);
     resp
 }
@@ -752,36 +752,6 @@ pub fn vsep(ui: &mut Ui, height: f32) {
 
 // ---- lanceurs ----------------------------------------------------------------------------------
 
-pub const TILE: Vec2 = vec2(70.0, 68.0);
-
-/// Un lanceur en tuile compacte : icône au-dessus, petit libellé dessous. Le favori est plein,
-/// couleur d'accent. `flash` (0 → 1) fait briller la tuile juste après un lancement.
-pub fn launcher_tile(ui: &mut Ui, l: &Launcher, favorite: bool, flash: f32) -> Response {
-    let t = tok(ui);
-    let (rect, resp) = ui.allocate_exact_size(TILE, Sense::click());
-    resp.widget_info(|| WidgetInfo::labeled(Role::Button, true, &l.name));
-    let hover = ui.ctx().animate_bool(resp.id.with("hover"), resp.hovered());
-    let rect = if resp.is_pointer_button_down_on() { rect.translate(vec2(0.0, 1.0)) } else { rect };
-    let p = ui.painter();
-    let (fill, stroke, fg) = if favorite {
-        (mix(t.accent, t.accent_hover, hover), Stroke::NONE, t.on_accent)
-    } else {
-        (tint(t.ink, 0.06 * hover), Stroke::new(1.0, mix(t.line, t.line_strong, hover)), mix(t.muted, t.ink_strong, hover))
-    };
-    p.rect(rect, CornerRadius::same(R_CTRL + 2), fill, stroke, StrokeKind::Inside);
-    let tile = Rect::from_center_size(pos2(rect.center().x, rect.top() + 24.0), vec2(30.0, 30.0));
-    let (tile_bg, icon_color) = if favorite { (tint(t.on_accent, 0.14), t.on_accent) } else { (tint(l.color, 0.18), l.color) };
-    p.rect_filled(tile, CornerRadius::same(7), tile_bg);
-    paint_launcher_icon(ui, l, tile, 16.0, icon_color);
-    let font = FontId::new(11.0, theme::medium());
-    let label = elide_end(p, &l.name, &font, rect.width() - 8.0);
-    p.text(pos2(rect.center().x, rect.bottom() - 13.0), Align2::CENTER_CENTER, label, font, fg);
-    if flash > 0.0 {
-        p.rect_stroke(rect.expand(2.0 + 4.0 * (1.0 - flash)), CornerRadius::same(R_CTRL + 4), Stroke::new(2.0, tint(t.accent, flash)), StrokeKind::Outside);
-    }
-    resp.on_hover_cursor(CursorIcon::PointingHand)
-}
-
 /// L'icône d'un lanceur dans `rect` : son logo SVG s'il en a un, sinon son icône Lucide.
 pub fn paint_launcher_icon(ui: &Ui, l: &crate::model::Launcher, rect: Rect, size: f32, color: Color32) {
     if l.svg.is_empty() {
@@ -801,20 +771,55 @@ pub fn launcher_icon_tile(ui: &mut Ui, l: &crate::model::Launcher, size: f32) ->
     resp
 }
 
-/// La tuile « + » au bout de la rangée de lanceurs.
-pub fn add_tile(ui: &mut Ui, label: &str) -> Response {
+/// Un lanceur en bouton : son icône (ou son logo) et son nom complet. Le favori prend la couleur
+/// d'accent. La largeur est connue avant la pose : dans une rangée qui passe à la ligne, le bouton
+/// va à la ligne au lieu de déborder.
+pub fn launcher_pill(ui: &mut Ui, l: &Launcher, favorite: bool, flash: f32) -> Response {
     let t = tok(ui);
-    let (rect, resp) = ui.allocate_exact_size(TILE, Sense::click());
+    let font = FontId::new(13.5, theme::medium());
+    let max_text = (ui.max_rect().width() - 44.0).max(60.0);
+    let label = elide_end(ui.painter(), &l.name, &font, max_text);
+    let text_w = width_of(ui.painter(), &label, &font);
+    let (rect, resp) = ui.allocate_exact_size(vec2(text_w + 43.0, PILL_H), Sense::click());
+    resp.widget_info(|| WidgetInfo::labeled(Role::Button, true, &l.name));
+    let hover = ui.ctx().animate_bool(resp.id.with("hover"), resp.hovered());
+    let rect = if resp.is_pointer_button_down_on() { rect.translate(vec2(0.0, 1.0)) } else { rect };
+    let p = ui.painter();
+    let (fill, stroke, fg, icon_color) = if favorite {
+        (mix(t.accent, t.accent_hover, hover), Stroke::NONE, t.on_accent, t.on_accent)
+    } else {
+        (mix(t.surface, t.raised, hover), Stroke::new(1.0, mix(t.line_strong, t.ink, hover * 0.4)), t.ink_strong, l.color)
+    };
+    p.rect(rect, CornerRadius::same(R_CTRL), fill, stroke, StrokeKind::Inside);
+    let icon = Rect::from_center_size(pos2(rect.left() + 20.0, rect.center().y), vec2(18.0, 18.0));
+    paint_launcher_icon(ui, l, icon, 16.0, icon_color);
+    p.text(pos2(rect.left() + 34.0, rect.center().y), Align2::LEFT_CENTER, label, font, fg);
+    if flash > 0.0 {
+        p.rect_stroke(rect.expand(2.0 + 4.0 * (1.0 - flash)), CornerRadius::same(R_CTRL + 2), Stroke::new(2.0, tint(t.accent, flash)), StrokeKind::Outside);
+    }
+    resp.on_hover_cursor(CursorIcon::PointingHand)
+}
+
+/// La hauteur d'un lanceur en bouton.
+pub const PILL_H: f32 = 34.0;
+
+/// Le bouton « + Ajouter » au bout des lanceurs en boutons.
+pub fn add_pill(ui: &mut Ui, label: &str) -> Response {
+    let t = tok(ui);
+    let font = FontId::new(13.5, theme::medium());
+    let text = tr("Ajouter");
+    let text_w = width_of(ui.painter(), text, &font);
+    let (rect, resp) = ui.allocate_exact_size(vec2(text_w + 40.0, PILL_H), Sense::click());
     resp.widget_info(|| WidgetInfo::labeled(Role::Button, true, label));
     let hover = ui.ctx().animate_bool(resp.id.with("hover"), resp.hovered());
-    let color = mix(t.faint, t.accent_ink, hover);
+    let color = mix(t.muted, t.accent_ink, hover);
     let p = ui.painter();
-    p.rect_filled(rect, CornerRadius::same(R_CTRL + 2), tint(t.accent, 0.06 * hover));
+    p.rect_filled(rect, CornerRadius::same(R_CTRL), tint(t.accent, 0.08 * hover));
     let r = rect.shrink(0.5);
     let points = [r.left_top(), r.right_top(), r.right_bottom(), r.left_bottom(), r.left_top()];
     p.extend(Shape::dashed_line(&points, Stroke::new(1.0, mix(t.line_strong, t.accent, hover)), 4.0, 3.0));
-    icons::paint(p, pos2(rect.center().x, rect.top() + 24.0), Icon::Plus, 20.0, color);
-    p.text(pos2(rect.center().x, rect.bottom() - 13.0), Align2::CENTER_CENTER, tr("Ajouter"), FontId::new(11.0, theme::medium()), color);
+    icons::paint(p, pos2(rect.left() + 18.0, rect.center().y), Icon::Plus, 16.0, color);
+    p.text(pos2(rect.left() + 31.0, rect.center().y), Align2::LEFT_CENTER, text, font, color);
     resp.on_hover_text(label).on_hover_cursor(CursorIcon::PointingHand)
 }
 

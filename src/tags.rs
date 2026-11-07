@@ -55,7 +55,7 @@ fn chip(ui: &mut Ui, label: &str, color: Color32, star: Option<bool>, ai: Option
         ui.end_row();
     }
     let label = label.as_str();
-    let fill = if ai.is_some() { Color32::TRANSPARENT } else { tint(color, 0.16) };
+    let fill = if ai.is_some() { Color32::TRANSPARENT } else { theme::soft(&t, color, 0.16) };
     let stroke = Stroke::new(1.0, tint(color, if ai.is_some() { 0.6 } else { 0.32 }));
     let resp = Frame::new().fill(fill).stroke(stroke).corner_radius(12).inner_margin(Margin { left: 8, right: 6, top: 2, bottom: 2 }).show(ui, |ui| {
         ui.spacing_mut().item_spacing.x = 4.0;

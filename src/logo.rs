@@ -13,7 +13,7 @@ use crate::app::ProjectDraft;
 use crate::i18n::tr;
 use crate::icons::{self, Icon};
 use crate::model::{Logo, Project};
-use crate::theme::{Tokens, tint};
+use crate::theme::Tokens;
 use crate::widgets::{self, Kind};
 
 /// Le côté le plus long d'une image importée (le logo s'affiche à 60 px au plus).
@@ -101,7 +101,7 @@ pub fn tile(ui: &mut Ui, p: &Project, color: Color32, size: f32) -> Response {
 
 fn tile_of(ui: &mut Ui, logo: &Logo, icon: Icon, color: Color32, size: f32) -> Response {
     let (rect, resp) = ui.allocate_exact_size(vec2(size, size), Sense::hover());
-    ui.painter().rect_filled(rect, CornerRadius::same((size * 0.24) as u8), tint(color, 0.16));
+    ui.painter().rect_filled(rect, CornerRadius::same((size * 0.24) as u8), crate::theme::soft(&Tokens::get(ui.ctx()), color, 0.16));
     paint_logo(ui, logo, icon, rect.center(), size * 0.56, color);
     resp
 }

@@ -70,15 +70,15 @@ impl Accent {
         let s = |accent, hover, ink, soft, on| AccentSet { accent: hex(accent), hover: hex(hover), ink: hex(ink), soft: hex(soft), on: hex(on) };
         match (self, dark) {
             (Self::Amber, true) => s(0xf4a945, 0xffbb62, 0xf6b65c, 0x4a3215, 0x1d1407),
-            (Self::Amber, false) => s(0xf0a03a, 0xf6b052, 0xa35f08, 0xfbe5c4, 0x1d1407),
+            (Self::Amber, false) => s(0xf7a80d, 0xffbb33, 0x8a4b00, 0xffd166, 0x1d1407),
             (Self::Coral, true) => s(0xff7f66, 0xff9883, 0xff9a85, 0x4a2219, 0x1f0c07),
-            (Self::Coral, false) => s(0xf26b52, 0xf6826c, 0xb8432d, 0xfde0d9, 0x1f0c07),
+            (Self::Coral, false) => s(0xf2603f, 0xf57a5e, 0xa3321a, 0xffbcab, 0x1f0c07),
             (Self::Green, true) => s(0x6fcf8e, 0x86dba2, 0x8fdca6, 0x1f3a28, 0x07140c),
-            (Self::Green, false) => s(0x46ad6a, 0x58bd7a, 0x23744a, 0xd8f0df, 0x07140c),
+            (Self::Green, false) => s(0x3fa862, 0x52b873, 0x1a6438, 0xb2e2c0, 0x07140c),
             (Self::Blue, true) => s(0x6aa6ff, 0x84b6ff, 0x8db9ff, 0x1b2c47, 0x06101f),
-            (Self::Blue, false) => s(0x4a88f0, 0x5f97f3, 0x2459b8, 0xdce8fd, 0x06101f),
+            (Self::Blue, false) => s(0x3f7fee, 0x5a91f1, 0x1b4ea6, 0xbad2fb, 0x06101f),
             (Self::Violet, true) => s(0xb48cff, 0xc3a3ff, 0xc6a6ff, 0x33244f, 0x120a20),
-            (Self::Violet, false) => s(0x9668f2, 0xa67ef4, 0x6236c4, 0xebe2fd, 0x120a20),
+            (Self::Violet, false) => s(0x8f5cf0, 0xa176f3, 0x5126ad, 0xd4c4fb, 0x120a20),
         }
     }
 }
@@ -158,29 +158,31 @@ const DARK: Tokens = Tokens {
     info: hex(0x7aa7ff),
 };
 
+// Clair : un fond gris neutre (pas de beige), des filets et des textes secondaires nettement plus
+// foncés, un accent franc avec un texte foncé dessus.
 const LIGHT: Tokens = Tokens {
     dark: false,
-    bg: hex(0xf4f1eb),
+    bg: hex(0xedecea),
     surface: hex(0xffffff),
-    raised: hex(0xf1ede6),
-    input: hex(0xf8f6f2),
-    line: hex(0xe5dfd5),
-    line_strong: hex(0xcdc5b8),
-    ink: hex(0x25211d),
-    ink_strong: hex(0x0f0d0b),
-    muted: hex(0x6b645a),
-    faint: hex(0x9a9286),
-    accent: hex(0xf0a03a),
-    accent_hover: hex(0xf6b052),
-    accent_ink: hex(0xa35f08),
-    accent_soft: hex(0xfbe5c4),
+    raised: hex(0xf1f0ee),
+    input: hex(0xf7f7f5),
+    line: hex(0xd3d0ca),
+    line_strong: hex(0xa29d95),
+    ink: hex(0x1a1816),
+    ink_strong: hex(0x050403),
+    muted: hex(0x48433d),
+    faint: hex(0x6c6760),
+    accent: hex(0xf7a80d),
+    accent_hover: hex(0xffbb33),
+    accent_ink: hex(0x8a4b00),
+    accent_soft: hex(0xffd166),
     on_accent: hex(0x1d1407),
-    good_bg: hex(0xdff0d5),
-    good_fg: hex(0x2f6b1f),
-    neutral_bg: hex(0xebe6de),
-    neutral_fg: hex(0x4b453d),
-    danger: hex(0xc4382d),
-    info: hex(0x2f6fd6),
+    good_bg: hex(0xc6e5b3),
+    good_fg: hex(0x1b500e),
+    neutral_bg: hex(0xdad7d1),
+    neutral_fg: hex(0x2b2722),
+    danger: hex(0xb3261e),
+    info: hex(0x1f5fc8),
 };
 
 fn accent_id() -> Id {
@@ -206,6 +208,12 @@ impl Tokens {
     }
 }
 
+/// Un fond teinté de `c` : en clair, plus soutenu qu'en sombre (sur du blanc, une teinte légère
+/// devient pastel et ne se voit plus).
+pub fn soft(t: &Tokens, c: Color32, alpha: f32) -> Color32 {
+    tint(c, if t.dark { alpha } else { (alpha * 1.8).min(1.0) })
+}
+
 /// `c` avec une opacité `alpha` (0–1).
 pub fn tint(c: Color32, alpha: f32) -> Color32 {
     Color32::from_rgba_unmultiplied(c.r(), c.g(), c.b(), (alpha.clamp(0.0, 1.0) * 255.0).round() as u8)
@@ -219,11 +227,11 @@ pub fn mix(a: Color32, b: Color32, t: f32) -> Color32 {
 }
 
 pub fn shadow(t: &Tokens) -> Shadow {
-    Shadow { offset: [0, 12], blur: 32, spread: 0, color: Color32::from_black_alpha(if t.dark { 160 } else { 45 }) }
+    Shadow { offset: [0, 12], blur: 32, spread: 0, color: Color32::from_black_alpha(if t.dark { 160 } else { 70 }) }
 }
 
 pub fn scrim(t: &Tokens) -> Color32 {
-    Color32::from_black_alpha(if t.dark { 150 } else { 90 })
+    Color32::from_black_alpha(if t.dark { 150 } else { 115 })
 }
 
 // ---- mesures -----------------------------------------------------------------------------------
