@@ -919,5 +919,21 @@
   "Seule exception : ce qui est vraiment impossible sans moi (une décision à prendre, un accès à donner) reste à faire ; explique pourquoi dans le bilan.": "Only exception: anything truly impossible without me (a decision to make, access to grant) stays to do; explain why in the summary.",
   "Termine par un bilan : ce qui est fait, ce qui reste et pourquoi.": "End with a summary: what is done, what remains and why.",
   "… et {n} de plus : la liste complète est dans `voir_projet`.": "… and {n} more: the full list is in `voir_projet`.",
-  "Langue, accent, densité": "Language, accent, density"
+  "Langue, accent, densité": "Language, accent, density",
+  "Dossier du projet : {dossier}": "Project folder: {dossier}",
+  "Voici mes nouveaux projets, trouvés par Rust Project :": "Here are my new projects, found by Rust Project:",
+  "Peux-tu les ajouter avec l'outil MCP `ajouter_projet` du serveur `rust-project` et rédiger leur fiche (description, domaine, technos, mots-clés) ? Lis d'abord leur README et leurs manifestes. Écarte avec `ignorer_dossier` ce qui n'est pas un vrai projet, puis fais-moi un bilan.": "Can you add them with the `ajouter_projet` MCP tool from the `rust-project` server and write their card (description, domain, technologies, keywords)? Read their README and manifests first. Set aside with `ignorer_dossier` anything that is not a real project, then give me a summary.",
+  "… et {n} de plus : appelle `scanner_dossiers` pour la liste complète.": "… and {n} more: call `scanner_dossiers` for the full list.",
+  "Aucun outil de code pour l'IA": "No coding tool for AI",
+  "Ajoute un lanceur du groupe IA dans Configuration › Lanceurs.": "Add a launcher in the AI group in Configuration › Launchers.",
+  "Il ajoute les projets et rédige leurs fiches ; Rust Project se met à jour tout seul.": "It adds the projects and writes their cards; Rust Project updates itself.",
+  "Le message est copié : colle-le dans la conversation.": "The message is copied: paste it into the conversation.",
+  "Nouveaux projets envoyés à {name}": "New projects sent to {name}",
+  "Faire avec l'IA": "Do it with AI",
+  "Avec {0} · modifiable dans Configuration › IA & modèles": "With {0} · can be changed in Configuration › AI & models",
+  "Outil de code": "Coding tool",
+  "Le bouton « Faire avec l'IA » de l'assistant lui envoie tes nouveaux projets, pour qu'il les ajoute et rédige leurs fiches.": "The wizard's « Do it with AI » button sends your new projects to this tool, so it adds them and writes their cards.",
+  "Aucun lanceur dans le groupe IA : ajoutes-en un dans Lanceurs (Claude Code, Codex…).": "No launcher in the AI group: add one in Launchers (Claude Code, Codex…).",
+  "Outil utilisé": "Tool used",
+  "Un autre outil (Codex…) s'ajoute comme lanceur du groupe IA. S'il ne prend pas de premier message ({etapes_url}), le message est copié pour que tu le colles.": "Another tool (Codex…) can be added as a launcher in the AI group. If it does not take a first message ({etapes_url}), the message is copied for you to paste."
 }

@@ -919,5 +919,21 @@
   "Seule exception : ce qui est vraiment impossible sans moi (une décision à prendre, un accès à donner) reste à faire ; explique pourquoi dans le bilan.": "유일한 예외: 제가 없으면 정말 불가능한 일(제가 내려야 할 결정, 제가 줘야 할 접근 권한)은 남겨 두고, 그 이유를 요약에서 설명하세요.",
   "Termine par un bilan : ce qui est fait, ce qui reste et pourquoi.": "마지막에 요약하세요: 완료한 것, 남은 것과 그 이유.",
   "… et {n} de plus : la liste complète est dans `voir_projet`.": "…외 {n}개: 전체 목록은 `voir_projet`에 있습니다.",
-  "Langue, accent, densité": "언어, 강조색, 밀도"
+  "Langue, accent, densité": "언어, 강조색, 밀도",
+  "Dossier du projet : {dossier}": "프로젝트 폴더: {dossier}",
+  "Voici mes nouveaux projets, trouvés par Rust Project :": "Rust Project가 찾은 새 프로젝트입니다:",
+  "Peux-tu les ajouter avec l'outil MCP `ajouter_projet` du serveur `rust-project` et rédiger leur fiche (description, domaine, technos, mots-clés) ? Lis d'abord leur README et leurs manifestes. Écarte avec `ignorer_dossier` ce qui n'est pas un vrai projet, puis fais-moi un bilan.": "`rust-project` 서버의 MCP 도구 `ajouter_projet`로 추가하고 카드(설명, 분야, 기술, 키워드)를 작성해 줄 수 있나요? 먼저 README와 매니페스트를 읽어 주세요. 실제 프로젝트가 아닌 것은 `ignorer_dossier`로 제외한 뒤 요약해 주세요.",
+  "… et {n} de plus : appelle `scanner_dossiers` pour la liste complète.": "… 외 {n}개: 전체 목록은 `scanner_dossiers`를 호출하세요.",
+  "Aucun outil de code pour l'IA": "AI용 코딩 도구가 없습니다",
+  "Ajoute un lanceur du groupe IA dans Configuration › Lanceurs.": "설정 › 실행기에서 AI 그룹의 실행기를 추가하세요.",
+  "Il ajoute les projets et rédige leurs fiches ; Rust Project se met à jour tout seul.": "프로젝트를 추가하고 카드를 작성합니다. Rust Project는 자동으로 업데이트됩니다.",
+  "Le message est copié : colle-le dans la conversation.": "메시지가 복사되었습니다. 대화에 붙여 넣으세요.",
+  "Nouveaux projets envoyés à {name}": "새 프로젝트를 {name}(으)로 보냈습니다",
+  "Faire avec l'IA": "AI로 하기",
+  "Avec {0} · modifiable dans Configuration › IA & modèles": "{0} 사용 · 설정 › AI 및 모델에서 변경 가능",
+  "Outil de code": "코딩 도구",
+  "Le bouton « Faire avec l'IA » de l'assistant lui envoie tes nouveaux projets, pour qu'il les ajoute et rédige leurs fiches.": "마법사의 « AI로 하기 » 버튼은 새 프로젝트를 이 도구로 보내 추가하고 카드를 작성하게 합니다.",
+  "Aucun lanceur dans le groupe IA : ajoutes-en un dans Lanceurs (Claude Code, Codex…).": "AI 그룹에 실행기가 없습니다. 실행기에서 추가하세요(Claude Code, Codex…).",
+  "Outil utilisé": "사용하는 도구",
+  "Un autre outil (Codex…) s'ajoute comme lanceur du groupe IA. S'il ne prend pas de premier message ({etapes_url}), le message est copié pour que tu le colles.": "다른 도구(Codex…)는 AI 그룹의 실행기로 추가할 수 있습니다. 첫 메시지({etapes_url})를 받지 않으면 붙여 넣을 수 있도록 메시지가 복사됩니다."
 }

@@ -919,5 +919,21 @@
   "Seule exception : ce qui est vraiment impossible sans moi (une décision à prendre, un accès à donner) reste à faire ; explique pourquoi dans le bilan.": "Единственное исключение: то, что действительно невозможно без меня (решение, которое должен принять я, доступ, который должен дать я), остаётся невыполненным; объясни причину в итоге.",
   "Termine par un bilan : ce qui est fait, ce qui reste et pourquoi.": "Закончи итогом: что сделано, что осталось и почему.",
   "… et {n} de plus : la liste complète est dans `voir_projet`.": "… и ещё {n}: полный список — в `voir_projet`.",
-  "Langue, accent, densité": "Язык, акцент, плотность"
+  "Langue, accent, densité": "Язык, акцент, плотность",
+  "Dossier du projet : {dossier}": "Папка проекта: {dossier}",
+  "Voici mes nouveaux projets, trouvés par Rust Project :": "Вот мои новые проекты, найденные Rust Project:",
+  "Peux-tu les ajouter avec l'outil MCP `ajouter_projet` du serveur `rust-project` et rédiger leur fiche (description, domaine, technos, mots-clés) ? Lis d'abord leur README et leurs manifestes. Écarte avec `ignorer_dossier` ce qui n'est pas un vrai projet, puis fais-moi un bilan.": "Можешь добавить их инструментом MCP `ajouter_projet` сервера `rust-project` и составить их карточки (описание, область, технологии, ключевые слова)? Сначала прочитай их README и манифесты. Отложи через `ignorer_dossier` то, что не является настоящим проектом, а затем подведи итог.",
+  "… et {n} de plus : appelle `scanner_dossiers` pour la liste complète.": "… и ещё {n}: вызови `scanner_dossiers`, чтобы получить полный список.",
+  "Aucun outil de code pour l'IA": "Нет инструмента кода для ИИ",
+  "Ajoute un lanceur du groupe IA dans Configuration › Lanceurs.": "Добавь ярлык запуска из группы ИИ в Настройки › Ярлыки запуска.",
+  "Il ajoute les projets et rédige leurs fiches ; Rust Project se met à jour tout seul.": "Он добавит проекты и составит их карточки; Rust Project обновится сам.",
+  "Le message est copié : colle-le dans la conversation.": "Сообщение скопировано: вставь его в разговор.",
+  "Nouveaux projets envoyés à {name}": "Новые проекты отправлены в {name}",
+  "Faire avec l'IA": "Сделать с ИИ",
+  "Avec {0} · modifiable dans Configuration › IA & modèles": "С {0} · можно изменить в Настройки › ИИ и модели",
+  "Outil de code": "Инструмент кода",
+  "Le bouton « Faire avec l'IA » de l'assistant lui envoie tes nouveaux projets, pour qu'il les ajoute et rédige leurs fiches.": "Кнопка « Сделать с ИИ » в мастере отправляет ему твои новые проекты, чтобы он добавил их и составил карточки.",
+  "Aucun lanceur dans le groupe IA : ajoutes-en un dans Lanceurs (Claude Code, Codex…).": "В группе ИИ нет ярлыков запуска: добавь один в разделе Ярлыки запуска (Claude Code, Codex…).",
+  "Outil utilisé": "Используемый инструмент",
+  "Un autre outil (Codex…) s'ajoute comme lanceur du groupe IA. S'il ne prend pas de premier message ({etapes_url}), le message est copié pour que tu le colles.": "Другой инструмент (Codex…) добавляется как ярлык запуска группы ИИ. Если он не принимает первое сообщение ({etapes_url}), сообщение копируется, чтобы ты его вставил."
 }

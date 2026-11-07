@@ -606,6 +606,13 @@ fn sans_modele_ollama_le_scan_attend_un_choix() {
     }
     h.run_steps(3);
     assert!(h.state().data.projects.is_empty(), "rien de créé sans modèle choisi");
+    // Le nouveau projet attend sa fiche : l'assistant s'ouvre tout seul à l'étape « Vérifier ».
+    assert!(
+        matches!(&h.state().st.modal, Some(crate::app::Modal::Setup(s)) if s.step == crate::screens::setup::Step::Review),
+        "l'assistant s'ouvre sur les nouveaux projets"
+    );
+    h.state_mut().st.modal = None;
+    h.run_steps(2);
     h.get_by_label("Créer les 1 fiches (règles)").click_accesskit();
     h.run_steps(2);
     assert_eq!(h.state().data.projects.len(), 1);

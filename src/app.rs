@@ -465,6 +465,8 @@ pub enum Action {
     SetupScan,
     /// Créer les fiches des dossiers gardés, écarter ceux décochés.
     SetupCreate { keep: Vec<String>, ignore: Vec<String>, with_ai: bool },
+    /// « Faire avec l'IA » : les dossiers cochés partent vers l'outil de code choisi.
+    SetupWithAi(Vec<String>),
     ListGithub,
     /// Les comptes GitHub connectés à la CLI gh.
     ListGithubAccounts,
@@ -526,6 +528,11 @@ pub struct UiState {
     pub scan: Option<ScanResult>,
     /// Un scan demandé pendant qu'un autre tournait : il repart à la fin de celui-ci.
     pub rescan: bool,
+    /// Le scan relancé à la main (double flèche) : à sa fin, l'assistant montre ce qu'il a trouvé.
+    pub review_after_scan: bool,
+    /// Les nouveaux projets déjà proposés dans l'assistant ouvert tout seul : il ne revient pas
+    /// pour eux à chaque scan.
+    pub proposed: Vec<String>,
     pub analysis: Option<Analysis>,
     /// Projets sélectionnés ensemble dans la Bibliothèque (identifiants).
     pub lib_multi: crate::select::MultiSelect<u64>,
@@ -629,6 +636,8 @@ impl Default for UiState {
             scan_count: 0,
             scan: None,
             rescan: false,
+            review_after_scan: false,
+            proposed: Vec::new(),
             analysis: None,
             lib_multi: Default::default(),
             lib_package: None,
@@ -1152,6 +1161,17 @@ impl AtelierApp {
         if screens::setup::scan_finished(&mut self.st, &self.data) {
             return;
         }
+        // De nouveaux projets attendent une fiche : l'assistant s'ouvre tout seul sur eux (une fois
+        // par projet), ou à chaque scan relancé à la main par la double flèche.
+        let asked = std::mem::take(&mut self.st.review_after_scan);
+        let c = &self.data.config;
+        let creates_alone = c.auto_add && ((c.ollama_on && !c.ollama_model.trim().is_empty()) || (!c.mcp_on && !c.ollama_on));
+        let unseen: Vec<String> = self.candidates(false).into_iter().map(|f| f.path).filter(|p| !self.st.proposed.contains(p)).collect();
+        if self.st.modal.is_none() && (asked || (!creates_alone && !unseen.is_empty())) {
+            self.st.proposed.extend(unseen);
+            self.open_setup(crate::screens::setup::Step::Review);
+            return;
+        }
         // Une seule notification par scan : le résultat, ou ce qui attend.
         let mut detail = tf("{likely} projets probables, dont {fresh} pas encore suivis", &[("likely", &likely), ("fresh", &fresh)]);
         match errors.as_slice() {
@@ -1370,6 +1390,8 @@ impl AtelierApp {
                 ui.spacing_mut().item_spacing.x = 0.0;
                 let scanning = self.st.scan_started.is_some();
                 if widgets::icon_button(ui, Icon::RefreshCw, tr("Scanner les dossiers maintenant"), 28.0).clicked() && !scanning {
+                    // À la fin du scan, l'assistant s'ouvre sur ce qui a été trouvé.
+                    self.st.review_after_scan = true;
                     self.actions.push(Action::StartScan);
                 }
                 ui.add_space(6.0);
@@ -2022,6 +2044,47 @@ impl AtelierApp {
                         s.waiting = true;
                         self.st.scan = None;
                         self.actions.push(Action::StartScan);
+                    }
+                }
+                Action::SetupWithAi(paths) => {
+                    let scan_dirs: Vec<Found> = self.st.scan.as_ref().map(|s| s.dirs.iter().filter(|d| paths.contains(&d.path)).cloned().collect()).unwrap_or_default();
+                    match self.data.ai_launcher() {
+                        None => self.toast(Icon::TriangleAlert, tr("Aucun outil de code pour l'IA"), Some(tr("Ajoute un lanceur du groupe IA dans Configuration › Lanceurs.").to_owned())),
+                        Some(l) => {
+                            let found: Vec<(String, String)> = scan_dirs.iter().map(|d| (d.name.clone(), d.path.clone())).collect();
+                            let prompt = model::new_projects_prompt(&found);
+                            // La conversation s'ouvre sur le dossier source des nouveaux projets.
+                            let root = scan_dirs.first().and_then(|d| self.data.config.roots.get(d.root)).map(|r| r.path.clone()).unwrap_or_default();
+                            let host = Project { name: "Rust Project".into(), folders: vec![root], ..Default::default() };
+                            let mut launcher = self.data.launchers[l].clone();
+                            let name = launcher.name.clone();
+                            let with_prompt = launcher.command.contains("{etapes_url}");
+                            launcher.command = launcher.resolve_with(&host, &prompt);
+                            if !with_prompt {
+                                // L'outil ne prend pas de premier message : il est copié, à coller.
+                                ctx.copy_text(prompt.clone());
+                            }
+                            match launch::plan(&launcher, &host) {
+                                Err(why) => self.toast(Icon::TriangleAlert, tf("{name} n'a pas pu être lancé", &[("name", &name)]), Some(why)),
+                                Ok(plan) => {
+                                    self.launched.push(plan.line.clone());
+                                    if !self.dry_run {
+                                        let tx = self.errors_tx.clone();
+                                        let repaint = ctx.clone();
+                                        let who = name.clone();
+                                        if let Err(why) = launch::spawn(&plan, move |err| {
+                                            let _ = tx.send((who, err));
+                                            repaint.request_repaint();
+                                        }) {
+                                            self.toast(Icon::TriangleAlert, tf("{name} n'a pas pu être lancé", &[("name", &name)]), Some(why));
+                                        }
+                                    }
+                                    let detail = if with_prompt { tr("Il ajoute les projets et rédige leurs fiches ; Rust Project se met à jour tout seul.") } else { tr("Le message est copié : colle-le dans la conversation.") };
+                                    self.toast(Icon::Sparkles, tf("Nouveaux projets envoyés à {name}", &[("name", &name)]), Some(detail.to_owned()));
+                                    self.st.modal = None;
+                                }
+                            }
+                        }
                     }
                 }
                 Action::SetupCreate { keep, ignore, with_ai } => {

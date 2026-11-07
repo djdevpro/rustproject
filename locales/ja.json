@@ -919,5 +919,21 @@
   "Seule exception : ce qui est vraiment impossible sans moi (une décision à prendre, un accès à donner) reste à faire ; explique pourquoi dans le bilan.": "唯一の例外：私なしでは本当に不可能なこと（私が下すべき判断、私が与えるべきアクセス）は未完了のまま残し、その理由をまとめで説明する。",
   "Termine par un bilan : ce qui est fait, ce qui reste et pourquoi.": "最後にまとめを書く：完了したこと、残っていることとその理由。",
   "… et {n} de plus : la liste complète est dans `voir_projet`.": "…ほか {n} 件：完全なリストは `voir_projet` にある。",
-  "Langue, accent, densité": "言語、アクセント、密度"
+  "Langue, accent, densité": "言語、アクセント、密度",
+  "Dossier du projet : {dossier}": "プロジェクトのフォルダー：{dossier}",
+  "Voici mes nouveaux projets, trouvés par Rust Project :": "Rust Project が見つけた新しいプロジェクトです：",
+  "Peux-tu les ajouter avec l'outil MCP `ajouter_projet` du serveur `rust-project` et rédiger leur fiche (description, domaine, technos, mots-clés) ? Lis d'abord leur README et leurs manifestes. Écarte avec `ignorer_dossier` ce qui n'est pas un vrai projet, puis fais-moi un bilan.": "`rust-project` サーバーの MCP ツール `ajouter_projet` で追加して、カード（説明、分野、技術、キーワード）を書いてもらえますか？まず README とマニフェストを読んでください。本当のプロジェクトでないものは `ignorer_dossier` で除外し、最後にまとめを教えてください。",
+  "… et {n} de plus : appelle `scanner_dossiers` pour la liste complète.": "… ほか {n} 件：全リストは `scanner_dossiers` で取得してください。",
+  "Aucun outil de code pour l'IA": "AI 用のコーディングツールがありません",
+  "Ajoute un lanceur du groupe IA dans Configuration › Lanceurs.": "設定 › ランチャー で AI グループのランチャーを追加してください。",
+  "Il ajoute les projets et rédige leurs fiches ; Rust Project se met à jour tout seul.": "プロジェクトを追加してカードを書きます。Rust Project は自動で更新されます。",
+  "Le message est copié : colle-le dans la conversation.": "メッセージをコピーしました。会話に貼り付けてください。",
+  "Nouveaux projets envoyés à {name}": "新しいプロジェクトを {name} に送りました",
+  "Faire avec l'IA": "AI に任せる",
+  "Avec {0} · modifiable dans Configuration › IA & modèles": "{0} を使用 · 設定 › AI とモデル で変更できます",
+  "Outil de code": "コーディングツール",
+  "Le bouton « Faire avec l'IA » de l'assistant lui envoie tes nouveaux projets, pour qu'il les ajoute et rédige leurs fiches.": "ウィザードの « AI に任せる » ボタンは、新しいプロジェクトをこのツールに送り、追加とカード作成を任せます。",
+  "Aucun lanceur dans le groupe IA : ajoutes-en un dans Lanceurs (Claude Code, Codex…).": "AI グループにランチャーがありません。ランチャー で追加してください（Claude Code、Codex…）。",
+  "Outil utilisé": "使用するツール",
+  "Un autre outil (Codex…) s'ajoute comme lanceur du groupe IA. S'il ne prend pas de premier message ({etapes_url}), le message est copié pour que tu le colles.": "別のツール（Codex…）は AI グループのランチャーとして追加できます。最初のメッセージ（{etapes_url}）を受け取れない場合は、貼り付け用にメッセージがコピーされます。"
 }

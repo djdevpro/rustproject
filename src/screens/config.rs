@@ -476,6 +476,7 @@ fn ai(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action>) {
             ui.label(RichText::new(tr("Pas d'IA : les dossiers avec un marqueur (.git, Cargo.toml, package.json…) deviennent des projets, décrits par leur manifeste ou leur README.")).size(13.0).color(t.muted));
         }
     });
+    harness_card(ui, data);
     if data.config.ollama_on {
         ollama_card(ui, data, st, act);
         semantic_card(ui, data, st, act);
@@ -500,6 +501,30 @@ fn ai(ui: &mut Ui, data: &mut Data, st: &mut UiState, act: &mut Vec<Action>) {
         });
     }
     ollaya_card(ui, data, st, act);
+}
+
+/// L'outil de code du bouton « Faire avec l'IA » (Claude Code par défaut, Codex…) : un des
+/// lanceurs du groupe IA.
+fn harness_card(ui: &mut Ui, data: &mut Data) {
+    let t = Tokens::get(ui.ctx());
+    widgets::settings_card(ui, tr("Outil de code"), Some(tr("Le bouton « Faire avec l'IA » de l'assistant lui envoie tes nouveaux projets, pour qu'il les ajoute et rédige leurs fiches.")), |ui| {
+        let ai = data.ai_launchers();
+        let Some(current) = data.ai_launcher() else {
+            ui.label(RichText::new(tr("Aucun lanceur dans le groupe IA : ajoutes-en un dans Lanceurs (Claude Code, Codex…).")).size(13.0).color(t.muted));
+            return;
+        };
+        let names: Vec<String> = ai.iter().map(|&i| data.launchers[i].name.clone()).collect();
+        let options: Vec<(usize, &str)> = ai.iter().zip(&names).map(|(&i, n)| (i, n.as_str())).collect();
+        let mut chosen = current;
+        let w = ui.available_width().min(420.0);
+        widgets::labeled(ui, tr("Outil utilisé"), |ui| {
+            widgets::combo(ui, tr("Outil utilisé"), &mut chosen, &options, w);
+        });
+        if chosen != current {
+            data.config.ai_launcher = data.launchers[chosen].name.clone();
+        }
+        ui.label(RichText::new(tr("Un autre outil (Codex…) s'ajoute comme lanceur du groupe IA. S'il ne prend pas de premier message ({etapes_url}), le message est copié pour que tu le colles.")).size(12.5).color(t.muted));
+    });
 }
 
 /// Ollaya : le serveur des modèles de décision, qui classent les projets dans l'ontologie.

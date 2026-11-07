@@ -158,7 +158,7 @@ pub fn show(ctx: &egui::Context, data: &Data, st: &UiState, s: &mut SetupState, 
             Step::Where => where_step(ui, s, list_h, act),
             Step::Scan => scan_step(ui, st, s),
             Step::Review => match &st.scan {
-                Some(scan) => review_step(ui, data, scan, s, list_h),
+                Some(scan) => review_step(ui, data, scan, s, list_h, act),
                 None => scan_step(ui, st, s),
             },
             Step::Create => create_step(ui, data, st, s, act, &mut open),
@@ -335,7 +335,7 @@ fn scan_step(ui: &mut Ui, st: &UiState, s: &mut SetupState) {
 
 // ---- 3. Vérifier -------------------------------------------------------------------------------
 
-fn review_step(ui: &mut Ui, data: &Data, scan: &ScanResult, s: &mut SetupState, list_h: f32) {
+fn review_step(ui: &mut Ui, data: &Data, scan: &ScanResult, s: &mut SetupState, list_h: f32, act: &mut Vec<Action>) {
     let t = Tokens::get(ui.ctx());
     let likely = review_rows(data, scan, false);
     let all = review_rows(data, scan, true);
@@ -419,6 +419,23 @@ fn review_step(ui: &mut Ui, data: &Data, scan: &ScanResult, s: &mut SetupState, 
         1 => tr("Suivant : créer 1 fiche").to_owned(),
         _ => tf("Suivant : créer {0} fiches", &[("0", &k)]),
     };
+    // « Faire avec l'IA » : les dossiers cochés partent vers l'outil de code choisi (Claude Code
+    // par défaut), qui crée les fiches par le serveur MCP.
+    if k > 0 {
+        if let Some(l) = data.ai_launcher() {
+            let name = &data.launchers[l].name;
+            ui.add_space(12.0);
+            ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
+                ui.vertical(|ui| {
+                    if widgets::button(ui, Some(Icon::Sparkles), tr("Faire avec l'IA"), Kind::Secondary).clicked() {
+                        let checked: Vec<String> = s.keep.iter().filter(|p| all.iter().any(|f| f.path == **p)).cloned().collect();
+                        act.push(Action::SetupWithAi(checked));
+                    }
+                    widgets::muted(ui, &tf("Avec {0} · modifiable dans Configuration › IA & modèles", &[("0", name)]));
+                });
+            });
+        }
+    }
     let (back, go) = footer(ui, Some(tr("Retour")), &primary, true);
     if back {
         s.step = Step::Where;

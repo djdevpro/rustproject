@@ -919,5 +919,21 @@
   "Seule exception : ce qui est vraiment impossible sans moi (une décision à prendre, un accès à donner) reste à faire ; explique pourquoi dans le bilan.": "Einzige Ausnahme: Was ohne mich wirklich unmöglich ist (eine Entscheidung, die ich treffen muss, ein Zugang, den ich geben muss), bleibt offen; erkläre im Fazit, warum.",
   "Termine par un bilan : ce qui est fait, ce qui reste et pourquoi.": "Schließe mit einem Fazit: was erledigt ist, was bleibt und warum.",
   "… et {n} de plus : la liste complète est dans `voir_projet`.": "… und {n} weitere: Die vollständige Liste steht in `voir_projet`.",
-  "Langue, accent, densité": "Sprache, Akzent, Dichte"
+  "Langue, accent, densité": "Sprache, Akzent, Dichte",
+  "Dossier du projet : {dossier}": "Projektordner: {dossier}",
+  "Voici mes nouveaux projets, trouvés par Rust Project :": "Hier sind meine neuen Projekte, gefunden von Rust Project:",
+  "Peux-tu les ajouter avec l'outil MCP `ajouter_projet` du serveur `rust-project` et rédiger leur fiche (description, domaine, technos, mots-clés) ? Lis d'abord leur README et leurs manifestes. Écarte avec `ignorer_dossier` ce qui n'est pas un vrai projet, puis fais-moi un bilan.": "Kannst du sie mit dem MCP-Werkzeug `ajouter_projet` des Servers `rust-project` hinzufügen und ihre Karte schreiben (Beschreibung, Bereich, Technologien, Stichwörter)? Lies zuerst ihre README und Manifeste. Lege mit `ignorer_dossier` beiseite, was kein echtes Projekt ist, und gib mir dann eine Zusammenfassung.",
+  "… et {n} de plus : appelle `scanner_dossiers` pour la liste complète.": "… und {n} weitere: Rufe `scanner_dossiers` für die vollständige Liste auf.",
+  "Aucun outil de code pour l'IA": "Kein Code-Werkzeug für die KI",
+  "Ajoute un lanceur du groupe IA dans Configuration › Lanceurs.": "Füge in Konfiguration › Starter einen Starter der Gruppe KI hinzu.",
+  "Il ajoute les projets et rédige leurs fiches ; Rust Project se met à jour tout seul.": "Es fügt die Projekte hinzu und schreibt ihre Karten; Rust Project aktualisiert sich selbst.",
+  "Le message est copié : colle-le dans la conversation.": "Die Nachricht ist kopiert: Füge sie in die Unterhaltung ein.",
+  "Nouveaux projets envoyés à {name}": "Neue Projekte an {name} gesendet",
+  "Faire avec l'IA": "Mit KI erledigen",
+  "Avec {0} · modifiable dans Configuration › IA & modèles": "Mit {0} · änderbar in Konfiguration › KI & Modelle",
+  "Outil de code": "Code-Werkzeug",
+  "Le bouton « Faire avec l'IA » de l'assistant lui envoie tes nouveaux projets, pour qu'il les ajoute et rédige leurs fiches.": "Die Schaltfläche « Mit KI erledigen » des Assistenten schickt ihm deine neuen Projekte, damit es sie hinzufügt und ihre Karten schreibt.",
+  "Aucun lanceur dans le groupe IA : ajoutes-en un dans Lanceurs (Claude Code, Codex…).": "Kein Starter in der Gruppe KI: Füge einen unter Starter hinzu (Claude Code, Codex…).",
+  "Outil utilisé": "Verwendetes Werkzeug",
+  "Un autre outil (Codex…) s'ajoute comme lanceur du groupe IA. S'il ne prend pas de premier message ({etapes_url}), le message est copié pour que tu le colles.": "Ein anderes Werkzeug (Codex…) lässt sich als Starter der Gruppe KI hinzufügen. Nimmt es keine erste Nachricht an ({etapes_url}), wird die Nachricht zum Einfügen kopiert."
 }

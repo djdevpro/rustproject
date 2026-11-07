@@ -919,5 +919,21 @@
   "Seule exception : ce qui est vraiment impossible sans moi (une décision à prendre, un accès à donner) reste à faire ; explique pourquoi dans le bilan.": "Única exceção: o que for realmente impossível sem mim (uma decisão a tomar, um acesso a dar) continua pendente; explique o porquê no resumo.",
   "Termine par un bilan : ce qui est fait, ce qui reste et pourquoi.": "Termine com um resumo: o que está feito, o que falta e por quê.",
   "… et {n} de plus : la liste complète est dans `voir_projet`.": "… e mais {n}: a lista completa está em `voir_projet`.",
-  "Langue, accent, densité": "Idioma, destaque, densidade"
+  "Langue, accent, densité": "Idioma, destaque, densidade",
+  "Dossier du projet : {dossier}": "Pasta do projeto: {dossier}",
+  "Voici mes nouveaux projets, trouvés par Rust Project :": "Aqui estão os meus novos projetos, encontrados pelo Rust Project:",
+  "Peux-tu les ajouter avec l'outil MCP `ajouter_projet` du serveur `rust-project` et rédiger leur fiche (description, domaine, technos, mots-clés) ? Lis d'abord leur README et leurs manifestes. Écarte avec `ignorer_dossier` ce qui n'est pas un vrai projet, puis fais-moi un bilan.": "Podes adicioná-los com a ferramenta MCP `ajouter_projet` do servidor `rust-project` e redigir a ficha deles (descrição, domínio, tecnologias, palavras-chave)? Lê primeiro o README e os manifestos. Põe de lado com `ignorer_dossier` o que não for um projeto real e depois faz-me um resumo.",
+  "… et {n} de plus : appelle `scanner_dossiers` pour la liste complète.": "… e mais {n}: chama `scanner_dossiers` para a lista completa.",
+  "Aucun outil de code pour l'IA": "Nenhuma ferramenta de código para a IA",
+  "Ajoute un lanceur du groupe IA dans Configuration › Lanceurs.": "Adiciona um atalho do grupo IA em Configuração › Atalhos.",
+  "Il ajoute les projets et rédige leurs fiches ; Rust Project se met à jour tout seul.": "Ela adiciona os projetos e redige as fichas; o Rust Project atualiza-se sozinho.",
+  "Le message est copié : colle-le dans la conversation.": "A mensagem foi copiada: cola-a na conversa.",
+  "Nouveaux projets envoyés à {name}": "Novos projetos enviados para {name}",
+  "Faire avec l'IA": "Fazer com a IA",
+  "Avec {0} · modifiable dans Configuration › IA & modèles": "Com {0} · alterável em Configuração › IA e modelos",
+  "Outil de code": "Ferramenta de código",
+  "Le bouton « Faire avec l'IA » de l'assistant lui envoie tes nouveaux projets, pour qu'il les ajoute et rédige leurs fiches.": "O botão « Fazer com a IA » do assistente envia-lhe os teus novos projetos, para que os adicione e redija as fichas.",
+  "Aucun lanceur dans le groupe IA : ajoutes-en un dans Lanceurs (Claude Code, Codex…).": "Nenhum atalho no grupo IA: adiciona um em Atalhos (Claude Code, Codex…).",
+  "Outil utilisé": "Ferramenta usada",
+  "Un autre outil (Codex…) s'ajoute comme lanceur du groupe IA. S'il ne prend pas de premier message ({etapes_url}), le message est copié pour que tu le colles.": "Outra ferramenta (Codex…) pode ser adicionada como atalho do grupo IA. Se não aceitar uma primeira mensagem ({etapes_url}), a mensagem é copiada para a colares."
 }

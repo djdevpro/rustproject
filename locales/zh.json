@@ -919,5 +919,21 @@
   "Seule exception : ce qui est vraiment impossible sans moi (une décision à prendre, un accès à donner) reste à faire ; explique pourquoi dans le bilan.": "唯一的例外：没有我确实无法完成的事（需要我做的决定、需要我提供的权限）保持待办，并在总结中说明原因。",
   "Termine par un bilan : ce qui est fait, ce qui reste et pourquoi.": "最后做个总结：哪些已完成，哪些还剩下，以及原因。",
   "… et {n} de plus : la liste complète est dans `voir_projet`.": "……另有 {n} 项：完整列表见 `voir_projet`。",
-  "Langue, accent, densité": "语言、强调色、密度"
+  "Langue, accent, densité": "语言、强调色、密度",
+  "Dossier du projet : {dossier}": "项目文件夹：{dossier}",
+  "Voici mes nouveaux projets, trouvés par Rust Project :": "这是 Rust Project 找到的我的新项目：",
+  "Peux-tu les ajouter avec l'outil MCP `ajouter_projet` du serveur `rust-project` et rédiger leur fiche (description, domaine, technos, mots-clés) ? Lis d'abord leur README et leurs manifestes. Écarte avec `ignorer_dossier` ce qui n'est pas un vrai projet, puis fais-moi un bilan.": "你能用 `rust-project` 服务器的 MCP 工具 `ajouter_projet` 添加它们，并写好它们的卡片（描述、领域、技术、关键词）吗？先读它们的 README 和清单文件。用 `ignorer_dossier` 排除不是真正项目的文件夹，然后给我一个总结。",
+  "… et {n} de plus : appelle `scanner_dossiers` pour la liste complète.": "…… 还有 {n} 个：调用 `scanner_dossiers` 获取完整列表。",
+  "Aucun outil de code pour l'IA": "没有用于 AI 的编程工具",
+  "Ajoute un lanceur du groupe IA dans Configuration › Lanceurs.": "在 设置 › 启动器 中添加一个 AI 组的启动器。",
+  "Il ajoute les projets et rédige leurs fiches ; Rust Project se met à jour tout seul.": "它会添加项目并写好卡片；Rust Project 会自动更新。",
+  "Le message est copié : colle-le dans la conversation.": "消息已复制：请粘贴到对话中。",
+  "Nouveaux projets envoyés à {name}": "新项目已发送给 {name}",
+  "Faire avec l'IA": "交给 AI",
+  "Avec {0} · modifiable dans Configuration › IA & modèles": "使用 {0} · 可在 设置 › AI 与模型 中更改",
+  "Outil de code": "编程工具",
+  "Le bouton « Faire avec l'IA » de l'assistant lui envoie tes nouveaux projets, pour qu'il les ajoute et rédige leurs fiches.": "向导中的 « 交给 AI » 按钮会把你的新项目发送给它，由它添加并写好卡片。",
+  "Aucun lanceur dans le groupe IA : ajoutes-en un dans Lanceurs (Claude Code, Codex…).": "AI 组中没有启动器：请在 启动器 中添加一个（Claude Code、Codex……）。",
+  "Outil utilisé": "使用的工具",
+  "Un autre outil (Codex…) s'ajoute comme lanceur du groupe IA. S'il ne prend pas de premier message ({etapes_url}), le message est copié pour que tu le colles.": "其他工具（Codex……）可以作为 AI 组的启动器添加。如果它不接受首条消息（{etapes_url}），消息会被复制，供你粘贴。"
 }

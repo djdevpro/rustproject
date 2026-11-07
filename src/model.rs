@@ -412,6 +412,11 @@ impl Launcher {
         }
     }
 
+    /// La commande pour ce projet, avec `prompt` comme premier message (`{etapes_url}`).
+    pub fn resolve_with(&self, project: &Project, prompt: &str) -> String {
+        fill(&self.command.replace("{etapes_url}", &url_encode(prompt)), project)
+    }
+
     /// La commande à montrer (bulle d'aide, aperçu) : comme elle partirait, sauf le premier
     /// message de Claude Code, illisible une fois encodé, qui reste `{etapes_url}`.
     pub fn preview(&self, project: &Project) -> String {
@@ -456,9 +461,13 @@ impl Project {
         let name: &dyn std::fmt::Display = &self.name;
         // La conversation prend le nom du projet (« Atelier - Publier la version ») : Claude Desktop
         // lui laisse renommer un titre qu'il a lui-même généré.
+        // Le dossier est écrit dans le message : la conversation sait où travailler même si
+        // l'outil de code ne l'a pas rattaché.
+        let folder = self.folders.first().cloned().unwrap_or_default();
+        let folder_line = if folder.is_empty() { String::new() } else { tf("Dossier du projet : {dossier}", &[("dossier", &folder)]) + "\n\n" };
         let method = |mark: String| {
             format!(
-                "{}\n1. {}\n2. {}\n3. {}\n4. {mark}\n5. {}\n6. {}",
+                "{folder_line}{}\n1. {}\n2. {}\n3. {}\n4. {mark}\n5. {}\n6. {}",
                 tr("Pour y arriver :"),
                 tf("Nomme d'abord cette conversation « {nom} - [objectif en quelques mots] » avec l'outil `set_session_title` de Claude Desktop (session_id = self).", &[("nom", name)]),
                 tf("Lis la fiche avec l'outil MCP `voir_projet` du serveur `rust-project` (id {id}).", &[("id", id)]),
@@ -525,6 +534,26 @@ pub fn url_encode(s: &str) -> String {
     s.bytes()
         .map(|b| if b.is_ascii_alphanumeric() || b"-_.~".contains(&b) { (b as char).to_string() } else { format!("%{b:02X}") })
         .collect()
+}
+
+/// Le premier message envoyé à l'outil de code par « Faire avec l'IA » : les nouveaux projets
+/// (nom, dossier) à ajouter par le serveur MCP de Rust Project, dans la langue de l'interface.
+/// Autant de projets que le lien en accepte, puis le nombre de ceux qui n'y sont pas.
+pub fn new_projects_prompt(found: &[(String, String)]) -> String {
+    use crate::i18n::{tf, tr};
+    let head = tr("Voici mes nouveaux projets, trouvés par Rust Project :");
+    let ask = tr("Peux-tu les ajouter avec l'outil MCP `ajouter_projet` du serveur `rust-project` et rédiger leur fiche (description, domaine, technos, mots-clés) ? Lis d'abord leur README et leurs manifestes. Écarte avec `ignorer_dossier` ce qui n'est pas un vrai projet, puis fais-moi un bilan.");
+    let build = |list: &[String]| format!("{head}\n{}\n\n{ask}", list.join("\n"));
+    let mut list: Vec<String> = Vec::new();
+    for (k, (name, path)) in found.iter().enumerate() {
+        list.push(format!("- {name} : {path}"));
+        if k > 0 && url_encode(&build(&list)).len() > PROMPT_URL_MAX - 200 {
+            list.pop();
+            list.push(tf("… et {n} de plus : appelle `scanner_dossiers` pour la liste complète.", &[("n", &(found.len() - k))]));
+            break;
+        }
+    }
+    build(&list)
 }
 
 // ---- configuration -----------------------------------------------------------------------------
@@ -629,6 +658,9 @@ pub struct Config {
     pub markers_version: u32,
     /// Dossiers écartés à la main ou par l'agent (copies, sauvegardes…) : le scan ne les relève plus.
     pub ignored: Vec<String>,
+    /// Le lanceur (par son nom) du bouton « Faire avec l'IA » : l'outil de code qui reçoit les
+    /// nouveaux projets. Vide : Claude Code.
+    pub ai_launcher: String,
 }
 
 fn zero() -> u32 {
@@ -760,6 +792,7 @@ impl Default for Config {
             language: None,
             markers_version: MARKERS_VERSION,
             ignored: Vec::new(),
+            ai_launcher: String::new(),
         }
     }
 }
@@ -792,6 +825,19 @@ pub struct Data {
 }
 
 impl Data {
+    /// Les lanceurs qui peuvent servir à « Faire avec l'IA » (groupe IA).
+    pub fn ai_launchers(&self) -> Vec<usize> {
+        (0..self.launchers.len()).filter(|&i| self.launchers[i].group == Group::Ai).collect()
+    }
+
+    /// Le lanceur de « Faire avec l'IA » : celui choisi dans la configuration, sinon Claude Code,
+    /// sinon le premier du groupe IA.
+    pub fn ai_launcher(&self) -> Option<usize> {
+        let ai = self.ai_launchers();
+        let by_name = |n: &str| ai.iter().copied().find(|&i| self.launchers[i].name == n);
+        by_name(&self.config.ai_launcher).or_else(|| by_name("Claude Code")).or_else(|| ai.first().copied())
+    }
+
     /// Un fichier tout neuf : aucun projet, la configuration par défaut.
     pub fn fresh() -> Self {
         let mut data = Self {
