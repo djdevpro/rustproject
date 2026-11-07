@@ -2441,8 +2441,14 @@ impl eframe::App for AtelierApp {
         // ne tourne que tant qu'il est affiché.
         let live = self.st.screen == Screen::Desk && self.st.selected.is_none() && !self.st.live_hidden && !self.data.projects.is_empty();
         if live {
-            let data = &self.data;
-            self.st.live.poll(&ctx, self.st.now, self.st.live_window, || live_jobs(data));
+            if self.dry_run {
+                // En test : aucun dossier lu (un relevé en arrière-plan rendrait les tests
+                // dépendants de sa durée) ; un relevé vide, sauf s'il y en a déjà un.
+                self.st.live.snapshot.get_or_insert_with(Default::default);
+            } else {
+                let data = &self.data;
+                self.st.live.poll(&ctx, self.st.now, self.st.live_window, || live_jobs(data));
+            }
         }
         // Le panneau projet accompagne le bureau et la bibliothèque ; « À revisiter » a sa propre fiche.
         if let Some(p) = self.st.selected.filter(|_| matches!(self.st.screen, Screen::Desk | Screen::Library)) {
