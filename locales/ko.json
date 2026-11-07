@@ -903,5 +903,8 @@
   "Logo du projet": "프로젝트 로고",
   "Remplacer…": "바꾸기…",
   "SVG ou image": "SVG 또는 이미지",
-  "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "SVG는 원래 색을 유지하고 이미지는 128px로 줄어듭니다. 파일을 창에 끌어다 놓을 수도 있습니다."
+  "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "SVG는 원래 색을 유지하고 이미지는 128px로 줄어듭니다. 파일을 창에 끌어다 놓을 수도 있습니다.",
+  "Classement": "분류",
+  "Fiche": "정보",
+  "Suivi": "진행"
 }

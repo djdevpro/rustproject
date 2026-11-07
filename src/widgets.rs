@@ -771,55 +771,51 @@ pub fn launcher_icon_tile(ui: &mut Ui, l: &crate::model::Launcher, size: f32) ->
     resp
 }
 
-/// Un lanceur en bouton : son icône (ou son logo) et son nom complet. Le favori prend la couleur
-/// d'accent. La largeur est connue avant la pose : dans une rangée qui passe à la ligne, le bouton
-/// va à la ligne au lieu de déborder.
-pub fn launcher_pill(ui: &mut Ui, l: &Launcher, favorite: bool, flash: f32) -> Response {
+pub const TILE: Vec2 = vec2(68.0, 66.0);
+
+/// Un lanceur en tuile compacte : icône au-dessus, petit libellé dessous. Le favori est plein,
+/// couleur d'accent. `flash` (0 → 1) fait briller la tuile juste après un lancement.
+pub fn launcher_tile(ui: &mut Ui, l: &Launcher, favorite: bool, flash: f32) -> Response {
     let t = tok(ui);
-    let font = FontId::new(13.5, theme::medium());
-    let max_text = (ui.max_rect().width() - 44.0).max(60.0);
-    let label = elide_end(ui.painter(), &l.name, &font, max_text);
-    let text_w = width_of(ui.painter(), &label, &font);
-    let (rect, resp) = ui.allocate_exact_size(vec2(text_w + 43.0, PILL_H), Sense::click());
+    let (rect, resp) = ui.allocate_exact_size(TILE, Sense::click());
     resp.widget_info(|| WidgetInfo::labeled(Role::Button, true, &l.name));
     let hover = ui.ctx().animate_bool(resp.id.with("hover"), resp.hovered());
     let rect = if resp.is_pointer_button_down_on() { rect.translate(vec2(0.0, 1.0)) } else { rect };
     let p = ui.painter();
-    let (fill, stroke, fg, icon_color) = if favorite {
-        (mix(t.accent, t.accent_hover, hover), Stroke::NONE, t.on_accent, t.on_accent)
+    let (fill, stroke, fg) = if favorite {
+        (mix(t.accent, t.accent_hover, hover), Stroke::NONE, t.on_accent)
     } else {
-        (mix(t.surface, t.raised, hover), Stroke::new(1.0, mix(t.line_strong, t.ink, hover * 0.4)), t.ink_strong, l.color)
+        // Un vrai contour, toujours visible : la tuile se détache du fond.
+        (mix(t.surface, t.raised, hover), Stroke::new(1.0, mix(t.line_strong, t.ink, hover * 0.35)), mix(t.ink, t.ink_strong, hover))
     };
-    p.rect(rect, CornerRadius::same(R_CTRL), fill, stroke, StrokeKind::Inside);
-    let icon = Rect::from_center_size(pos2(rect.left() + 20.0, rect.center().y), vec2(18.0, 18.0));
-    paint_launcher_icon(ui, l, icon, 16.0, icon_color);
-    p.text(pos2(rect.left() + 34.0, rect.center().y), Align2::LEFT_CENTER, label, font, fg);
+    p.rect(rect, CornerRadius::same(R_CTRL + 2), fill, stroke, StrokeKind::Inside);
+    let tile = Rect::from_center_size(pos2(rect.center().x, rect.top() + 24.0), vec2(30.0, 30.0));
+    let (tile_bg, icon_color) = if favorite { (tint(t.on_accent, 0.14), t.on_accent) } else { (tint(l.color, 0.18), l.color) };
+    p.rect_filled(tile, CornerRadius::same(7), tile_bg);
+    paint_launcher_icon(ui, l, tile, 16.0, icon_color);
+    let font = FontId::new(11.0, theme::medium());
+    let label = elide_end(p, &l.name, &font, rect.width() - 8.0);
+    p.text(pos2(rect.center().x, rect.bottom() - 13.0), Align2::CENTER_CENTER, label, font, fg);
     if flash > 0.0 {
-        p.rect_stroke(rect.expand(2.0 + 4.0 * (1.0 - flash)), CornerRadius::same(R_CTRL + 2), Stroke::new(2.0, tint(t.accent, flash)), StrokeKind::Outside);
+        p.rect_stroke(rect.expand(2.0 + 4.0 * (1.0 - flash)), CornerRadius::same(R_CTRL + 4), Stroke::new(2.0, tint(t.accent, flash)), StrokeKind::Outside);
     }
     resp.on_hover_cursor(CursorIcon::PointingHand)
 }
 
-/// La hauteur d'un lanceur en bouton.
-pub const PILL_H: f32 = 34.0;
-
-/// Le bouton « + Ajouter » au bout des lanceurs en boutons.
-pub fn add_pill(ui: &mut Ui, label: &str) -> Response {
+/// La tuile « + » au bout de la rangée de lanceurs.
+pub fn add_tile(ui: &mut Ui, label: &str) -> Response {
     let t = tok(ui);
-    let font = FontId::new(13.5, theme::medium());
-    let text = tr("Ajouter");
-    let text_w = width_of(ui.painter(), text, &font);
-    let (rect, resp) = ui.allocate_exact_size(vec2(text_w + 40.0, PILL_H), Sense::click());
+    let (rect, resp) = ui.allocate_exact_size(TILE, Sense::click());
     resp.widget_info(|| WidgetInfo::labeled(Role::Button, true, label));
     let hover = ui.ctx().animate_bool(resp.id.with("hover"), resp.hovered());
-    let color = mix(t.muted, t.accent_ink, hover);
+    let color = mix(t.faint, t.accent_ink, hover);
     let p = ui.painter();
-    p.rect_filled(rect, CornerRadius::same(R_CTRL), tint(t.accent, 0.08 * hover));
+    p.rect_filled(rect, CornerRadius::same(R_CTRL + 2), tint(t.accent, 0.06 * hover));
     let r = rect.shrink(0.5);
     let points = [r.left_top(), r.right_top(), r.right_bottom(), r.left_bottom(), r.left_top()];
     p.extend(Shape::dashed_line(&points, Stroke::new(1.0, mix(t.line_strong, t.accent, hover)), 4.0, 3.0));
-    icons::paint(p, pos2(rect.left() + 18.0, rect.center().y), Icon::Plus, 16.0, color);
-    p.text(pos2(rect.left() + 31.0, rect.center().y), Align2::LEFT_CENTER, text, font, color);
+    icons::paint(p, pos2(rect.center().x, rect.top() + 24.0), Icon::Plus, 20.0, color);
+    p.text(pos2(rect.center().x, rect.bottom() - 13.0), Align2::CENTER_CENTER, tr("Ajouter"), FontId::new(11.0, theme::medium()), color);
     resp.on_hover_text(label).on_hover_cursor(CursorIcon::PointingHand)
 }
 

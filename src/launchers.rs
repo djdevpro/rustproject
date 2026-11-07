@@ -435,8 +435,8 @@ pub fn editor_form(ui: &mut Ui, d: &mut LauncherDraft, preview: Option<&Project>
             }
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 8.0;
-                widgets::launcher_pill(ui, &l, false, 0.0);
-                widgets::launcher_pill(ui, &l, true, 0.0);
+                widgets::launcher_tile(ui, &l, false, 0.0);
+                widgets::launcher_tile(ui, &l, true, 0.0);
             });
             ui.label(RichText::new(tr("À droite, en favori : il prend la couleur d'accent.")).size(12.0).color(t.faint));
             ui.add_space(6.0);

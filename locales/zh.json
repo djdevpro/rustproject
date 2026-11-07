@@ -903,5 +903,8 @@
   "Logo du projet": "项目徽标",
   "Remplacer…": "替换…",
   "SVG ou image": "SVG 或图片",
-  "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "SVG 保留自身颜色，图片会缩小到 128 px。也可以把文件拖到窗口上。"
+  "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "SVG 保留自身颜色，图片会缩小到 128 px。也可以把文件拖到窗口上。",
+  "Classement": "分类",
+  "Fiche": "资料",
+  "Suivi": "跟进"
 }

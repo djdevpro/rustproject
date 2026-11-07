@@ -46,7 +46,6 @@ fn header(ui: &mut Ui, data: &Data, p: usize, act: &mut Vec<Action>) {
     let project = &data.projects[p];
     ui.horizontal_top(|ui| {
         ui.spacing_mut().item_spacing.x = 12.0;
-        crate::logo::tile(ui, project, t.accent_ink, 46.0);
         // Place réservée à droite pour le bouton fermer.
         let text_w = (ui.available_width() - 44.0).max(80.0);
         ui.vertical(|ui| {
@@ -79,8 +78,7 @@ fn header(ui: &mut Ui, data: &Data, p: usize, act: &mut Vec<Action>) {
     });
 }
 
-/// Les lanceurs en boutons, avec leur nom complet : ils passent à la ligne, rien ne défile ni ne
-/// se coupe.
+/// Les lanceurs en tuiles carrées, qui passent à la ligne (rien ne défile ni ne se cache).
 fn launchers(ui: &mut Ui, data: &Data, st: &UiState, p: usize, act: &mut Vec<Action>) {
     let ids = data.launchers_of(p);
     let favorite = data.favorite_of(p);
@@ -96,7 +94,7 @@ fn launchers(ui: &mut Ui, data: &Data, st: &UiState, p: usize, act: &mut Vec<Act
     ui.add_space(2.0);
     {
         ui.horizontal_wrapped(|ui| {
-            ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
+            ui.spacing_mut().item_spacing = vec2(5.0, 5.0);
             for &id in &ids {
                 let l = &data.launchers[id];
                 let is_default = data.default_launchers.contains(&id);
@@ -107,7 +105,7 @@ fn launchers(ui: &mut Ui, data: &Data, st: &UiState, p: usize, act: &mut Vec<Act
                 if flash > 0.0 {
                     ui.ctx().request_repaint();
                 }
-                let resp = widgets::launcher_pill(ui, l, Some(id) == favorite, flash);
+                let resp = widgets::launcher_tile(ui, l, Some(id) == favorite, flash);
                 if resp.clicked() {
                     act.push(Action::Launch(p, id));
                 }
@@ -136,7 +134,7 @@ fn launchers(ui: &mut Ui, data: &Data, st: &UiState, p: usize, act: &mut Vec<Act
                     }
                 });
             }
-            if widgets::add_pill(ui, tr("Ajouter un lanceur")).clicked() {
+            if widgets::add_tile(ui, tr("Ajouter un lanceur")).clicked() {
                 act.push(Action::OpenGallery(Some(p)));
             }
         });
@@ -369,6 +367,24 @@ fn row(ui: &mut Ui, icon: Icon, text: &str, path: bool, actions: usize, add_acti
 
 /// L'onglet « Modifier » : chaque changement est enregistré tout de suite, sans bouton ni
 /// notification.
+/// Un bloc encadré de l'onglet « Modifier », avec son titre ; `add` reçoit la largeur utile.
+fn section<R>(ui: &mut Ui, title: &str, add: impl FnOnce(&mut Ui, f32) -> R) -> R {
+    let t = Tokens::get(ui.ctx());
+    Frame::new()
+        .fill(theme::mix(t.surface, t.bg, 0.45))
+        .stroke(Stroke::new(1.0, t.line))
+        .corner_radius(10)
+        .inner_margin(Margin::same(14))
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.spacing_mut().item_spacing.y = 10.0;
+            ui.label(RichText::new(title).font(FontId::new(15.5, theme::bold())).color(t.ink_strong));
+            let w = ui.available_width();
+            add(ui, w)
+        })
+        .inner
+}
+
 fn edit(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<Action>) {
     let t = Tokens::get(ui.ctx());
     let project = &data.projects[p];
@@ -392,8 +408,8 @@ fn edit(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<Acti
     if st.modal.is_none() {
         crate::logo::take_dropped(ui.ctx(), d, &mut st.logo_error);
     }
-    let w = ui.available_width();
     ui.spacing_mut().item_spacing.y = 12.0;
+    section(ui, tr("Fiche"), |ui, w| {
     widgets::labeled(ui, tr("Nom du projet"), |ui| widgets::text_input(ui, &mut d.name, tr("Nom"), w));
     widgets::labeled(ui, tr("Description (une phrase)"), |ui| widgets::text_input(ui, &mut d.description, tr("Ce qu'est le projet, en une phrase"), w));
     widgets::labeled(ui, tr("Dépôt GitHub"), |ui| {
@@ -409,6 +425,8 @@ fn edit(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<Acti
         });
     });
     widgets::labeled(ui, tr("Résultat recherché"), |ui| widgets::text_input(ui, &mut d.outcome, tr("Ce que tu veux avoir entre les mains"), w));
+    });
+    section(ui, tr("Suivi"), |ui, w| {
     ui.horizontal(|ui| {
         let half = (w - 12.0) / 2.0;
         let statuses: Vec<(Status, &str)> = Status::ALL.iter().map(|s| (*s, s.label())).collect();
@@ -426,15 +444,17 @@ fn edit(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<Acti
     widgets::labeled(ui, tr("Objectif"), |ui| {
         widgets::named(ui.add(egui::TextEdit::multiline(&mut d.objective).desired_rows(3).desired_width(w).margin(Margin::symmetric(12, 8))), egui::Role::MultilineTextInput, tr("Objectif"))
     });
+    });
     // Les tags (plusieurs domaines, l'ontologie) et les mots-clés : enregistrés tout de suite.
-    crate::tags::editor(ui, data, p, &mut st.tag_query, &mut st.tag_new, act);
-    crate::tags::keywords_editor(ui, data, p, &mut st.keyword_input, act);
+    section(ui, tr("Classement"), |ui, _| {
+        crate::tags::editor(ui, data, p, &mut st.tag_query, &mut st.tag_new, act);
+        crate::tags::keywords_editor(ui, data, p, &mut st.keyword_input, act);
+    });
     // L'icône (un bouton qui ouvre le sélecteur), ou un logo à sa place.
-    crate::logo::editor(ui, d, &mut st.logo_paste, &mut st.logo_error, w);
-    ui.horizontal_top(|ui| {
+    section(ui, tr("Apparence"), |ui, w| crate::logo::editor(ui, d, &mut st.logo_paste, &mut st.logo_error, w));
+    section(ui, tr("Dossiers du projet"), |ui, fw| {
         ui.vertical(|ui| {
-            let fw = ui.available_width();
-            widgets::labeled(ui, tr("Dossiers du projet"), |ui| {
+            {
                 let mut remove = None;
                 for (i, folder) in d.folders.iter_mut().enumerate() {
                     ui.horizontal(|ui| {
@@ -451,7 +471,7 @@ fn edit(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<Acti
                 if widgets::link(ui, tr("Ajouter un dossier"), Some(Icon::Plus), 13.5).clicked() {
                     d.folders.push(String::new());
                 }
-            });
+            }
         });
     });
     // Enregistrement automatique : ce qui diffère du projet part tout de suite.

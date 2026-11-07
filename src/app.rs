@@ -2302,7 +2302,15 @@ impl eframe::App for AtelierApp {
                 .resizable(false)
                 .show_separator_line(false)
                 .frame(Frame::new().fill(t.bg).inner_margin(Margin { left: 0, right: 16, top: 16, bottom: 14 }))
-                .show(ui, |ui| panel::show(ui, &self.data, &mut self.st, &mut self.actions, p));
+                .show(ui, |ui| {
+                    // Une zone fixe : un contenu trop large y est coupé au lieu d'élargir le
+                    // panneau (egui décalerait alors la zone centrale par-dessus).
+                    let rect = ui.max_rect();
+                    let mut inner = ui.new_child(egui::UiBuilder::new().max_rect(rect).layout(*ui.layout()));
+                    inner.shrink_clip_rect(rect);
+                    panel::show(&mut inner, &self.data, &mut self.st, &mut self.actions, p);
+                    ui.advance_cursor_after_rect(rect);
+                });
         }
 
         let margin = Margin { left: 24, right: 20, top: 18, bottom: 10 };

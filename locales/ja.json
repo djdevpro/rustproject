@@ -903,5 +903,8 @@
   "Logo du projet": "プロジェクトのロゴ",
   "Remplacer…": "置き換え…",
   "SVG ou image": "SVG または画像",
-  "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "SVG は元の色のまま、画像は 128 px に縮小されます。ファイルをウィンドウにドロップすることもできます。"
+  "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "SVG は元の色のまま、画像は 128 px に縮小されます。ファイルをウィンドウにドロップすることもできます。",
+  "Classement": "分類",
+  "Fiche": "詳細",
+  "Suivi": "進捗"
 }

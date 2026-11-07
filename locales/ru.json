@@ -903,5 +903,8 @@
   "Logo du projet": "Логотип проекта",
   "Remplacer…": "Заменить…",
   "SVG ou image": "SVG или изображение",
-  "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "SVG сохраняет свои цвета, изображение уменьшается до 128 px. Файл можно также перетащить в окно."
+  "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "SVG сохраняет свои цвета, изображение уменьшается до 128 px. Файл можно также перетащить в окно.",
+  "Classement": "Классификация",
+  "Fiche": "Карточка",
+  "Suivi": "Отслеживание"
 }

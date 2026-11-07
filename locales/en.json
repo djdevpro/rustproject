@@ -903,5 +903,8 @@
   "Logo du projet": "Project logo",
   "Remplacer…": "Replace…",
   "SVG ou image": "SVG or image",
-  "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "An SVG keeps its colors, an image is scaled down to 128 px. You can also drop the file on the window."
+  "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "An SVG keeps its colors, an image is scaled down to 128 px. You can also drop the file on the window.",
+  "Classement": "Classification",
+  "Fiche": "Details",
+  "Suivi": "Tracking"
 }

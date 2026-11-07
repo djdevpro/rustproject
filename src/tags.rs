@@ -9,7 +9,7 @@
 //! - Les mots-clés sont libres : ce qu'on taperait pour retrouver le projet. Ils comptent dans la
 //!   recherche et dans l'embedding (la recherche par le sens).
 
-use egui::{Color32, FontId, Frame, Margin, RichText, Sense, Stroke, Ui, vec2};
+use egui::{Color32, Frame, Margin, RichText, Sense, Stroke, Ui, vec2};
 
 use crate::app::{Action, TagNew};
 use crate::i18n::{tf, tr};
@@ -57,8 +57,10 @@ fn chip(ui: &mut Ui, label: &str, color: Color32, star: Option<bool>, ai: Option
     let label = label.as_str();
     let fill = if ai.is_some() { Color32::TRANSPARENT } else { theme::soft(&t, color, 0.16) };
     let stroke = Stroke::new(1.0, tint(color, if ai.is_some() { 0.6 } else { 0.32 }));
-    let resp = Frame::new().fill(fill).stroke(stroke).corner_radius(12).inner_margin(Margin { left: 8, right: 6, top: 2, bottom: 2 }).show(ui, |ui| {
+    let resp = Frame::new().fill(fill).stroke(stroke).corner_radius(12).inner_margin(Margin { left: 8, right: 6, top: 3, bottom: 3 }).show(ui, |ui| {
         ui.spacing_mut().item_spacing.x = 4.0;
+        // Une pastille basse : pas la hauteur d'un champ de saisie.
+        ui.spacing_mut().interact_size.y = 18.0;
         ui.horizontal(|ui| {
             if let Some(main) = star {
                 let name = if main { tr("Domaine principal") } else { tr("En faire le domaine principal") };
@@ -146,10 +148,12 @@ pub fn editor(ui: &mut Ui, data: &Data, p: usize, query: &mut String, new: &mut 
         for facet in &data.ontology.facets {
             let is_domain = Some(facet.id) == domain_facet;
             let tags: Vec<_> = project.tags.iter().filter(|t| t.weight >= LINK_MIN && data.ontology.concept(t.concept).is_some_and(|c| c.facet == facet.id && !(is_domain && c.parent.is_none()))).collect();
+            // La facette au-dessus de ses tags : les rangées qui passent à la ligne restent
+            // alignées sur le bord gauche.
+            ui.add_space(2.0);
+            widgets::caps(ui, &facet.name);
             ui.horizontal_wrapped(|ui| {
                 ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
-                let (r, _) = ui.allocate_exact_size(vec2(78.0, 22.0), Sense::hover());
-                widgets::paint_text(ui.painter(), r.left_top() + vec2(0.0, 4.0), &facet.name, FontId::new(12.0, theme::semibold()), t.muted, 76.0);
                 if is_domain {
                     for (k, &d) in domains.iter().enumerate() {
                         let dm = &data.domains[d];

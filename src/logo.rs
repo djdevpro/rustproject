@@ -111,7 +111,7 @@ fn tile_of(ui: &mut Ui, logo: &Logo, icon: Icon, color: Color32, size: f32) -> R
 pub fn editor(ui: &mut Ui, d: &mut ProjectDraft, paste: &mut Option<String>, error: &mut Option<String>, width: f32) {
     let t = Tokens::get(ui.ctx());
     widgets::labeled(ui, tr("Icône ou logo"), |ui| {
-        ui.horizontal(|ui| {
+        ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing.x = 8.0;
             if d.logo.is_none() {
                 widgets::icon_picker(ui, tr("Icône du projet"), &mut d.icon);
