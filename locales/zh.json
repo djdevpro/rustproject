@@ -990,5 +990,9 @@
   "Déclaré dans Codex pour tous tes projets.": "已在 Codex 中为你的所有项目配置。",
   "Codex lance un autre exécutable (une ancienne version ?) : {0}": "Codex 运行的是另一个可执行文件（旧版本？）：{0}",
   "Pas encore déclaré dans Codex.": "尚未在 Codex 中配置。",
-  "Ajouter à Codex": "添加到 Codex"
+  "Ajouter à Codex": "添加到 Codex",
+  "Texte de l'étape": "步骤内容",
+  "Voir plus": "显示更多",
+  "Voir moins": "收起",
+  "Étape modifiée : {text}": "步骤已修改：{text}"
 }

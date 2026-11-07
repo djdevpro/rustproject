@@ -990,5 +990,9 @@
   "Déclaré dans Codex pour tous tes projets.": "Подключено в Codex для всех твоих проектов.",
   "Codex lance un autre exécutable (une ancienne version ?) : {0}": "Codex запускает другой исполняемый файл (старая версия?): {0}",
   "Pas encore déclaré dans Codex.": "Ещё не подключено в Codex.",
-  "Ajouter à Codex": "Добавить в Codex"
+  "Ajouter à Codex": "Добавить в Codex",
+  "Texte de l'étape": "Текст шага",
+  "Voir plus": "Показать больше",
+  "Voir moins": "Показать меньше",
+  "Étape modifiée : {text}": "Шаг изменён: {text}"
 }

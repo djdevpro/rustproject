@@ -455,6 +455,7 @@ pub enum Action {
     AskDelete(usize),
     DeleteProject(usize),
     AddStep(usize, String),
+    EditStep(usize, usize, String, String),
     RemoveStep(usize, usize),
     AddNote(usize, String),
     // ---- découverte
@@ -568,6 +569,7 @@ pub struct UiState {
     pub new_exclude: String,
     pub new_note: String,
     pub new_step: String,
+    pub steps: crate::steps::State,
     // ---- « En ce moment » (panneau du bureau quand aucun projet n'est ouvert)
     /// Le relevé des fichiers modifiés, en arrière-plan.
     pub live: crate::recent::Watcher,
@@ -679,6 +681,7 @@ impl Default for UiState {
             new_exclude: String::new(),
             new_note: String::new(),
             new_step: String::new(),
+            steps: Default::default(),
             live: Default::default(),
             live_window: Default::default(),
             live_feed: false,
@@ -2055,6 +2058,13 @@ impl AtelierApp {
                     {
                         project.steps.push(Step { text: text.clone(), done: false });
                         project.log(ActivityKind::Edit, tf("Étape ajoutée : {text}", &[("text", &text)]));
+                    }
+                }
+                Action::EditStep(p, s, original, text) => {
+                    if let Some(project) = self.data.projects.get_mut(p)
+                        && project.steps.get(s).is_some_and(|step| step.text == original)
+                    {
+                        let _ = project.edit_step(s, &text);
                     }
                 }
                 Action::RemoveStep(p, s) => {

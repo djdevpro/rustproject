@@ -990,5 +990,9 @@
   "Déclaré dans Codex pour tous tes projets.": "In Codex für alle deine Projekte eingerichtet.",
   "Codex lance un autre exécutable (une ancienne version ?) : {0}": "Codex startet eine andere Datei (eine ältere Version?): {0}",
   "Pas encore déclaré dans Codex.": "Noch nicht in Codex eingerichtet.",
-  "Ajouter à Codex": "Zu Codex hinzufügen"
+  "Ajouter à Codex": "Zu Codex hinzufügen",
+  "Texte de l'étape": "Text des Schritts",
+  "Voir plus": "Mehr anzeigen",
+  "Voir moins": "Weniger anzeigen",
+  "Étape modifiée : {text}": "Schritt bearbeitet: {text}"
 }

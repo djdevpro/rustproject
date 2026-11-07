@@ -186,44 +186,7 @@ fn summary(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<A
         }
     });
     gap(ui);
-    let (done, total) = project.steps_done();
-    widgets::info_row(ui, Icon::ListChecks, &tf("Prochaines étapes · {done}/{total}", &[("done", &done), ("total", &total)]), |ui| {
-        ui.add_space(4.0);
-        let width = ui.available_width();
-        // L'espacement hérité de `info_row` (14 points), pas celui par défaut : sinon la rangée
-        // déborde et le panneau, élargi à gauche, voit sa bordure rognée.
-        let spacing = ui.spacing().item_spacing.x;
-        for (i, step) in project.steps.iter().enumerate() {
-            // Case à cocher, et une croix discrète pour retirer l'étape.
-            ui.horizontal(|ui| {
-                let resp = ui.allocate_ui(vec2(width - 24.0 - spacing, 24.0), |ui| {
-                    let mut checked = step.done;
-                    widgets::checkbox(ui, &mut checked, &step.text, true)
-                });
-                if resp.inner.changed() {
-                    act.push(Action::ToggleStep(p, i));
-                }
-                if widgets::icon_button(ui, Icon::X, &tf("Retirer « {0} »", &[("0", &step.text)]), 24.0).clicked() {
-                    act.push(Action::RemoveStep(p, i));
-                }
-            });
-        }
-        // Ajouter une étape : on tape, puis Entrée.
-        ui.add_space(2.0);
-        ui.horizontal(|ui| {
-            let resp = widgets::text_input(ui, &mut st.new_step, tr("Ajouter une étape…"), width - 34.0 - spacing);
-            let enter = resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-            let add = widgets::icon_button(ui, Icon::Plus, tr("Ajouter l'étape"), 34.0).clicked();
-            if (enter || add) && !st.new_step.trim().is_empty() {
-                act.push(Action::AddStep(p, st.new_step.trim().to_owned()));
-                st.new_step.clear();
-                if enter {
-                    // On garde la main dans le champ pour enchaîner les étapes.
-                    resp.request_focus();
-                }
-            }
-        });
-    });
+    crate::steps::show(ui, project, p, &mut st.steps, &mut st.new_step, act);
     gap(ui);
     widgets::info_row(ui, Icon::Calendar, tr("Prochaine revue"), |ui| {
         widgets::muted(ui, &project.review);

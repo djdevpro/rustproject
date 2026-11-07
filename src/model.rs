@@ -299,6 +299,21 @@ impl Project {
         (self.steps.iter().filter(|s| s.done).count(), self.steps.len())
     }
 
+    /// Retouche le texte sans changer l'ordre des étapes ni leur état coché.
+    pub fn edit_step(&mut self, index: usize, text: &str) -> Result<(), String> {
+        let text = text.trim();
+        if text.is_empty() {
+            return Err("Le texte de l'étape ne peut pas être vide".into());
+        }
+        let total = self.steps.len();
+        let step = self.steps.get_mut(index).ok_or_else(|| format!("Pas d'étape {index} (le projet en a {total})"))?;
+        if step.text != text {
+            step.text = text.to_owned();
+            self.log(ActivityKind::Edit, crate::i18n::tf("Étape modifiée : {text}", &[("text", &text)]));
+        }
+        Ok(())
+    }
+
     /// Ajoute une ligne au journal (les 50 dernières sont gardées).
     pub fn log(&mut self, kind: ActivityKind, text: impl Into<String>) {
         self.activity.insert(0, Activity { at: now(), kind, text: text.into() });

@@ -990,5 +990,9 @@
   "Déclaré dans Codex pour tous tes projets.": "Declarado no Codex para todos os seus projetos.",
   "Codex lance un autre exécutable (une ancienne version ?) : {0}": "O Codex executa outro executável (uma versão antiga?): {0}",
   "Pas encore déclaré dans Codex.": "Ainda não declarado no Codex.",
-  "Ajouter à Codex": "Adicionar ao Codex"
+  "Ajouter à Codex": "Adicionar ao Codex",
+  "Texte de l'étape": "Texto da etapa",
+  "Voir plus": "Ver mais",
+  "Voir moins": "Ver menos",
+  "Étape modifiée : {text}": "Etapa editada: {text}"
 }

@@ -990,5 +990,9 @@
   "Déclaré dans Codex pour tous tes projets.": "Set up in Codex for all your projects.",
   "Codex lance un autre exécutable (une ancienne version ?) : {0}": "Codex runs a different executable (an older version?): {0}",
   "Pas encore déclaré dans Codex.": "Not set up in Codex yet.",
-  "Ajouter à Codex": "Add to Codex"
+  "Ajouter à Codex": "Add to Codex",
+  "Texte de l'étape": "Step text",
+  "Voir plus": "Show more",
+  "Voir moins": "Show less",
+  "Étape modifiée : {text}": "Step edited: {text}"
 }

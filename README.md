@@ -8,6 +8,7 @@ Rust Project is a desktop app that keeps track of your side projects. It scans t
 - Sorting and one sentence descriptions by a local model through Ollama, or by an AI agent through MCP.
 - Fuzzy and semantic search.
 - A library with a live graph of domains and projects.
+- Editable next steps, newest first, with five shown initially and a Show more button.
 - Updates from GitHub releases, checked at startup.
 - An interface in English, French, Spanish, German, Portuguese, Italian, Russian, Chinese, Japanese and Korean. It follows the system language.
 
@@ -34,6 +35,8 @@ cargo run -- --fixture fixtures/demo-en.json
 ```bash
 claude mcp add --scope user rust-project -- "C:\path\to\rust-project.exe" --mcp
 ```
+
+Agents can add, edit, check and remove steps with `ajouter_etape`, `modifier_etape`, `cocher_etape` and `supprimer_etape`. Use the zero-based index in the `steps` array returned by `voir_projet`; the app displays that list in reverse order. Editing a step keeps its checked state.
 
 ## Release
 

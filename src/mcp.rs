@@ -400,6 +400,7 @@ fn tools() -> Vec<Value> {
         ),
         tool("supprimer_projet", "Supprime la fiche d'un projet (pas son dossier).", json!({ "id": n("Identifiant") }), &["id"]),
         tool("ajouter_etape", "Ajoute une étape (case à cocher) à un projet.", json!({ "id": n("Identifiant du projet"), "texte": s("L'étape") }), &["id", "texte"]),
+        tool("modifier_etape", "Modifie le texte d'une étape sans changer son état coché. Utiliser l'index dans steps de voir_projet, pas sa position affichée (les plus récentes sont en haut).", json!({ "id": n("Identifiant du projet"), "index": n("Index dans steps (0 = première enregistrée)"), "texte": s("Nouveau texte non vide") }), &["id", "index", "texte"]),
         tool("cocher_etape", "Coche ou décoche une étape.", json!({ "id": n("Identifiant du projet"), "index": n("Index de l'étape (0 = première)"), "fait": { "type": "boolean" } }), &["id", "index", "fait"]),
         tool("supprimer_etape", "Supprime une étape.", json!({ "id": n("Identifiant du projet"), "index": n("Index de l'étape") }), &["id", "index"]),
         // ---- ontologie et classement (Ollaya)
@@ -816,7 +817,18 @@ pub fn run_tool(store: &mut Store, name: &str, args: &Value) -> Result<Value, St
         "ajouter_etape" => {
             let i = find(&data, args)?;
             let text = args["texte"].as_str().ok_or("Paramètre « texte » manquant")?.trim().to_owned();
+            if text.is_empty() {
+                return Err("Le texte de l'étape ne peut pas être vide".into());
+            }
             data.projects[i].steps.push(Step { text, done: false });
+            store.save(&data)?;
+            Ok(json!({ "etapes": data.projects[i].steps }))
+        }
+        "modifier_etape" => {
+            let i = find(&data, args)?;
+            let k = args["index"].as_u64().and_then(|k| usize::try_from(k).ok()).ok_or("Paramètre « index » invalide ou manquant")?;
+            let text = args["texte"].as_str().ok_or("Paramètre « texte » manquant")?;
+            data.projects[i].edit_step(k, text)?;
             store.save(&data)?;
             Ok(json!({ "etapes": data.projects[i].steps }))
         }
@@ -1059,7 +1071,7 @@ mod tests {
         assert!(handle_line(&mut store, r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#).is_none(), "pas de réponse à une notification");
         let tools = call(&mut store, 2, "tools/list", json!({}));
         let names: Vec<&str> = tools["result"]["tools"].as_array().unwrap().iter().map(|t| t["name"].as_str().unwrap()).collect();
-        for n in ["scanner_dossiers", "ajouter_projet", "modifier_projet", "supprimer_projet", "ajouter_etape", "cocher_etape"] {
+        for n in ["scanner_dossiers", "ajouter_projet", "modifier_projet", "supprimer_projet", "ajouter_etape", "modifier_etape", "cocher_etape"] {
             assert!(names.contains(&n), "{n}");
         }
         assert_eq!(call(&mut store, 3, "inconnue", json!({}))["error"]["code"], -32601);
@@ -1257,6 +1269,38 @@ mod tests {
         let p = &data.projects[data.index_of(id).unwrap()];
         assert!(p.tags.iter().any(|t| t.concept == web && t.manual));
         assert_eq!(data.domains[p.domain].name, "Immobilier", "le meilleur domaine devient le domaine du projet");
+    }
+
+    #[test]
+    fn etapes_modifier_persiste_et_valide() {
+        let mut store = temp_store("edit-steps");
+        let created = tool_json(&mut store, "ajouter_projet", json!({ "nom": "Étapes" }));
+        let id = created["id"].as_u64().unwrap();
+        tool_json(&mut store, "ajouter_etape", json!({ "id": id, "texte": "Ancienne étape" }));
+        tool_json(&mut store, "ajouter_etape", json!({ "id": id, "texte": "Dernière étape" }));
+        tool_json(&mut store, "cocher_etape", json!({ "id": id, "index": 0, "fait": true }));
+        let result = tool_json(&mut store, "modifier_etape", json!({ "id": id, "index": 0, "texte": "  Étape corrigée\navec détail  " }));
+        let expected = json!([
+            { "text": "Étape corrigée\navec détail", "done": true },
+            { "text": "Dernière étape", "done": false }
+        ]);
+        assert_eq!(result["etapes"], expected);
+        for args in [
+            json!({ "id": id, "index": 0, "texte": " \n " }),
+            json!({ "id": id, "index": 2, "texte": "Hors limites" }),
+            json!({ "id": id, "index": -1, "texte": "Négatif" }),
+            json!({ "id": id, "index": 0.5, "texte": "Fraction" }),
+            json!({ "id": id, "index": 0 }),
+        ] {
+            let result = call(&mut store, 10, "tools/call", json!({ "name": "modifier_etape", "arguments": args }));
+            assert_eq!(result["result"]["isError"], true, "{result}");
+        }
+        let result = call(&mut store, 11, "tools/call", json!({ "name": "ajouter_etape", "arguments": { "id": id, "texte": "  " } }));
+        assert_eq!(result["result"]["isError"], true);
+        let mut reopened = Store::open(store.path());
+        let project = tool_json(&mut reopened, "voir_projet", json!({ "id": id }));
+        assert_eq!(project["steps"], expected, "les erreurs ne modifient pas le fichier");
+        assert!(project["activity"].as_array().unwrap().iter().any(|a| a["text"].as_str().unwrap().contains("Étape corrigée")));
     }
 
     #[test]

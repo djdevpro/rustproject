@@ -990,5 +990,9 @@
   "Déclaré dans Codex pour tous tes projets.": "Codex にすべてのプロジェクト向けに登録済みです。",
   "Codex lance un autre exécutable (une ancienne version ?) : {0}": "Codex は別の実行ファイルを起動しています（古いバージョン？）：{0}",
   "Pas encore déclaré dans Codex.": "まだ Codex に登録されていません。",
-  "Ajouter à Codex": "Codex に追加"
+  "Ajouter à Codex": "Codex に追加",
+  "Texte de l'étape": "ステップの内容",
+  "Voir plus": "もっと見る",
+  "Voir moins": "表示を減らす",
+  "Étape modifiée : {text}": "ステップを編集：{text}"
 }

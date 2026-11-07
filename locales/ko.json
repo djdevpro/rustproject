@@ -990,5 +990,9 @@
   "Déclaré dans Codex pour tous tes projets.": "Codex에 모든 프로젝트용으로 등록되어 있습니다.",
   "Codex lance un autre exécutable (une ancienne version ?) : {0}": "Codex가 다른 실행 파일을 실행합니다 (이전 버전?): {0}",
   "Pas encore déclaré dans Codex.": "아직 Codex에 등록되지 않았습니다.",
-  "Ajouter à Codex": "Codex에 추가"
+  "Ajouter à Codex": "Codex에 추가",
+  "Texte de l'étape": "단계 내용",
+  "Voir plus": "더 보기",
+  "Voir moins": "접기",
+  "Étape modifiée : {text}": "단계 수정: {text}"
 }

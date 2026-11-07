@@ -472,6 +472,111 @@ fn etapes_ajouter_cocher_retirer() {
 }
 
 #[test]
+fn etapes_recentes_pagination_et_index() {
+    let mut h = harness();
+    let p = h.state().st.selected.unwrap();
+    h.state_mut().data.projects[p].steps = (1..=6).map(|n| crate::model::Step { text: format!("Étape {n}"), done: false }).collect();
+    h.run();
+    assert!(h.query_by_label("Étape 1").is_none());
+    let tops: Vec<f32> = (2..=6).rev().map(|n| h.get_by_label(&format!("Étape {n}")).rect().top()).collect();
+    assert!(tops.windows(2).all(|pair| pair[0] < pair[1]), "la plus récente est en haut");
+    click(&mut h, "Étape 6");
+    assert!(h.state().data.projects[p].steps[5].done);
+    assert!(!h.state().data.projects[p].steps[0].done);
+    click(&mut h, "Voir plus");
+    h.get_by_label("Étape 1");
+    click(&mut h, "Voir moins");
+    assert!(h.query_by_label("Étape 1").is_none());
+    click(&mut h, "Retirer « Étape 6 »");
+    h.get_by_label("Étape 1");
+    assert!(h.query_by_label("Voir plus").is_none(), "pas de bouton pour cinq étapes");
+    h.state_mut().st.new_step = "Étape 7".into();
+    click(&mut h, "Ajouter l'étape");
+    assert!(h.get_by_label("Étape 7").rect().top() < h.get_by_label("Étape 5").rect().top());
+    assert!(h.query_by_label("Étape 1").is_none());
+}
+
+fn replace_step_text(h: &mut Harness<'static, AtelierApp>, text: &str) {
+    h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
+    h.event(egui::Event::Text(text.into()));
+    h.run();
+}
+
+#[test]
+fn etapes_edition_valider_annuler_et_texte_vide() {
+    use egui_kittest::kittest::NodeT as _;
+    let mut h = harness();
+    let p = h.state().st.selected.unwrap();
+    h.state_mut().data.projects[p].steps = vec![crate::model::Step { text: "À corriger".into(), done: true }];
+    h.run();
+    click(&mut h, "Modifier « À corriger »");
+    replace_step_text(&mut h, "  Étape corrigée\navec détail  ");
+    click(&mut h, "Enregistrer");
+    let step = &h.state().data.projects[p].steps[0];
+    assert_eq!(step.text, "Étape corrigée\navec détail");
+    assert!(step.done, "modifier garde la case cochée");
+    click(&mut h, "Modifier « Étape corrigée\navec détail »");
+    replace_step_text(&mut h, "  ");
+    assert!(h.get_by_label("Enregistrer").accesskit_node().is_disabled());
+    click(&mut h, "Annuler");
+    assert_eq!(h.state().data.projects[p].steps[0].text, "Étape corrigée\navec détail");
+    click(&mut h, "Modifier « Étape corrigée\navec détail »");
+    replace_step_text(&mut h, "Brouillon abandonné");
+    h.key_press(egui::Key::Escape);
+    h.run();
+    assert!(h.query_by_label("Enregistrer").is_none());
+    assert_eq!(h.state().data.projects[p].steps[0].text, "Étape corrigée\navec détail");
+}
+
+#[test]
+fn etapes_edition_relecture_mcp_et_changement_de_projet() {
+    let mut h = harness();
+    let p = h.state().st.selected.unwrap();
+    h.state_mut().data.projects[p].steps = vec![crate::model::Step { text: "À corriger".into(), done: false }];
+    h.run();
+    click(&mut h, "Modifier « À corriger »");
+    replace_step_text(&mut h, "Brouillon local");
+    // La relecture du fichier remplace la liste après un changement MCP.
+    h.state_mut().data.projects[p].steps[0].text = "Modifiée par le MCP".into();
+    h.run();
+    assert!(h.query_by_label("Enregistrer").is_none());
+    h.get_by_label("Modifiée par le MCP");
+    click(&mut h, "Modifier « Modifiée par le MCP »");
+    h.state_mut().st.selected = Some((p + 1) % h.state().data.projects.len());
+    h.run();
+    assert!(h.query_by_label("Enregistrer").is_none());
+}
+
+/// Captures de contrôle locales, sans modifier les visuels du README.
+#[test]
+#[ignore]
+fn captures_etapes() {
+    for (name, size) in [("normal", NORMAL), ("mini", MINI)] {
+        let mut h = harness_sized(size);
+        let p = h.state().st.selected.unwrap();
+        h.state_mut().data.projects[p].steps = (1..=7).map(|n| crate::model::Step {
+            text: format!("Étape {n} — Vérifier le résultat et préparer la prochaine version du projet"),
+            done: n <= 2,
+        }).collect();
+        h.run();
+        assert!(overflowing(&h, size.0).is_empty());
+        let top = h.get_by_label("Étape 7 — Vérifier le résultat et préparer la prochaine version du projet").rect().top();
+        h.event(egui::Event::PointerMoved(egui::pos2(size.0 - 100.0, 300.0)));
+        h.event(egui::Event::MouseWheel { unit: egui::MouseWheelUnit::Point, delta: egui::vec2(0.0, 160.0 - top), phase: egui::TouchPhase::Move, source: egui::MouseWheelSource::Wheel, modifiers: egui::Modifiers::NONE });
+        h.run();
+        h.event(egui::Event::PointerMoved(egui::pos2(20.0, 20.0)));
+        h.run();
+        std::fs::create_dir_all("target/steps-review").unwrap();
+        h.render().unwrap().save(format!("target/steps-review/{name}.png")).unwrap();
+        click(&mut h, "Modifier « Étape 7 — Vérifier le résultat et préparer la prochaine version du projet »");
+        h.event(egui::Event::PointerMoved(egui::pos2(20.0, 20.0)));
+        h.run();
+        assert!(overflowing(&h, size.0).is_empty());
+        h.render().unwrap().save(format!("target/steps-review/{name}-edit.png")).unwrap();
+    }
+}
+
+#[test]
 fn supprimer_un_projet() {
     let mut h = harness();
     let before = h.state().data.projects.len();

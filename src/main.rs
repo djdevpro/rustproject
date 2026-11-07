@@ -46,6 +46,7 @@ mod ollaya;
 mod ontology;
 mod packages;
 mod panel;
+mod steps;
 mod recent;
 mod release;
 mod scan;
