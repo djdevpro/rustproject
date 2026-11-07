@@ -906,5 +906,18 @@
   "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "SVG 保留自身颜色，图片会缩小到 128 px。也可以把文件拖到窗口上。",
   "Classement": "分类",
   "Fiche": "资料",
-  "Suivi": "跟进"
+  "Suivi": "跟进",
+  "Les étapes à faire de la fiche « {nom} » dans Rust Project (id {id}) sont toutes faites, vérifiées et cochées.": "Rust Project 中卡片“{nom}”（id {id}）的待办步骤已全部完成、验证并勾选。",
+  "La prochaine action de la fiche « {nom} » dans Rust Project (id {id}) est faite et vérifiée : {action}": "Rust Project 中卡片“{nom}”（id {id}）的下一步行动已完成并验证：{action}",
+  "Étapes à faire :": "待办步骤：",
+  "Pour y arriver :": "做法：",
+  "Nomme d'abord cette conversation « {nom} - [objectif en quelques mots] » avec l'outil `set_session_title` de Claude Desktop (session_id = self).": "先用 Claude Desktop 的 `set_session_title` 工具把本对话命名为“{nom} - [几个字概括的目标]”（session_id = self）。",
+  "Lis la fiche avec l'outil MCP `voir_projet` du serveur `rust-project` (id {id}).": "用 `rust-project` 服务器的 MCP 工具 `voir_projet` 读取卡片（id {id}）。",
+  "Va jusqu'au bout, une chose à la fois : vérifie chacune (build, tests, résultat visible) avant de passer à la suivante.": "坚持做到底，一次只做一件事：每件事都先验证（构建、测试、可见结果），再进行下一件。",
+  "Dès qu'une étape est faite et vérifiée, coche-la avec l'outil MCP `cocher_etape` (id {id}, index = sa position dans `steps` à partir de 0, fait = true). Jamais avant.": "每完成并验证一个步骤，就立即用 MCP 工具 `cocher_etape` 勾选它（id {id}，index = 它在 `steps` 中从 0 开始的位置，fait = true）。绝不提前勾选。",
+  "Une fois l'action faite et vérifiée, marque-la comme faite : vide `prochaine_action` avec l'outil MCP `modifier_projet` (id {id}).": "行动完成并验证后，将其标记为完成：用 MCP 工具 `modifier_projet`（id {id}）清空 `prochaine_action`。",
+  "Seule exception : ce qui est vraiment impossible sans moi (une décision à prendre, un accès à donner) reste à faire ; explique pourquoi dans le bilan.": "唯一的例外：没有我确实无法完成的事（需要我做的决定、需要我提供的权限）保持待办，并在总结中说明原因。",
+  "Termine par un bilan : ce qui est fait, ce qui reste et pourquoi.": "最后做个总结：哪些已完成，哪些还剩下，以及原因。",
+  "… et {n} de plus : la liste complète est dans `voir_projet`.": "……另有 {n} 项：完整列表见 `voir_projet`。",
+  "Langue, accent, densité": "语言、强调色、密度"
 }

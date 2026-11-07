@@ -906,5 +906,18 @@
   "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "An SVG keeps its colors, an image is scaled down to 128 px. You can also drop the file on the window.",
   "Classement": "Classification",
   "Fiche": "Details",
-  "Suivi": "Tracking"
+  "Suivi": "Tracking",
+  "Les étapes à faire de la fiche « {nom} » dans Rust Project (id {id}) sont toutes faites, vérifiées et cochées.": "The steps to do on the \"{nom}\" card in Rust Project (id {id}) are all done, verified and checked off.",
+  "La prochaine action de la fiche « {nom} » dans Rust Project (id {id}) est faite et vérifiée : {action}": "The next action on the \"{nom}\" card in Rust Project (id {id}) is done and verified: {action}",
+  "Étapes à faire :": "Steps to do:",
+  "Pour y arriver :": "How to get there:",
+  "Nomme d'abord cette conversation « {nom} - [objectif en quelques mots] » avec l'outil `set_session_title` de Claude Desktop (session_id = self).": "First name this conversation \"{nom} - [goal in a few words]\" with Claude Desktop's `set_session_title` tool (session_id = self).",
+  "Lis la fiche avec l'outil MCP `voir_projet` du serveur `rust-project` (id {id}).": "Read the card with the `voir_projet` MCP tool from the `rust-project` server (id {id}).",
+  "Va jusqu'au bout, une chose à la fois : vérifie chacune (build, tests, résultat visible) avant de passer à la suivante.": "Go all the way, one thing at a time: verify each one (build, tests, visible result) before moving on to the next.",
+  "Dès qu'une étape est faite et vérifiée, coche-la avec l'outil MCP `cocher_etape` (id {id}, index = sa position dans `steps` à partir de 0, fait = true). Jamais avant.": "As soon as a step is done and verified, check it off with the `cocher_etape` MCP tool (id {id}, index = its position in `steps` starting from 0, fait = true). Never before.",
+  "Une fois l'action faite et vérifiée, marque-la comme faite : vide `prochaine_action` avec l'outil MCP `modifier_projet` (id {id}).": "Once the action is done and verified, mark it as done: clear `prochaine_action` with the `modifier_projet` MCP tool (id {id}).",
+  "Seule exception : ce qui est vraiment impossible sans moi (une décision à prendre, un accès à donner) reste à faire ; explique pourquoi dans le bilan.": "Only exception: anything truly impossible without me (a decision to make, access to grant) stays to do; explain why in the summary.",
+  "Termine par un bilan : ce qui est fait, ce qui reste et pourquoi.": "End with a summary: what is done, what remains and why.",
+  "… et {n} de plus : la liste complète est dans `voir_projet`.": "… and {n} more: the full list is in `voir_projet`.",
+  "Langue, accent, densité": "Language, accent, density"
 }

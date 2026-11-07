@@ -96,10 +96,13 @@ fn lancement_direct() {
     assert!(h.state().st.flash.is_some());
 
     // Claude Code : une nouvelle conversation dans Claude Desktop, sur le dossier (encodé), avec
-    // l'étape à faire comme premier message.
+    // l'étape à faire en objectif `/goal` comme premier message.
     click_now(&mut h, "Claude Code");
     let line = h.state().launched.last().cloned().unwrap();
-    let url = format!("claude://code/new?folder={}&q=%C3%89crire%20les%20tests", crate::model::url_encode(&dir.display().to_string()));
+    let prompt = h.state().data.projects[p].todo_prompt();
+    assert!(prompt.starts_with("/goal ") && prompt.contains("- Écrire les tests\n") && !prompt.contains("Déjà fait"), "{prompt}");
+    let url = format!("claude://code/new?folder={}&q={}", crate::model::url_encode(&dir.display().to_string()), crate::model::url_encode(&prompt));
+    assert!(url.contains("&q=%2Fgoal%20"), "{url}");
     let expected = if cfg!(windows) {
         format!(r#"start "" "{url}""#)
     } else if cfg!(target_os = "macos") {
@@ -324,12 +327,22 @@ fn mise_a_jour() {
     assert!(h.state().restart_requested);
 }
 
+/// Le thème clair est mis de côté : Apparence ne propose plus de thème, et l'application reste en
+/// sombre même si « Clair » ou « Système » avait été choisi.
 #[test]
-fn theme_clair() {
+fn theme_sombre_seulement() {
+    use crate::theme::{Accent, ThemeChoice};
     let mut h = harness();
     click(&mut h, "Configuration");
     click(&mut h, "Apparence");
-    click(&mut h, "Clair");
+    for label in ["Clair", "Sombre", "Système"] {
+        assert!(h.query_by_label(label).is_none(), "pas de choix « {label} »");
+    }
+    for choice in [ThemeChoice::Light, ThemeChoice::System] {
+        crate::theme::apply(&h.ctx, choice, Accent::Amber, false);
+        h.run();
+        assert_eq!(h.ctx.theme(), egui::Theme::Dark, "{choice:?}");
+    }
     click(&mut h, "Mon bureau");
 }
 
@@ -746,6 +759,40 @@ fn ancien_lanceur_claude_code_vers_claude_desktop() {
     assert!(!data.launchers[0].in_terminal);
     assert_eq!(data.launchers[1].command, "claude --model opus");
     assert_eq!(crate::model::url_encode(r"C:\Mes projets\é"), "C%3A%5CMes%20projets%5C%C3%A9");
+}
+
+/// Le premier message de Claude Code : un objectif `/goal` fait des étapes à faire, qui fait nommer
+/// la conversation d'après le projet et cocher chaque étape par le serveur MCP ; sinon la prochaine
+/// action ; sinon rien. Il tient toujours dans le lien et dans `/goal`.
+#[test]
+fn message_claude_code_en_objectif() {
+    use crate::model::{Project, Step, url_encode};
+    let step = |text: &str, done| Step { text: text.into(), done };
+    let mut p = Project { id: 7, name: "Atelier".into(), ..Default::default() };
+    p.steps = vec![step("Écrire les tests", false), step("Déjà fait", true), step("Publier\n  la version", false)];
+    let m = p.todo_prompt();
+    assert!(m.starts_with("/goal Les étapes à faire de la fiche « Atelier » dans Rust Project (id 7)"), "{m}");
+    assert!(m.contains("- Écrire les tests\n- Publier la version\n"), "une étape par ligne : {m}");
+    assert!(!m.contains("Déjà fait"), "pas les étapes cochées : {m}");
+    assert!(m.contains("« Atelier - [objectif en quelques mots] »") && m.contains("`set_session_title`"), "le titre de la conversation : {m}");
+    assert!(m.contains("`voir_projet`") && m.contains("`cocher_etape` (id 7,"), "{m}");
+
+    // Plus d'étape à faire : la prochaine action, qu'on coche en la vidant.
+    p.steps.iter_mut().for_each(|s| s.done = true);
+    p.next_action = "Relire le README".into();
+    let m = p.todo_prompt();
+    assert!(m.starts_with("/goal ") && m.contains("Relire le README") && m.contains("`modifier_projet` (id 7)"), "{m}");
+    // Rien du tout : pas de message.
+    p.next_action = "  ".into();
+    assert_eq!(p.todo_prompt(), "");
+
+    // Beaucoup d'étapes longues : le message tient dans le lien (`cmd`) et dans `/goal`, et dit
+    // combien d'étapes il n'a pas pu citer.
+    p.steps = (0..60).map(|k| step(&format!("Étape {k} : {}", "é".repeat(400)), false)).collect();
+    let m = p.todo_prompt();
+    assert!(url_encode(&m).len() <= 6000 && m.encode_utf16().count() <= 4000, "{} / {}", url_encode(&m).len(), m.encode_utf16().count());
+    assert!(m.contains("- Étape 0 : éé") && m.contains("…\n"), "étapes coupées : {m}");
+    assert!(m.contains("de plus : la liste complète est dans `voir_projet`."), "{m}");
 }
 
 /// La ligne de la liste (ou la carte de la grille) d'un projet : son nom existe aussi dans le

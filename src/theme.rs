@@ -10,6 +10,11 @@ use egui::{Color32, CornerRadius, FontData, FontDefinitions, FontFamily, FontId,
 
 // ---- choix de l'utilisateur --------------------------------------------------------------------
 
+/// Le thème clair est mis de côté pour l'instant (pas assez abouti) : l'application reste en
+/// sombre, quel que soit le choix enregistré ou celui du système, et Apparence ne propose plus de
+/// thème. `true` le rétablit.
+pub const LIGHT_THEME: bool = false;
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ThemeChoice {
     System,
@@ -290,6 +295,7 @@ pub fn apply(ctx: &egui::Context, theme: ThemeChoice, accent: Accent, compact: b
     ctx.set_visuals_of(egui::Theme::Dark, visuals(&Tokens::of(true, accent)));
     ctx.set_visuals_of(egui::Theme::Light, visuals(&Tokens::of(false, accent)));
     ctx.set_theme(match theme {
+        _ if !LIGHT_THEME => egui::ThemePreference::Dark,
         ThemeChoice::System => egui::ThemePreference::System,
         ThemeChoice::Dark => egui::ThemePreference::Dark,
         ThemeChoice::Light => egui::ThemePreference::Light,

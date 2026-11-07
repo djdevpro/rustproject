@@ -396,7 +396,7 @@ pub struct Launcher {
 pub const VARIABLES: [(&str, &str); 6] = [
     ("{dossier}", "Chemin du dossier principal du projet"),
     ("{dossier_url}", "Le même chemin, encodé pour un lien (claude://…)"),
-    ("{etapes_url}", "Les étapes à faire, encodées pour un lien (le premier message de Claude Code)"),
+    ("{etapes_url}", "Les étapes à faire en objectif /goal, encodées pour un lien (le premier message de Claude Code)"),
     ("{nom}", "Nom du projet"),
     ("{remote}", "URL du dépôt Git distant (détectée)"),
     ("{port}", "Port de dev (3000 par défaut)"),
@@ -405,29 +405,118 @@ pub const VARIABLES: [(&str, &str); 6] = [
 impl Launcher {
     /// La commande telle qu'elle partirait pour ce projet.
     pub fn resolve(&self, project: &Project) -> String {
-        let folder = project.folders.first().map(String::as_str).unwrap_or("");
-        let remote = project.remote.clone().unwrap_or_default();
-        self.command
-            .replace("{etapes_url}", &url_encode(&project.todo_prompt()))
-            .replace("{dossier_url}", &url_encode(folder))
-            .replace("{dossier}", folder)
-            .replace("{nom}", &project.name)
-            .replace("{remote}", &remote)
-            .replace("{port}", "3000")
+        if self.command.contains("{etapes_url}") {
+            fill(&self.command.replace("{etapes_url}", &url_encode(&project.todo_prompt())), project)
+        } else {
+            fill(&self.command, project)
+        }
+    }
+
+    /// La commande à montrer (bulle d'aide, aperçu) : comme elle partirait, sauf le premier
+    /// message de Claude Code, illisible une fois encodé, qui reste `{etapes_url}`.
+    pub fn preview(&self, project: &Project) -> String {
+        fill(&self.command, project)
     }
 }
 
+/// Les variables d'une commande remplacées pour ce projet (sauf `{etapes_url}`).
+fn fill(command: &str, project: &Project) -> String {
+    let folder = project.folders.first().map(String::as_str).unwrap_or("");
+    let remote = project.remote.clone().unwrap_or_default();
+    command
+        .replace("{dossier_url}", &url_encode(folder))
+        .replace("{dossier}", folder)
+        .replace("{nom}", &project.name)
+        .replace("{remote}", &remote)
+        .replace("{port}", "3000")
+}
+
+/// Le premier message de Claude Code, une fois encodé, n'en prend pas plus : le lien passe par
+/// `cmd`, qui refuse les lignes de plus de 8 191 caractères.
+const PROMPT_URL_MAX: usize = 6000;
+/// `/goal` refuse une condition de plus de 4 000 caractères (comptés en UTF-16, comme JavaScript).
+const GOAL_MAX: usize = 4000;
+/// Une étape plus longue est coupée : la fiche complète reste lisible avec `voir_projet`.
+const STEP_MAX: usize = 240;
+
 impl Project {
-    /// Le premier message d'une conversation Claude Code ouverte sur le projet : ses étapes à
-    /// faire (une seule : son texte, plusieurs : une liste), sinon sa prochaine action. Vide s'il
-    /// n'y a rien à faire.
+    /// Le premier message d'une conversation Claude Code ouverte sur le projet : un objectif
+    /// `/goal` (Claude Code ne s'arrête pas avant de l'avoir atteint) fait de ses étapes à faire,
+    /// sinon de sa prochaine action, avec la méthode : nommer la conversation d'après le projet,
+    /// lire la fiche, aller jusqu'au bout, et cocher chaque étape finie par le serveur MCP de Rust
+    /// Project. Vide s'il n'y a rien à faire.
     pub fn todo_prompt(&self) -> String {
-        let todo: Vec<&str> = self.steps.iter().filter(|s| !s.done).map(|s| s.text.trim()).filter(|t| !t.is_empty()).collect();
-        match todo.as_slice() {
-            [] => self.next_action.trim().to_owned(),
-            [one] => (*one).to_owned(),
-            many => many.iter().map(|t| format!("- {t}")).collect::<Vec<_>>().join("\n"),
+        use crate::i18n::{tf, tr};
+        let todo: Vec<String> = self.steps.iter().filter(|s| !s.done).map(|s| one_line(&s.text)).filter(|t| !t.is_empty()).collect();
+        let action = one_line(&self.next_action);
+        if todo.is_empty() && action.is_empty() {
+            return String::new();
         }
+        let id: &dyn std::fmt::Display = &self.id;
+        let name: &dyn std::fmt::Display = &self.name;
+        // La conversation prend le nom du projet (« Atelier - Publier la version ») : Claude Desktop
+        // lui laisse renommer un titre qu'il a lui-même généré.
+        let method = |mark: String| {
+            format!(
+                "{}\n1. {}\n2. {}\n3. {}\n4. {mark}\n5. {}\n6. {}",
+                tr("Pour y arriver :"),
+                tf("Nomme d'abord cette conversation « {nom} - [objectif en quelques mots] » avec l'outil `set_session_title` de Claude Desktop (session_id = self).", &[("nom", name)]),
+                tf("Lis la fiche avec l'outil MCP `voir_projet` du serveur `rust-project` (id {id}).", &[("id", id)]),
+                tr("Va jusqu'au bout, une chose à la fois : vérifie chacune (build, tests, résultat visible) avant de passer à la suivante."),
+                tr("Seule exception : ce qui est vraiment impossible sans moi (une décision à prendre, un accès à donner) reste à faire ; explique pourquoi dans le bilan."),
+                tr("Termine par un bilan : ce qui est fait, ce qui reste et pourquoi."),
+            )
+        };
+        if todo.is_empty() {
+            let goal = tf("La prochaine action de la fiche « {nom} » dans Rust Project (id {id}) est faite et vérifiée : {action}", &[("nom", name), ("id", id), ("action", &clip(&action, STEP_MAX))]);
+            let mark = tf("Une fois l'action faite et vérifiée, marque-la comme faite : vide `prochaine_action` avec l'outil MCP `modifier_projet` (id {id}).", &[("id", id)]);
+            return format!("/goal {goal}\n\n{}", method(mark));
+        }
+        let goal = tf("Les étapes à faire de la fiche « {nom} » dans Rust Project (id {id}) sont toutes faites, vérifiées et cochées.", &[("nom", name), ("id", id)]);
+        let mark = tf("Dès qu'une étape est faite et vérifiée, coche-la avec l'outil MCP `cocher_etape` (id {id}, index = sa position dans `steps` à partir de 0, fait = true). Jamais avant.", &[("id", id)]);
+        let method = method(mark);
+        let message = |list: &[String]| format!("/goal {goal}\n\n{}\n{}\n\n{method}", tr("Étapes à faire :"), list.join("\n"));
+        let more = |n: usize| tf("… et {n} de plus : la liste complète est dans `voir_projet`.", &[("n", &n)]);
+        // Autant d'étapes que le lien et `/goal` en acceptent (la première toujours), puis le
+        // nombre de celles qui n'y sont pas.
+        let mut list: Vec<String> = Vec::new();
+        for (k, step) in todo.iter().enumerate() {
+            list.push(format!("- {}", clip(step, STEP_MAX)));
+            let left = todo.len() - k - 1;
+            if left > 0 {
+                list.push(more(left));
+            }
+            let fits = k == 0 || fits(&message(&list));
+            if left > 0 {
+                list.pop();
+            }
+            if !fits {
+                list.pop();
+                break;
+            }
+        }
+        if list.len() < todo.len() {
+            list.push(more(todo.len() - list.len()));
+        }
+        message(&list)
+    }
+}
+
+/// Le message tient-il dans le lien et dans `/goal` ?
+fn fits(message: &str) -> bool {
+    url_encode(message).len() <= PROMPT_URL_MAX && message.encode_utf16().count() <= GOAL_MAX
+}
+
+/// Le texte sur une ligne : retours à la ligne et espaces répétés deviennent un espace.
+fn one_line(s: &str) -> String {
+    s.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// Le texte coupé à `max` caractères, avec « … » s'il était plus long.
+fn clip(s: &str, max: usize) -> String {
+    match s.char_indices().nth(max) {
+        Some((i, _)) => format!("{}…", s[..i].trim_end()),
+        None => s.to_owned(),
     }
 }
 
@@ -900,7 +989,8 @@ fn launcher(name: &str, icon: Icon, color: u32, kind: LauncherKind, command: &st
 
 /// Une nouvelle conversation Claude Code dans Claude Desktop, sur le dossier du projet
 /// (Claude Desktop demande de confirmer le dossier à chaque fois).
-/// Les étapes à faire du projet préremplissent la conversation (`q`, lu par Claude Desktop).
+/// Les étapes à faire du projet préremplissent la conversation (`q`, lu par Claude Desktop), en
+/// objectif `/goal` à cocher par le serveur MCP (voir `Project::todo_prompt`).
 const CLAUDE_DESKTOP: &str = "claude://code/new?folder={dossier_url}&q={etapes_url}";
 /// Le lien d'avant, sans les étapes.
 const CLAUDE_DESKTOP_V1: &str = "claude://code/new?folder={dossier_url}";

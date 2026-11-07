@@ -906,5 +906,18 @@
   "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "SVG は元の色のまま、画像は 128 px に縮小されます。ファイルをウィンドウにドロップすることもできます。",
   "Classement": "分類",
   "Fiche": "詳細",
-  "Suivi": "進捗"
+  "Suivi": "進捗",
+  "Les étapes à faire de la fiche « {nom} » dans Rust Project (id {id}) sont toutes faites, vérifiées et cochées.": "Rust Project のカード「{nom}」（id {id}）の未完了のステップがすべて完了し、検証され、チェックされている。",
+  "La prochaine action de la fiche « {nom} » dans Rust Project (id {id}) est faite et vérifiée : {action}": "Rust Project のカード「{nom}」（id {id}）の次のアクションが完了し、検証されている：{action}",
+  "Étapes à faire :": "未完了のステップ：",
+  "Pour y arriver :": "進め方：",
+  "Nomme d'abord cette conversation « {nom} - [objectif en quelques mots] » avec l'outil `set_session_title` de Claude Desktop (session_id = self).": "まず Claude Desktop の `set_session_title` ツールで、この会話の名前を「{nom} - [目標を短く]」にする（session_id = self）。",
+  "Lis la fiche avec l'outil MCP `voir_projet` du serveur `rust-project` (id {id}).": "`rust-project` サーバーの MCP ツール `voir_projet` でカードを読む（id {id}）。",
+  "Va jusqu'au bout, une chose à la fois : vérifie chacune (build, tests, résultat visible) avant de passer à la suivante.": "最後までやり切る。一度に一つずつ、次に進む前にそれぞれを検証する（ビルド、テスト、目に見える結果）。",
+  "Dès qu'une étape est faite et vérifiée, coche-la avec l'outil MCP `cocher_etape` (id {id}, index = sa position dans `steps` à partir de 0, fait = true). Jamais avant.": "ステップが完了して検証できたら、すぐに MCP ツール `cocher_etape` でチェックする（id {id}、index = `steps` 内の 0 から数えた位置、fait = true）。それより前には決してチェックしない。",
+  "Une fois l'action faite et vérifiée, marque-la comme faite : vide `prochaine_action` avec l'outil MCP `modifier_projet` (id {id}).": "アクションが完了して検証できたら、完了として記録する：MCP ツール `modifier_projet`（id {id}）で `prochaine_action` を空にする。",
+  "Seule exception : ce qui est vraiment impossible sans moi (une décision à prendre, un accès à donner) reste à faire ; explique pourquoi dans le bilan.": "唯一の例外：私なしでは本当に不可能なこと（私が下すべき判断、私が与えるべきアクセス）は未完了のまま残し、その理由をまとめで説明する。",
+  "Termine par un bilan : ce qui est fait, ce qui reste et pourquoi.": "最後にまとめを書く：完了したこと、残っていることとその理由。",
+  "… et {n} de plus : la liste complète est dans `voir_projet`.": "…ほか {n} 件：完全なリストは `voir_projet` にある。",
+  "Langue, accent, densité": "言語、アクセント、密度"
 }

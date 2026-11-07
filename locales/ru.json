@@ -906,5 +906,18 @@
   "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "SVG сохраняет свои цвета, изображение уменьшается до 128 px. Файл можно также перетащить в окно.",
   "Classement": "Классификация",
   "Fiche": "Карточка",
-  "Suivi": "Отслеживание"
+  "Suivi": "Отслеживание",
+  "Les étapes à faire de la fiche « {nom} » dans Rust Project (id {id}) sont toutes faites, vérifiées et cochées.": "Все оставшиеся шаги карточки «{nom}» в Rust Project (id {id}) выполнены, проверены и отмечены.",
+  "La prochaine action de la fiche « {nom} » dans Rust Project (id {id}) est faite et vérifiée : {action}": "Следующее действие карточки «{nom}» в Rust Project (id {id}) выполнено и проверено: {action}",
+  "Étapes à faire :": "Оставшиеся шаги:",
+  "Pour y arriver :": "Как этого добиться:",
+  "Nomme d'abord cette conversation « {nom} - [objectif en quelques mots] » avec l'outil `set_session_title` de Claude Desktop (session_id = self).": "Сначала назови этот разговор «{nom} - [цель в нескольких словах]» инструментом `set_session_title` Claude Desktop (session_id = self).",
+  "Lis la fiche avec l'outil MCP `voir_projet` du serveur `rust-project` (id {id}).": "Прочитай карточку MCP-инструментом `voir_projet` сервера `rust-project` (id {id}).",
+  "Va jusqu'au bout, une chose à la fois : vérifie chacune (build, tests, résultat visible) avant de passer à la suivante.": "Доводи всё до конца, по одной задаче за раз: проверяй каждую (сборка, тесты, видимый результат), прежде чем переходить к следующей.",
+  "Dès qu'une étape est faite et vérifiée, coche-la avec l'outil MCP `cocher_etape` (id {id}, index = sa position dans `steps` à partir de 0, fait = true). Jamais avant.": "Как только шаг выполнен и проверен, отметь его MCP-инструментом `cocher_etape` (id {id}, index = его позиция в `steps`, начиная с 0, fait = true). Никогда раньше.",
+  "Une fois l'action faite et vérifiée, marque-la comme faite : vide `prochaine_action` avec l'outil MCP `modifier_projet` (id {id}).": "Когда действие выполнено и проверено, отметь его как выполненное: очисти `prochaine_action` MCP-инструментом `modifier_projet` (id {id}).",
+  "Seule exception : ce qui est vraiment impossible sans moi (une décision à prendre, un accès à donner) reste à faire ; explique pourquoi dans le bilan.": "Единственное исключение: то, что действительно невозможно без меня (решение, которое должен принять я, доступ, который должен дать я), остаётся невыполненным; объясни причину в итоге.",
+  "Termine par un bilan : ce qui est fait, ce qui reste et pourquoi.": "Закончи итогом: что сделано, что осталось и почему.",
+  "… et {n} de plus : la liste complète est dans `voir_projet`.": "… и ещё {n}: полный список — в `voir_projet`.",
+  "Langue, accent, densité": "Язык, акцент, плотность"
 }

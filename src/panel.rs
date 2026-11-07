@@ -110,7 +110,7 @@ fn launchers(ui: &mut Ui, data: &Data, st: &UiState, p: usize, act: &mut Vec<Act
                     act.push(Action::Launch(p, id));
                 }
                 let shortcut = if l.shortcut.is_empty() { String::new() } else { format!(" · {}", l.shortcut) };
-                let resp = resp.on_hover_text(tf("{0}{shortcut}\n{1}\nClic droit : options", &[("0", &l.name), ("shortcut", &shortcut), ("1", &l.resolve(project))]));
+                let resp = resp.on_hover_text(tf("{0}{shortcut}\n{1}\nClic droit : options", &[("0", &l.name), ("shortcut", &shortcut), ("1", &l.preview(project))]));
                 resp.context_menu(|ui| {
                     ui.set_min_width(220.0);
                     if ui.button(tf("{0}  Mettre en avant", &[("0", &(icons::ch(Icon::Star)))])).clicked() {

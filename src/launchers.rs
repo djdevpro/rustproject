@@ -442,7 +442,7 @@ pub fn editor_form(ui: &mut Ui, d: &mut LauncherDraft, preview: Option<&Project>
             ui.add_space(6.0);
             if let Some(project) = preview {
                 widgets::caps(ui, &tf("Pour {0}", &[("0", &project.name)]));
-                let resolved = if l.command.is_empty() { "—".to_owned() } else { l.resolve(project) };
+                let resolved = if l.command.is_empty() { "—".to_owned() } else { l.preview(project) };
                 Frame::new().fill(t.input).corner_radius(8).inner_margin(Margin::same(10)).show(ui, |ui| {
                     ui.set_width(ui.available_width());
                     ui.label(RichText::new(resolved).font(FontId::new(11.5, FontFamily::Monospace)).color(t.ink));

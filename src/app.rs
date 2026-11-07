@@ -107,7 +107,8 @@ impl CfgSection {
             Self::Ontology => tr("Facettes, concepts, classement"),
             Self::Launchers => tr("Boutons « Ouvrir avec »"),
             Self::Attention => tr("Focus, réserve, revue"),
-            Self::Appearance => tr("Thème, accent, densité"),
+            Self::Appearance if theme::LIGHT_THEME => tr("Thème, accent, densité"),
+            Self::Appearance => tr("Langue, accent, densité"),
             Self::Data => tr("Index, export, démo"),
         }
     }

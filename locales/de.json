@@ -906,5 +906,18 @@
   "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "Ein SVG behält seine Farben, ein Bild wird auf 128 px verkleinert. Du kannst die Datei auch auf das Fenster ziehen.",
   "Classement": "Einordnung",
   "Fiche": "Steckbrief",
-  "Suivi": "Verlauf"
+  "Suivi": "Verlauf",
+  "Les étapes à faire de la fiche « {nom} » dans Rust Project (id {id}) sont toutes faites, vérifiées et cochées.": "Die offenen Schritte der Karte „{nom}“ in Rust Project (id {id}) sind alle erledigt, geprüft und abgehakt.",
+  "La prochaine action de la fiche « {nom} » dans Rust Project (id {id}) est faite et vérifiée : {action}": "Der nächste Schritt der Karte „{nom}“ in Rust Project (id {id}) ist erledigt und geprüft: {action}",
+  "Étapes à faire :": "Offene Schritte:",
+  "Pour y arriver :": "So kommst du ans Ziel:",
+  "Nomme d'abord cette conversation « {nom} - [objectif en quelques mots] » avec l'outil `set_session_title` de Claude Desktop (session_id = self).": "Benenne zuerst diese Unterhaltung „{nom} - [Ziel in wenigen Worten]“ mit dem Werkzeug `set_session_title` von Claude Desktop (session_id = self).",
+  "Lis la fiche avec l'outil MCP `voir_projet` du serveur `rust-project` (id {id}).": "Lies die Karte mit dem MCP-Werkzeug `voir_projet` des Servers `rust-project` (id {id}).",
+  "Va jusqu'au bout, une chose à la fois : vérifie chacune (build, tests, résultat visible) avant de passer à la suivante.": "Zieh es bis zum Ende durch, eins nach dem anderen: Prüfe jedes (Build, Tests, sichtbares Ergebnis), bevor du zum nächsten übergehst.",
+  "Dès qu'une étape est faite et vérifiée, coche-la avec l'outil MCP `cocher_etape` (id {id}, index = sa position dans `steps` à partir de 0, fait = true). Jamais avant.": "Sobald ein Schritt erledigt und geprüft ist, hake ihn mit dem MCP-Werkzeug `cocher_etape` ab (id {id}, index = seine Position in `steps` ab 0, fait = true). Nie vorher.",
+  "Une fois l'action faite et vérifiée, marque-la comme faite : vide `prochaine_action` avec l'outil MCP `modifier_projet` (id {id}).": "Sobald der nächste Schritt erledigt und geprüft ist, markiere ihn als erledigt: Leere `prochaine_action` mit dem MCP-Werkzeug `modifier_projet` (id {id}).",
+  "Seule exception : ce qui est vraiment impossible sans moi (une décision à prendre, un accès à donner) reste à faire ; explique pourquoi dans le bilan.": "Einzige Ausnahme: Was ohne mich wirklich unmöglich ist (eine Entscheidung, die ich treffen muss, ein Zugang, den ich geben muss), bleibt offen; erkläre im Fazit, warum.",
+  "Termine par un bilan : ce qui est fait, ce qui reste et pourquoi.": "Schließe mit einem Fazit: was erledigt ist, was bleibt und warum.",
+  "… et {n} de plus : la liste complète est dans `voir_projet`.": "… und {n} weitere: Die vollständige Liste steht in `voir_projet`.",
+  "Langue, accent, densité": "Sprache, Akzent, Dichte"
 }

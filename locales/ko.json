@@ -906,5 +906,18 @@
   "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "SVG는 원래 색을 유지하고 이미지는 128px로 줄어듭니다. 파일을 창에 끌어다 놓을 수도 있습니다.",
   "Classement": "분류",
   "Fiche": "정보",
-  "Suivi": "진행"
+  "Suivi": "진행",
+  "Les étapes à faire de la fiche « {nom} » dans Rust Project (id {id}) sont toutes faites, vérifiées et cochées.": "Rust Project의 ‘{nom}’ 카드(id {id})에 남은 단계가 모두 완료되고 검증되어 체크되었다.",
+  "La prochaine action de la fiche « {nom} » dans Rust Project (id {id}) est faite et vérifiée : {action}": "Rust Project의 ‘{nom}’ 카드(id {id})의 다음 행동이 완료되고 검증되었다: {action}",
+  "Étapes à faire :": "남은 단계:",
+  "Pour y arriver :": "진행 방법:",
+  "Nomme d'abord cette conversation « {nom} - [objectif en quelques mots] » avec l'outil `set_session_title` de Claude Desktop (session_id = self).": "먼저 Claude Desktop의 `set_session_title` 도구로 이 대화의 이름을 ‘{nom} - [몇 단어로 된 목표]’로 정하세요(session_id = self).",
+  "Lis la fiche avec l'outil MCP `voir_projet` du serveur `rust-project` (id {id}).": "`rust-project` 서버의 MCP 도구 `voir_projet`를 사용해 카드를 읽으세요(id {id}).",
+  "Va jusqu'au bout, une chose à la fois : vérifie chacune (build, tests, résultat visible) avant de passer à la suivante.": "끝까지 해내세요. 한 번에 하나씩, 다음으로 넘어가기 전에 각각을 검증하세요(빌드, 테스트, 눈에 보이는 결과).",
+  "Dès qu'une étape est faite et vérifiée, coche-la avec l'outil MCP `cocher_etape` (id {id}, index = sa position dans `steps` à partir de 0, fait = true). Jamais avant.": "단계를 완료하고 검증하면 바로 MCP 도구 `cocher_etape`로 체크하세요(id {id}, index = `steps`에서 0부터 센 위치, fait = true). 그 전에는 절대 체크하지 마세요.",
+  "Une fois l'action faite et vérifiée, marque-la comme faite : vide `prochaine_action` avec l'outil MCP `modifier_projet` (id {id}).": "행동을 완료하고 검증하면 완료로 표시하세요: MCP 도구 `modifier_projet`(id {id})로 `prochaine_action`을 비우세요.",
+  "Seule exception : ce qui est vraiment impossible sans moi (une décision à prendre, un accès à donner) reste à faire ; explique pourquoi dans le bilan.": "유일한 예외: 제가 없으면 정말 불가능한 일(제가 내려야 할 결정, 제가 줘야 할 접근 권한)은 남겨 두고, 그 이유를 요약에서 설명하세요.",
+  "Termine par un bilan : ce qui est fait, ce qui reste et pourquoi.": "마지막에 요약하세요: 완료한 것, 남은 것과 그 이유.",
+  "… et {n} de plus : la liste complète est dans `voir_projet`.": "…외 {n}개: 전체 목록은 `voir_projet`에 있습니다.",
+  "Langue, accent, densité": "언어, 강조색, 밀도"
 }

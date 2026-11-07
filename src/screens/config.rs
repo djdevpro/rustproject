@@ -912,7 +912,7 @@ fn launchers(ui: &mut Ui, data: &mut Data, act: &mut Vec<Action>) {
             let code = &data.launchers[1];
             Frame::new().fill(t.input).corner_radius(8).inner_margin(Margin::same(12)).show(ui, |ui| {
                 ui.set_width(ui.available_width());
-                ui.label(RichText::new(format!("{}    →    {}", code.command, code.resolve(project))).font(FontId::new(12.0, FontFamily::Monospace)).color(t.ink));
+                ui.label(RichText::new(format!("{}    →    {}", code.command, code.preview(project))).font(FontId::new(12.0, FontFamily::Monospace)).color(t.ink));
             });
             ui.label(RichText::new(tf("Exemple avec le projet {0}.", &[("0", &project.name)])).size(12.5).color(t.faint));
         }
@@ -998,16 +998,19 @@ fn appearance(ui: &mut Ui, data: &mut Data, act: &mut Vec<Action>) {
             act.push(Action::SetLanguage(choice));
         }
     });
-    widgets::settings_card(ui, tr("Thème"), None, |ui| {
-        let options: Vec<(ThemeChoice, Option<Icon>, &str)> = vec![
-            (ThemeChoice::System, Some(Icon::Monitor), ThemeChoice::System.label()),
-            (ThemeChoice::Dark, Some(Icon::Moon), ThemeChoice::Dark.label()),
-            (ThemeChoice::Light, Some(Icon::Sun), ThemeChoice::Light.label()),
-        ];
-        if widgets::segmented(ui, "cfg-theme", &mut c.theme, &options, Some(420.0)) {
-            act.push(Action::ApplyTheme);
-        }
-    });
+    // Le thème clair est mis de côté pour l'instant (`theme::LIGHT_THEME`) : pas de choix du thème.
+    if theme::LIGHT_THEME {
+        widgets::settings_card(ui, tr("Thème"), None, |ui| {
+            let options: Vec<(ThemeChoice, Option<Icon>, &str)> = vec![
+                (ThemeChoice::System, Some(Icon::Monitor), ThemeChoice::System.label()),
+                (ThemeChoice::Dark, Some(Icon::Moon), ThemeChoice::Dark.label()),
+                (ThemeChoice::Light, Some(Icon::Sun), ThemeChoice::Light.label()),
+            ];
+            if widgets::segmented(ui, "cfg-theme", &mut c.theme, &options, Some(420.0)) {
+                act.push(Action::ApplyTheme);
+            }
+        });
+    }
     widgets::settings_card(ui, tr("Couleur d'accent"), Some(tr("Boutons principaux, sélection, focus.")), |ui| {
         ui.horizontal(|ui| {
             for a in Accent::ALL {
