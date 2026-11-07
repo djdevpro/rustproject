@@ -576,6 +576,8 @@ pub struct UiState {
     pub live_window: crate::recent::Window,
     /// Le fil combiné (sinon, une carte par projet).
     pub live_feed: bool,
+    /// Le seul projet déplié dans « En ce moment » ; tous sont repliés au démarrage.
+    pub live_expanded: Option<u64>,
     /// Les projets dont on voit tous les fichiers (identifiants).
     pub live_open: Vec<u64>,
     /// Le panneau masqué (un bouton du bureau le rouvre).
@@ -685,6 +687,7 @@ impl Default for UiState {
             live: Default::default(),
             live_window: Default::default(),
             live_feed: false,
+            live_expanded: None,
             live_open: Vec::new(),
             live_hidden: false,
             now: 0.0,

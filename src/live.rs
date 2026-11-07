@@ -4,7 +4,8 @@
 //! s'ouvrent d'un clic dans l'application par défaut du système. Le « fil combiné » mêle les
 //! fichiers de tous les projets, du plus récent au plus ancien.
 //!
-//! Un clic sur un projet l'ouvre dans le panneau projet ; le fermer ramène ici.
+//! Les cartes sont repliées au départ ; ouvrir l'une referme l'autre. La flèche dans les
+//! détails ouvre la fiche du projet ; la fermer ramène ici.
 
 use egui::{Align, Align2, CornerRadius, FontFamily, FontId, Frame, Layout, Margin, RichText, ScrollArea, Sense, Stroke, Ui, pos2, vec2};
 
@@ -47,6 +48,9 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
                 let projects: Vec<ProjectActivity> = st.live.snapshot.as_ref().map(|s| s.projects.clone()).unwrap_or_default();
                 // Les projets encore suivis (une fiche supprimée entre deux relevés disparaît).
                 let rows: Vec<(usize, &ProjectActivity)> = projects.iter().filter_map(|pa| data.index_of(pa.id).map(|i| (i, pa))).collect();
+                if st.live_expanded.is_some_and(|id| !rows.iter().any(|(_, pa)| pa.id == id)) {
+                    st.live_expanded = None;
+                }
                 if st.live.snapshot.is_none() {
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
@@ -60,7 +64,7 @@ pub fn show(ui: &mut Ui, data: &Data, st: &mut UiState, act: &mut Vec<Action>) {
                 } else {
                     ui.spacing_mut().item_spacing.y = 10.0;
                     for &(i, pa) in &rows {
-                        project_card(ui, data, st, i, pa, act);
+                        ui.push_id(pa.id, |ui| project_card(ui, data, st, i, pa, act));
                     }
                 }
                 ui.add_space(10.0);
@@ -146,26 +150,14 @@ fn project_card(ui: &mut Ui, data: &Data, st: &mut UiState, i: usize, pa: &Proje
     Frame::new().fill(mix(t.surface, t.bg, 0.45)).stroke(Stroke::new(1.0, t.line)).corner_radius(12).inner_margin(Margin::symmetric(12, 12)).show(ui, |ui| {
         ui.set_width(ui.available_width());
         ui.spacing_mut().item_spacing.y = 6.0;
-        // Le nom (clic : ouvrir le projet), la dernière modification, la flèche d'ouverture.
-        ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 8.0;
-            crate::logo::show(ui, p, 20.0, t.accent_ink);
-            let when = ago(pa.last);
-            let when_w = ui.painter().layout_no_wrap(when.clone(), FontId::proportional(12.0), t.faint).size().x;
-            let name_w = (ui.available_width() - when_w - 50.0).max(40.0);
-            let name = ui
-                .allocate_ui(vec2(name_w, 24.0), |ui| ui.add(egui::Label::new(RichText::new(&p.name).font(FontId::new(16.5, theme::bold())).color(t.ink_strong)).truncate().sense(Sense::click())))
-                .inner;
-            if name.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
-                act.push(Action::Select(i));
-            }
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if widgets::icon_button(ui, Icon::ArrowRight, &tf("Ouvrir le projet {0}", &[("0", &p.name)]), 28.0).clicked() {
-                    act.push(Action::Select(i));
-                }
-                ui.label(RichText::new(when).size(12.0).color(t.faint));
-            });
-        });
+        let expanded = st.live_expanded == Some(pa.id);
+        if project_header(ui, p, pa.last, expanded).clicked() {
+            st.live_expanded = if expanded { None } else { Some(pa.id) };
+            ui.ctx().request_repaint();
+        }
+        if st.live_expanded != Some(pa.id) {
+            return;
+        }
         // État et attention, modifiables ; la branche et ce qui n'est pas commité.
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
@@ -224,7 +216,42 @@ fn project_card(ui: &mut Ui, data: &Data, st: &mut UiState, i: usize, pa: &Proje
                 }
             }
         }
+        ui.horizontal(|ui| {
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                if widgets::icon_button(ui, Icon::ArrowRight, &tf("Ouvrir le projet {0}", &[("0", &p.name)]), 40.0).clicked() {
+                    act.push(Action::Select(i));
+                }
+            });
+        });
     });
+}
+
+/// Toute la ligne est cliquable, y compris l'icône et la date. Le nom reste accessible en
+/// entier quand il doit être tronqué à l'écran.
+fn project_header(ui: &mut Ui, project: &crate::model::Project, last: u64, expanded: bool) -> egui::Response {
+    let t = Tokens::get(ui.ctx());
+    let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 40.0), Sense::click());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::DisclosureTriangle, true, &project.name));
+    ui.ctx().accesskit_node_builder(resp.id, |node| node.set_expanded(expanded));
+    if resp.clicked() {
+        resp.request_focus();
+    }
+    let hover = ui.ctx().animate_bool(resp.id.with("hover"), resp.hovered());
+    ui.painter().rect_filled(rect, 6, tint(t.ink, 0.07 * hover));
+    if resp.has_focus() {
+        ui.painter().rect_stroke(rect, 6, Stroke::new(1.0, t.accent), egui::StrokeKind::Inside);
+    }
+    let cy = rect.center().y;
+    crate::logo::paint(ui, project, pos2(rect.left() + 10.0, cy), 20.0, t.accent_ink);
+    icons::paint(ui.painter(), pos2(rect.right() - 10.0, cy), if expanded { Icon::ChevronDown } else { Icon::ChevronRight }, 16.0, t.muted);
+    let when = ui.painter().layout_no_wrap(ago(last), FontId::proportional(12.0), t.faint);
+    let when_x = rect.right() - 30.0 - when.size().x;
+    ui.painter().galley(pos2(when_x, cy - when.size().y / 2.0), when, t.faint);
+    let name_x = rect.left() + 28.0;
+    let font = FontId::new(16.5, theme::bold());
+    let name = widgets::elide_end(ui.painter(), &project.name, &font, (when_x - name_x - 10.0).max(0.0));
+    ui.painter().text(pos2(name_x, cy), Align2::LEFT_CENTER, name, font, t.ink_strong);
+    resp.on_hover_text(&project.name).on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
 /// Le fil combiné : les fichiers de tous les projets, par tranche de temps.

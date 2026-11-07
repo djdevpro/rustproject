@@ -7,6 +7,7 @@
 
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable as _;
+use egui_kittest::kittest::NodeT as _;
 
 use crate::app::{AtelierApp, Modal, PanelTab, Screen, UpdatePhase};
 use crate::icons::Icon;
@@ -1292,6 +1293,8 @@ fn en_ce_moment() {
     // Fermer le projet ouvert : le bureau montre « En ce moment ».
     click(&mut h, "Fermer le panneau");
     assert!(h.state().st.selected.is_none());
+    assert!(h.query_by_label("Cargo.toml").is_none(), "les détails sont repliés au départ");
+    click_live_project(&mut h, &name);
     // Trois fichiers d'abord, puis tous.
     assert!(h.query_by_label("Cargo.toml").is_some() && h.query_by_label("docs/notes.md").is_none());
     click(&mut h, "Voir les 5 fichiers");
@@ -1315,4 +1318,94 @@ fn en_ce_moment() {
     assert!(h.state().st.live_hidden && h.query_by_label("build.rs").is_none());
     click(&mut h, "En ce moment");
     assert!(!h.state().st.live_hidden);
+}
+
+fn click_live_project(h: &mut Harness<'static, AtelierApp>, name: &str) {
+    h.query_all_by_label(name).find(|n| n.accesskit_node().role() == egui::Role::DisclosureTriangle).expect("l'en-tête dans le panneau").click_accesskit();
+    h.run();
+}
+
+fn live_accordion_harness(size: (f32, f32)) -> Harness<'static, AtelierApp> {
+    use crate::recent::{FileHit, ProjectActivity, Snapshot};
+    let mut h = harness_sized(size);
+    let now = crate::model::now();
+    let projects = (0..2).map(|i| {
+        let project = &mut h.state_mut().data.projects[i];
+        project.name = ["Rust Project", "Un projet au titre très long pour vérifier la place de la date"][i].into();
+        project.steps = vec![crate::model::Step { text: format!("Prochaine action {i}"), done: false }];
+        ProjectActivity {
+            id: project.id,
+            last: now - 60 * (i as u64 + 1),
+            count: 1,
+            files: vec![FileHit { path: format!("C:/demo/projet-{i}.rs"), rel: format!("projet-{i}.rs"), mtime: now - 60 }],
+            readme: None,
+            git: None,
+        }
+    }).collect();
+    h.state_mut().st.live.freeze(Snapshot { at: now, projects });
+    click(&mut h, "Fermer le panneau");
+    h
+}
+
+#[test]
+fn en_ce_moment_accordeon_exclusif() {
+    for size in [NORMAL, MINI] {
+        let mut h = live_accordion_harness(size);
+        let first = h.state().data.projects[0].name.clone();
+        let second = h.state().data.projects[1].name.clone();
+        assert!(h.state().st.live_expanded.is_none());
+        assert!(h.query_by_label("projet-0.rs").is_none() && h.query_by_label("projet-1.rs").is_none());
+        assert!(h.query_by_label("Prochaine action 0").is_none());
+        click_live_project(&mut h, &first);
+        assert!(h.state().st.selected.is_none(), "l'en-tête déplie sans ouvrir la fiche");
+        assert!(h.query_by_label("projet-0.rs").is_some() && h.query_by_label("projet-1.rs").is_none());
+        let next_header = h.query_all_by_label(&second).find(|n| n.accesskit_node().role() == egui::Role::DisclosureTriangle).unwrap().rect();
+        assert!(next_header.bottom() < size.1 - 54.0, "les détails ne remplissent pas toute la hauteur du panneau");
+        // Les actions du contenu restent indépendantes de l'accordéon.
+        click(&mut h, "Prochaine action 0");
+        assert!(h.state().data.projects[0].steps[0].done);
+        assert_eq!(h.state().st.live_expanded, Some(h.state().data.projects[0].id));
+        click_live_project(&mut h, &second);
+        assert!(h.query_by_label("projet-0.rs").is_none() && h.query_by_label("projet-1.rs").is_some());
+        assert!(overflowing(&h, size.0).is_empty(), "le titre long ne déborde pas");
+        // Le clavier permet aussi de replier le projet ouvert.
+        let header = h.query_all_by_label(&second).find(|n| n.accesskit_node().role() == egui::Role::DisclosureTriangle).unwrap().rect();
+        click_with(&mut h, header, egui::Modifiers::NONE);
+        assert!(h.query_by_label("projet-1.rs").is_none());
+        h.key_press(egui::Key::Enter);
+        h.run();
+        assert!(h.query_by_label("projet-1.rs").is_some());
+        // Un nouveau relevé peut changer l'ordre : le projet ouvert est repéré par son id.
+        let mut snap = h.state().st.live.snapshot.clone().unwrap();
+        snap.projects.reverse();
+        h.state_mut().st.live.freeze(snap.clone());
+        h.run();
+        assert!(h.query_by_label("projet-0.rs").is_none() && h.query_by_label("projet-1.rs").is_some());
+        // Si le projet disparaît du relevé, il ne reste pas ouvert à son prochain retour.
+        let removed = snap.projects.remove(0);
+        h.state_mut().st.live.freeze(snap.clone());
+        h.run();
+        assert!(h.state().st.live_expanded.is_none());
+        snap.projects.push(removed);
+        h.state_mut().st.live.freeze(snap);
+        h.run();
+        assert!(h.query_by_label("projet-1.rs").is_none());
+    }
+}
+
+/// Captures du vrai rendu egui, avec des projets fictifs et sans accès au disque utilisateur.
+#[test]
+#[ignore]
+fn captures_accordeon() {
+    std::fs::create_dir_all("target/accordion-review").unwrap();
+    for (name, size) in [("normal", NORMAL), ("mini", MINI)] {
+        let mut h = live_accordion_harness(size);
+        h.render().unwrap().save(format!("target/accordion-review/{name}-collapsed.png")).unwrap();
+        let first = h.state().data.projects[0].name.clone();
+        click_live_project(&mut h, &first);
+        h.render().unwrap().save(format!("target/accordion-review/{name}-first.png")).unwrap();
+        let second = h.state().data.projects[1].name.clone();
+        click_live_project(&mut h, &second);
+        h.render().unwrap().save(format!("target/accordion-review/{name}-second.png")).unwrap();
+    }
 }
