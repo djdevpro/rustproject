@@ -111,7 +111,7 @@ fn drag_ghost(ui: &Ui, data: &Data) {
     let galley = painter.layout_no_wrap(label, font, t.ink_strong);
     let rect = Rect::from_min_size(pos + vec2(14.0, 10.0), vec2(galley.size().x + 44.0, 34.0));
     painter.rect(rect, CornerRadius::same(9), t.raised, Stroke::new(1.0, t.accent), StrokeKind::Inside);
-    icons::paint(&painter, pos2(rect.left() + 19.0, rect.center().y), p.icon, 16.0, t.accent_ink);
+    crate::logo::paint(ui, p, pos2(rect.left() + 19.0, rect.center().y), 16.0, t.accent_ink);
     painter.galley(pos2(rect.left() + 34.0, rect.center().y - galley.size().y / 2.0), galley, t.ink_strong);
 }
 
@@ -618,7 +618,7 @@ fn grid(ui: &mut Ui, data: &Data, ids: &[usize], st: &mut UiState, act: &mut Vec
                         painter.rect(rect, CornerRadius::same(theme::R_CARD), mix(t.surface, t.raised, hover * 0.6), stroke, StrokeKind::Inside);
                         let tile = Rect::from_min_size(rect.min + vec2(14.0, 14.0), vec2(36.0, 36.0));
                         painter.rect_filled(tile, CornerRadius::same(9), tint(dm.color, 0.16));
-                        icons::paint(&painter, tile.center(), p.icon, 20.0, dm.color);
+                        crate::logo::paint(ui, p, tile.center(), 20.0, dm.color);
                         widgets::paint_text(&painter, pos2(tile.right() + 12.0, tile.top()), &p.name, FontId::new(16.0, theme::bold()), t.ink_strong, w - 80.0);
                         widgets::paint_text(&painter, pos2(tile.right() + 12.0, tile.top() + 21.0), &p.kind, FontId::proportional(12.5), t.muted, w - 80.0);
                         let mut x = rect.left() + 14.0;
@@ -695,7 +695,7 @@ fn list(ui: &mut Ui, data: &Data, ids: &[usize], st: &mut UiState, act: &mut Vec
                 let col = |k: usize| rect.left() + 14.0 + (width - 28.0) * columns[..k].iter().map(|c| c.1).sum::<f32>();
                 let cw = |k: usize| (width - 28.0) * columns[k].1 - 10.0;
                 let shown = |k: usize| columns[k].1 > 0.0;
-                icons::paint(&painter, pos2(col(0) + 9.0, cy), p.icon, 17.0, dm.color);
+                crate::logo::paint(ui, p, pos2(col(0) + 9.0, cy), 17.0, dm.color);
                 widgets::paint_text(&painter, pos2(col(0) + 26.0, cy - 9.0), &p.name, FontId::new(14.5, theme::semibold()), t.ink_strong, cw(0) - 26.0);
                 if shown(1) {
                     painter.circle_filled(pos2(col(1) + 5.0, cy), 4.0, dm.color);

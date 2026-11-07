@@ -18,8 +18,11 @@ sha2 = "0.10.9"
 strsim = "0.11.1"
 sys-locale = "0.3.2"
 ureq = { version = "3.5.1", features = ["json"] }
-# Les logos SVG des lanceurs (rendus par resvg).
-egui_extras = { version = "0.37", default-features = false, features = ["svg"] }
+# Les logos SVG des lanceurs et des projets (rendus par resvg), et les images des projets.
+egui_extras = { version = "0.37", default-features = false, features = ["svg", "image"] }
+# Le logo image d'un projet : lu, réduit à 128 px et gardé en PNG (base64) dans le fichier.
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "ico", "gif", "bmp"] }
+base64 = "0.22"
 
 # L'icône de l'exécutable Windows (build.rs).
 [build-dependencies]

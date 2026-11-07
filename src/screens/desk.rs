@@ -298,7 +298,7 @@ fn focus_card(ui: &mut Ui, data: &Data, i: usize, selected: bool, reorder: bool,
     let x0 = rect.left() + 18.0;
     let inner_w = width - 36.0;
     let mut y = rect.top() + 18.0;
-    icons::paint(&painter, pos2(x0 + 10.0, y + 11.0), p.icon, 20.0, t.accent_ink);
+    crate::logo::paint(ui, p, pos2(x0 + 10.0, y + 11.0), 20.0, t.accent_ink);
     widgets::paint_text(&painter, pos2(x0 + 28.0, y + 1.0), &p.name, FontId::new(16.5, theme::bold()), t.ink_strong, inner_w - 28.0 - if reorder { 56.0 } else { 0.0 });
     y += 32.0;
     // Ce qu'on vise ; à défaut, la description (jamais une étiquette vide).
@@ -348,7 +348,7 @@ fn flow_row(ui: &mut Ui, data: &Data, i: usize, selected: bool, act: &mut Vec<Ac
     }
     let cy = rect.center().y;
     let x0 = rect.left() + 22.0;
-    icons::paint(&painter, pos2(x0 + 12.0, cy), p.icon, 22.0, if selected { t.accent_ink } else { t.muted });
+    crate::logo::paint(ui, p, pos2(x0 + 12.0, cy), 22.0, if selected { t.accent_ink } else { t.muted });
     // Adaptation à la largeur : on retire d'abord ce qui est redondant (la pastille « Au fil de
     // l'eau », toute la section l'est), puis l'état, puis la date ; la prochaine action se coupe.
     let row_w = rect.width();
@@ -434,7 +434,7 @@ fn rediscover_card(ui: &mut Ui, data: &Data, i: usize, act: &mut Vec<Action>) {
         };
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 12.0;
-            icons::show(ui, p.icon, 26.0, t.muted);
+            crate::logo::show(ui, p, 26.0, t.muted);
             widgets::title(ui, &p.name, 20.0);
             widgets::status_chip(ui, p.status);
             widgets::attention_chip(ui, p.attention);

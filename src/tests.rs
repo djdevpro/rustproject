@@ -1052,3 +1052,36 @@ fn outils_de_developpement() {
     assert!(!h.state().st.devtools.open, "F12 les referme");
 }
 
+
+/// Le logo d'un projet : un SVG gardé tel quel (ses couleurs), une image réduite à 128 px et
+/// gardée en PNG ; dessiné à la place de l'icône ; « Retirer le logo » revient à l'icône.
+#[test]
+fn logo_du_projet() {
+    use crate::model::Logo;
+    use base64::Engine as _;
+    const SVG: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#e07a5f"/><path d="M4 12h16" stroke="currentColor"/></svg>"##;
+    assert_eq!(crate::logo::from_bytes(SVG.as_bytes(), "svg").unwrap(), Logo::Svg(SVG.into()), "couleurs gardées");
+    assert_eq!(crate::logo::from_bytes(SVG.as_bytes(), "").unwrap(), Logo::Svg(SVG.into()), "repéré sans extension");
+    let mut png = std::io::Cursor::new(Vec::new());
+    image::RgbaImage::from_pixel(300, 150, image::Rgba([200, 80, 40, 255])).write_to(&mut png, image::ImageFormat::Png).unwrap();
+    let Logo::Png(b64) = crate::logo::from_bytes(png.get_ref(), "png").unwrap() else { panic!("une image") };
+    let back = image::load_from_memory(&base64::engine::general_purpose::STANDARD.decode(b64).unwrap()).unwrap();
+    assert_eq!((back.width(), back.height()), (128, 64), "réduite, proportions gardées");
+    assert!(crate::logo::from_bytes(b"pas une image", "png").is_err());
+    assert!(crate::logo::from_bytes(b"x", "pdf").is_err());
+    assert!(!serde_json::to_string(&crate::model::Project::default()).unwrap().contains("\"logo\""), "rien d'écrit sans logo");
+
+    let mut h = harness();
+    let p = h.state().st.selected.unwrap();
+    h.state_mut().data.projects[p].logo = Logo::Svg(SVG.into());
+    h.state_mut().data.projects[(p + 1) % 3].logo = crate::logo::from_bytes(png.get_ref(), "png").unwrap();
+    let json = serde_json::to_string(&h.state().data).unwrap();
+    let back: crate::model::Data = serde_json::from_str(&json).unwrap();
+    assert_eq!(back.projects[p].logo, Logo::Svg(SVG.into()), "gardé dans le fichier");
+    // Dessiné au bureau et dans le panneau, puis retiré depuis l'onglet « Modifier ».
+    h.state_mut().st.tab = PanelTab::Edit;
+    h.run();
+    h.get_by_label("Retirer le logo").click_accesskit();
+    h.run();
+    assert!(h.state().data.projects[p].logo.is_none(), "retour à l'icône");
+}

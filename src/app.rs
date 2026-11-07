@@ -279,6 +279,8 @@ pub struct ProjectDraft {
     pub attention: Attention,
     pub domain: usize,
     pub icon: Icon,
+    /// Un logo à la place de l'icône (SVG ou image).
+    pub logo: crate::model::Logo,
     pub folders: Vec<String>,
     /// Adresse web du dépôt (GitHub…), vide s'il n'y en a pas.
     pub remote: String,
@@ -295,6 +297,7 @@ impl PartialEq for ProjectDraft {
             && self.attention == o.attention
             && self.domain == o.domain
             && icons::same(self.icon, o.icon)
+            && self.logo == o.logo
             && self.folders == o.folders
             && self.remote == o.remote
     }
@@ -312,6 +315,7 @@ impl ProjectDraft {
             attention: p.attention,
             domain: p.domain,
             icon: p.icon,
+            logo: p.logo.clone(),
             folders: p.folders.clone(),
             remote: p.remote.clone().unwrap_or_default(),
         }
@@ -335,7 +339,7 @@ impl ProjectDraft {
         macro_rules! take {
             ($($f:ident),*) => { $(if base.$f != fresh.$f { self.$f = fresh.$f.clone(); })* };
         }
-        take!(name, description, outcome, objective, next_action, status, attention, domain, folders, remote);
+        take!(name, description, outcome, objective, next_action, status, attention, domain, logo, folders, remote);
         if !icons::same(base.icon, fresh.icon) {
             self.icon = fresh.icon;
         }
@@ -538,6 +542,10 @@ pub struct UiState {
     pub tag_new: Option<TagNew>,
     /// Les outils de développement (F12).
     pub devtools: crate::devtools::DevTools,
+    /// Le logo du projet dans l'onglet « Modifier » : la zone « coller le code SVG » ouverte,
+    /// et le dernier fichier refusé.
+    pub logo_paste: Option<String>,
+    pub logo_error: Option<String>,
     pub keyword_input: String,
     /// Mots-clés proposés par Ollama : (faits, en tout).
     pub keywords_job: Option<(usize, usize)>,
@@ -630,6 +638,8 @@ impl Default for UiState {
             tag_query: String::new(),
             tag_new: None,
             devtools: Default::default(),
+            logo_paste: None,
+            logo_error: None,
             keyword_input: String::new(),
             keywords_job: None,
             new_exclude: String::new(),
@@ -1328,27 +1338,6 @@ impl AtelierApp {
                 if resp.clicked() {
                     self.actions.push(Action::OpenUpdate);
                 }
-                ui.add_space(4.0);
-                let scanning = self.st.scan_started.is_some();
-                if widgets::icon_button(ui, Icon::RefreshCw, tr("Scanner les dossiers maintenant"), 34.0).clicked() && !scanning {
-                    self.actions.push(Action::StartScan);
-                }
-                // Le texte d'état seulement s'il reste de la place (fenêtre étroite, zoom…).
-                if ui.available_width() > 220.0 {
-                    ui.add_space(6.0);
-                    let last = self.data.config.roots.iter().map(|r| r.last_scan).max().unwrap_or(0);
-                    let (text, color) = if scanning {
-                        (tf("Scan en cours… {0} dossiers", &[("0", &self.st.scan_count)]), t.accent_ink)
-                    } else if last == 0 {
-                        (tr("Aucun scan pour l'instant").to_owned(), t.muted)
-                    } else {
-                        (tf("Dossiers scannés {0}", &[("0", &model::ago(last))]), t.muted)
-                    };
-                    ui.label(RichText::new(text).size(13.0).color(color));
-                    ui.add_space(6.0);
-                    let (dot, _) = ui.allocate_exact_size(vec2(8.0, 8.0), egui::Sense::hover());
-                    ui.painter().circle_filled(dot.center(), 4.0, if scanning { t.accent } else { t.good_fg });
-                }
             });
         });
     }
@@ -1371,19 +1360,40 @@ impl AtelierApp {
             ui.add_space(12.0);
             // Coupé par « … » plutôt que de chevaucher « Données de démonstration ».
             let font = FontId::proportional(13.0);
-            let shown = widgets::elide_end(ui.painter(), &text, &font, ui.available_width() - 230.0);
+            let demo = self.st.store_path.is_none();
+            let shown = widgets::elide_end(ui.painter(), &text, &font, ui.available_width() - if demo { 470.0 } else { 290.0 });
             ui.label(RichText::new(shown).font(font).color(t.muted)).on_hover_text(&text);
+            // À droite : l'état du scan des dossiers, et le bouton pour le relancer.
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                ui.add_space(24.0);
-                match &self.st.store_path {
-                    Some(path) => {
-                        ui.label(RichText::new(tr("Enregistré")).size(13.0).color(t.faint)).on_hover_text(path);
-                        icons::show(ui, Icon::HardDrive, 15.0, t.faint);
-                    }
-                    None => {
-                        ui.label(RichText::new(tr("Données de démonstration")).size(13.0).color(t.faint));
-                        icons::show(ui, Icon::FlaskConical, 15.0, t.faint);
-                    }
+                ui.add_space(18.0);
+                ui.spacing_mut().item_spacing.x = 0.0;
+                let scanning = self.st.scan_started.is_some();
+                if widgets::icon_button(ui, Icon::RefreshCw, tr("Scanner les dossiers maintenant"), 28.0).clicked() && !scanning {
+                    self.actions.push(Action::StartScan);
+                }
+                ui.add_space(6.0);
+                let last = self.data.config.roots.iter().map(|r| r.last_scan).max().unwrap_or(0);
+                let (text, color) = if scanning {
+                    (tf("Scan en cours… {0} dossiers", &[("0", &self.st.scan_count)]), t.accent_ink)
+                } else if last == 0 {
+                    (tr("Aucun scan pour l'instant").to_owned(), t.muted)
+                } else {
+                    (tf("Dossiers scannés {0}", &[("0", &model::ago(last))]), t.muted)
+                };
+                let label = ui.label(RichText::new(text).size(13.0).color(color));
+                if let Some(path) = &self.st.store_path {
+                    label.on_hover_text(tf("Données enregistrées dans {0}", &[("0", path)]));
+                }
+                ui.add_space(8.0);
+                let (dot, _) = ui.allocate_exact_size(vec2(8.0, 8.0), egui::Sense::hover());
+                ui.painter().circle_filled(dot.center(), 4.0, if scanning { t.accent } else { t.good_fg });
+                if demo {
+                    ui.add_space(14.0);
+                    widgets::vsep(ui, 18.0);
+                    ui.add_space(14.0);
+                    ui.label(RichText::new(tr("Données de démonstration")).size(13.0).color(t.faint));
+                    ui.add_space(6.0);
+                    icons::show(ui, Icon::FlaskConical, 15.0, t.faint);
                 }
             });
         });
@@ -1844,6 +1854,7 @@ impl AtelierApp {
                     project.status = d.status;
                     project.domain = d.domain;
                     project.icon = d.icon;
+                    project.logo = d.logo;
                     project.folders = d.folders;
                     project.remote = (!d.remote.is_empty()).then_some(d.remote);
                     // De nouveaux dossiers : leur dépôt Git, si l'adresse manque encore.

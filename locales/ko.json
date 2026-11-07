@@ -890,5 +890,18 @@
   "{0} dossiers": "폴더 {0}개",
   "{0} lignes": "{0}개 행",
   "Écran · projet ouvert": "화면 · 열린 프로젝트",
-  "Éléments qui s'élargissent": "넓어지는 요소"
+  "Éléments qui s'élargissent": "넓어지는 요소",
+  "Cette image n'a pas pu être lue.": "이 이미지를 읽을 수 없습니다.",
+  "Choisir un logo…": "로고 선택…",
+  "Coller un SVG": "SVG 붙여넣기",
+  "Données enregistrées dans {0}": "데이터 저장 위치 {0}",
+  "Dépose le fichier, il devient le logo du projet": "파일을 놓으면 프로젝트 로고가 됩니다",
+  "Formats acceptés : SVG, PNG, JPEG, WebP, ICO, GIF et BMP.": "지원 형식: SVG, PNG, JPEG, WebP, ICO, GIF, BMP.",
+  "Icône ou logo": "아이콘 또는 로고",
+  "Image trop lourde (25 Mo au plus).": "이미지가 너무 큽니다(최대 25MB).",
+  "Les cadres au survol et les zones cliquables n'existent que dans la version de développement.": "마우스 오버 테두리와 클릭 영역은 개발 버전에서만 사용할 수 있습니다.",
+  "Logo du projet": "프로젝트 로고",
+  "Remplacer…": "바꾸기…",
+  "SVG ou image": "SVG 또는 이미지",
+  "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "SVG는 원래 색을 유지하고 이미지는 128px로 줄어듭니다. 파일을 창에 끌어다 놓을 수도 있습니다."
 }

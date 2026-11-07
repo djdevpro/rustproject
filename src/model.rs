@@ -231,6 +231,26 @@ pub struct Project {
     /// Les paquets qu'il utilise (dépendances directes de ses manifestes), relus à chaque
     /// lancement et après chaque scan.
     pub packages: Vec<crate::packages::Package>,
+    /// Un logo à la place de l'icône (SVG ou image), choisi dans la fiche.
+    #[serde(skip_serializing_if = "Logo::is_none")]
+    pub logo: Logo,
+}
+
+/// Le logo d'un projet, à la place de son icône. Un SVG garde ses couleurs (seul `currentColor`
+/// prend la couleur de l'icône) ; une image est réduite à 128 px et gardée en PNG (base64).
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Logo {
+    #[default]
+    None,
+    Svg(String),
+    Png(String),
+}
+
+impl Logo {
+    pub fn is_none(&self) -> bool {
+        matches!(self, Logo::None)
+    }
 }
 
 impl Default for Project {
@@ -269,6 +289,7 @@ impl Default for Project {
             tags_hash: 0,
             keywords: Vec::new(),
             packages: Vec::new(),
+            logo: Logo::None,
         }
     }
 }

@@ -890,5 +890,18 @@
   "{0} dossiers": "Папок: {0}",
   "{0} lignes": "Строк: {0}",
   "Écran · projet ouvert": "Экран · открытый проект",
-  "Éléments qui s'élargissent": "Растягивающиеся элементы"
+  "Éléments qui s'élargissent": "Растягивающиеся элементы",
+  "Cette image n'a pas pu être lue.": "Не удалось прочитать изображение.",
+  "Choisir un logo…": "Выбрать логотип…",
+  "Coller un SVG": "Вставить SVG",
+  "Données enregistrées dans {0}": "Данные сохранены в {0}",
+  "Dépose le fichier, il devient le logo du projet": "Отпустите файл, он станет логотипом проекта",
+  "Formats acceptés : SVG, PNG, JPEG, WebP, ICO, GIF et BMP.": "Поддерживаемые форматы: SVG, PNG, JPEG, WebP, ICO, GIF и BMP.",
+  "Icône ou logo": "Значок или логотип",
+  "Image trop lourde (25 Mo au plus).": "Изображение слишком большое (не более 25 МБ).",
+  "Les cadres au survol et les zones cliquables n'existent que dans la version de développement.": "Рамки при наведении и кликабельные зоны есть только в версии для разработки.",
+  "Logo du projet": "Логотип проекта",
+  "Remplacer…": "Заменить…",
+  "SVG ou image": "SVG или изображение",
+  "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "SVG сохраняет свои цвета, изображение уменьшается до 128 px. Файл можно также перетащить в окно."
 }

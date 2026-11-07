@@ -890,5 +890,18 @@
   "{0} dossiers": "{0} pastas",
   "{0} lignes": "{0} linhas",
   "Écran · projet ouvert": "Tela · projeto aberto",
-  "Éléments qui s'élargissent": "Elementos que se expandem"
+  "Éléments qui s'élargissent": "Elementos que se expandem",
+  "Cette image n'a pas pu être lue.": "Não foi possível ler esta imagem.",
+  "Choisir un logo…": "Escolher um logo…",
+  "Coller un SVG": "Colar um SVG",
+  "Données enregistrées dans {0}": "Dados salvos em {0}",
+  "Dépose le fichier, il devient le logo du projet": "Solte o arquivo e ele vira o logo do projeto",
+  "Formats acceptés : SVG, PNG, JPEG, WebP, ICO, GIF et BMP.": "Formatos aceitos: SVG, PNG, JPEG, WebP, ICO, GIF e BMP.",
+  "Icône ou logo": "Ícone ou logo",
+  "Image trop lourde (25 Mo au plus).": "Imagem pesada demais (25 MB no máximo).",
+  "Les cadres au survol et les zones cliquables n'existent que dans la version de développement.": "Os contornos ao passar o mouse e as áreas clicáveis só existem na versão de desenvolvimento.",
+  "Logo du projet": "Logo do projeto",
+  "Remplacer…": "Substituir…",
+  "SVG ou image": "SVG ou imagem",
+  "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "Um SVG mantém suas cores, uma imagem é reduzida para 128 px. Você também pode soltar o arquivo na janela."
 }

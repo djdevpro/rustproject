@@ -890,5 +890,18 @@
   "{0} dossiers": "{0} folders",
   "{0} lignes": "{0} rows",
   "Écran · projet ouvert": "Screen · open project",
-  "Éléments qui s'élargissent": "Elements that expand"
+  "Éléments qui s'élargissent": "Elements that expand",
+  "Cette image n'a pas pu être lue.": "This image could not be read.",
+  "Choisir un logo…": "Choose a logo…",
+  "Coller un SVG": "Paste an SVG",
+  "Données enregistrées dans {0}": "Data saved in {0}",
+  "Dépose le fichier, il devient le logo du projet": "Drop the file to make it the project logo",
+  "Formats acceptés : SVG, PNG, JPEG, WebP, ICO, GIF et BMP.": "Accepted formats: SVG, PNG, JPEG, WebP, ICO, GIF and BMP.",
+  "Icône ou logo": "Icon or logo",
+  "Image trop lourde (25 Mo au plus).": "Image too large (25 MB max).",
+  "Les cadres au survol et les zones cliquables n'existent que dans la version de développement.": "Hover outlines and clickable areas are only available in the development build.",
+  "Logo du projet": "Project logo",
+  "Remplacer…": "Replace…",
+  "SVG ou image": "SVG or image",
+  "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "An SVG keeps its colors, an image is scaled down to 128 px. You can also drop the file on the window."
 }

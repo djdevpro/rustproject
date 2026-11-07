@@ -890,5 +890,18 @@
   "{0} dossiers": "{0} 个文件夹",
   "{0} lignes": "{0} 行",
   "Écran · projet ouvert": "屏幕 · 打开的项目",
-  "Éléments qui s'élargissent": "会扩展的元素"
+  "Éléments qui s'élargissent": "会扩展的元素",
+  "Cette image n'a pas pu être lue.": "无法读取此图片。",
+  "Choisir un logo…": "选择徽标…",
+  "Coller un SVG": "粘贴 SVG",
+  "Données enregistrées dans {0}": "数据保存在 {0}",
+  "Dépose le fichier, il devient le logo du projet": "放下文件，它将成为项目徽标",
+  "Formats acceptés : SVG, PNG, JPEG, WebP, ICO, GIF et BMP.": "支持的格式：SVG、PNG、JPEG、WebP、ICO、GIF 和 BMP。",
+  "Icône ou logo": "图标或徽标",
+  "Image trop lourde (25 Mo au plus).": "图片过大（最大 25 MB）。",
+  "Les cadres au survol et les zones cliquables n'existent que dans la version de développement.": "悬停边框和可点击区域仅在开发版本中可用。",
+  "Logo du projet": "项目徽标",
+  "Remplacer…": "替换…",
+  "SVG ou image": "SVG 或图片",
+  "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "SVG 保留自身颜色，图片会缩小到 128 px。也可以把文件拖到窗口上。"
 }

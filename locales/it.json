@@ -890,5 +890,18 @@
   "{0} dossiers": "{0} cartelle",
   "{0} lignes": "{0} righe",
   "Écran · projet ouvert": "Schermata · progetto aperto",
-  "Éléments qui s'élargissent": "Elementi che si allargano"
+  "Éléments qui s'élargissent": "Elementi che si allargano",
+  "Cette image n'a pas pu être lue.": "Impossibile leggere questa immagine.",
+  "Choisir un logo…": "Scegli un logo…",
+  "Coller un SVG": "Incolla un SVG",
+  "Données enregistrées dans {0}": "Dati salvati in {0}",
+  "Dépose le fichier, il devient le logo du projet": "Rilascia il file, diventa il logo del progetto",
+  "Formats acceptés : SVG, PNG, JPEG, WebP, ICO, GIF et BMP.": "Formati accettati: SVG, PNG, JPEG, WebP, ICO, GIF e BMP.",
+  "Icône ou logo": "Icona o logo",
+  "Image trop lourde (25 Mo au plus).": "Immagine troppo pesante (massimo 25 MB).",
+  "Les cadres au survol et les zones cliquables n'existent que dans la version de développement.": "I contorni al passaggio e le zone cliccabili esistono solo nella versione di sviluppo.",
+  "Logo du projet": "Logo del progetto",
+  "Remplacer…": "Sostituisci…",
+  "SVG ou image": "SVG o immagine",
+  "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "Un SVG mantiene i suoi colori, un'immagine viene ridotta a 128 px. Puoi anche rilasciare il file sulla finestra."
 }

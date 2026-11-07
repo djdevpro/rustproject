@@ -73,7 +73,7 @@ fn review_card(ui: &mut Ui, data: &Data, p: usize, act: &mut Vec<Action>) {
             // En-tête.
             ui.horizontal_top(|ui| {
                 ui.spacing_mut().item_spacing.x = 16.0;
-                widgets::icon_tile(ui, project.icon, domain.color, 60.0);
+                crate::logo::tile(ui, project, domain.color, 60.0);
                 ui.vertical(|ui| {
                     ui.spacing_mut().item_spacing.y = 4.0;
                     widgets::title(ui, &project.name, 30.0);
@@ -213,7 +213,7 @@ fn side(ui: &mut Ui, data: &Data, st: &mut UiState, queue: &[usize], current: Op
                 } else if resp.hovered() {
                     painter.rect_filled(rect, egui::CornerRadius::same(8), tint(t.ink, 0.05));
                 }
-                icons::paint(&painter, rect.left_center() + vec2(18.0, 0.0), p.icon, 17.0, if selected { t.accent_ink } else { t.muted });
+                crate::logo::paint(ui, p, rect.left_center() + vec2(18.0, 0.0), 17.0, if selected { t.accent_ink } else { t.muted });
                 widgets::paint_text(&painter, rect.left_top() + vec2(38.0, 6.0), &p.name, FontId::new(14.0, theme::semibold()), if selected { t.accent_ink } else { t.ink }, rect.width() - 110.0);
                 // Barre de sommeil : plus elle est longue, plus le projet dort.
                 let bar = egui::Rect::from_min_size(rect.left_top() + vec2(38.0, 30.0), vec2((rect.width() - 110.0) * p.idle_days as f32 / max_idle, 4.0));
@@ -234,7 +234,7 @@ fn side(ui: &mut Ui, data: &Data, st: &mut UiState, queue: &[usize], current: Op
         }
         for (i, d) in st.decisions.iter().rev().take(6) {
             ui.horizontal(|ui| {
-                icons::show(ui, data.projects[*i].icon, 16.0, t.muted);
+                crate::logo::show(ui, &data.projects[*i], 16.0, t.muted);
                 ui.label(RichText::new(&data.projects[*i].name).size(14.0).color(t.ink));
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     let tone = match d {

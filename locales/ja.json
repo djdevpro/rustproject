@@ -890,5 +890,18 @@
   "{0} dossiers": "{0} フォルダー",
   "{0} lignes": "{0} 行",
   "Écran · projet ouvert": "画面 · 開いているプロジェクト",
-  "Éléments qui s'élargissent": "広がる要素"
+  "Éléments qui s'élargissent": "広がる要素",
+  "Cette image n'a pas pu être lue.": "この画像を読み込めませんでした。",
+  "Choisir un logo…": "ロゴを選ぶ…",
+  "Coller un SVG": "SVG を貼り付け",
+  "Données enregistrées dans {0}": "データの保存先 {0}",
+  "Dépose le fichier, il devient le logo du projet": "ファイルをドロップするとプロジェクトのロゴになります",
+  "Formats acceptés : SVG, PNG, JPEG, WebP, ICO, GIF et BMP.": "対応形式: SVG、PNG、JPEG、WebP、ICO、GIF、BMP。",
+  "Icône ou logo": "アイコンまたはロゴ",
+  "Image trop lourde (25 Mo au plus).": "画像が大きすぎます（最大 25 MB）。",
+  "Les cadres au survol et les zones cliquables n'existent que dans la version de développement.": "ホバー時の枠とクリック可能な領域は開発版でのみ使えます。",
+  "Logo du projet": "プロジェクトのロゴ",
+  "Remplacer…": "置き換え…",
+  "SVG ou image": "SVG または画像",
+  "Un SVG garde ses couleurs, une image est réduite à 128 px. Tu peux aussi déposer le fichier sur la fenêtre.": "SVG は元の色のまま、画像は 128 px に縮小されます。ファイルをウィンドウにドロップすることもできます。"
 }

@@ -40,7 +40,7 @@ pub fn gallery(ctx: &egui::Context, data: &Data, g: &mut GalleryState, act: &mut
     // Onglet « Sur mesure » : un fichier .svg déposé devient le logo du lanceur.
     if g.tab == GalleryTab::Custom {
         take_dropped_svg(ctx, &mut g.draft);
-        drop_hint(ctx);
+        drop_hint(ctx, tr("Dépose le fichier .svg : il devient le logo du lanceur"));
     }
     let modal = egui::Modal::new(Id::unique("gallery")).backdrop_color(theme::scrim(&t)).frame(modal_frame(&t)).show(ctx, |ui| {
         ui.set_width(820.0);
@@ -302,7 +302,7 @@ fn take_dropped_svg(ctx: &egui::Context, d: &mut LauncherDraft) {
 }
 
 /// Pendant qu'on survole la fenêtre avec un fichier : un cadre invite à le déposer.
-fn drop_hint(ctx: &egui::Context) {
+pub fn drop_hint(ctx: &egui::Context, text: &str) {
     if ctx.input(|i| i.raw.hovered_files.is_empty()) {
         return;
     }
@@ -310,7 +310,7 @@ fn drop_hint(ctx: &egui::Context) {
     let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Tooltip, Id::unique("svg-drop-hint")));
     let rect = ctx.viewport_rect().shrink(24.0);
     painter.rect(rect, CornerRadius::same(16), tint(t.accent, 0.10), Stroke::new(2.0, t.accent), StrokeKind::Inside);
-    painter.text(rect.center(), egui::Align2::CENTER_CENTER, tr("Dépose le fichier .svg : il devient le logo du lanceur"), FontId::new(18.0, theme::semibold()), t.ink_strong);
+    painter.text(rect.center(), egui::Align2::CENTER_CENTER, text, FontId::new(18.0, theme::semibold()), t.ink_strong);
 }
 
 /// L'éditeur seul (depuis la configuration : création ou modification).
@@ -318,7 +318,7 @@ pub fn editor(ctx: &egui::Context, data: &Data, launcher: Option<usize>, draft: 
     let t = Tokens::get(ctx);
     let mut open = true;
     take_dropped_svg(ctx, draft);
-    drop_hint(ctx);
+    drop_hint(ctx, tr("Dépose le fichier .svg : il devient le logo du lanceur"));
     let preview = data.focus().first().map(|&p| &data.projects[p]);
     let modal = egui::Modal::new(Id::unique("launcher-editor")).backdrop_color(theme::scrim(&t)).frame(modal_frame(&t)).show(ctx, |ui| {
         ui.set_width(820.0);

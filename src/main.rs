@@ -36,6 +36,7 @@ mod icons;
 mod jobs;
 mod launch;
 mod launchers;
+mod logo;
 mod mcp;
 mod model;
 mod ollama;

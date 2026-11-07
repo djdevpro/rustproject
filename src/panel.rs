@@ -46,7 +46,7 @@ fn header(ui: &mut Ui, data: &Data, p: usize, act: &mut Vec<Action>) {
     let project = &data.projects[p];
     ui.horizontal_top(|ui| {
         ui.spacing_mut().item_spacing.x = 14.0;
-        widgets::icon_tile(ui, project.icon, t.accent_ink, 52.0);
+        crate::logo::tile(ui, project, t.accent_ink, 52.0);
         // Place réservée à droite pour les deux boutons (focus, fermer).
         let text_w = (ui.available_width() - 84.0).max(80.0);
         ui.vertical(|ui| {
@@ -380,10 +380,17 @@ fn edit(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<Acti
                 s.base = fresh.clone();
             }
         }
-        _ => st.draft = Some(DraftState { project: p, draft: fresh.clone(), base: fresh.clone() }),
+        _ => {
+            st.draft = Some(DraftState { project: p, draft: fresh.clone(), base: fresh.clone() });
+            (st.logo_paste, st.logo_error) = (None, None);
+        }
     }
     let Some(s) = st.draft.as_mut() else { return };
     let d = &mut s.draft;
+    // Un fichier déposé sur la fenêtre devient le logo (sauf si une fenêtre modale l'attend).
+    if st.modal.is_none() {
+        crate::logo::take_dropped(ui.ctx(), d, &mut st.logo_error);
+    }
     let w = ui.available_width();
     ui.spacing_mut().item_spacing.y = 12.0;
     widgets::labeled(ui, tr("Nom du projet"), |ui| widgets::text_input(ui, &mut d.name, tr("Nom"), w));
@@ -421,10 +428,9 @@ fn edit(ui: &mut Ui, data: &Data, p: usize, st: &mut UiState, act: &mut Vec<Acti
     // Les tags (plusieurs domaines, l'ontologie) et les mots-clés : enregistrés tout de suite.
     crate::tags::editor(ui, data, p, &mut st.tag_query, &mut st.tag_new, act);
     crate::tags::keywords_editor(ui, data, p, &mut st.keyword_input, act);
-    // L'icône (un bouton qui ouvre le sélecteur), à gauche des dossiers.
+    // L'icône (un bouton qui ouvre le sélecteur), ou un logo à sa place.
+    crate::logo::editor(ui, d, &mut st.logo_paste, &mut st.logo_error, w);
     ui.horizontal_top(|ui| {
-        ui.spacing_mut().item_spacing.x = 12.0;
-        widgets::labeled(ui, tr("Icône"), |ui| widgets::icon_picker(ui, tr("Icône du projet"), &mut d.icon));
         ui.vertical(|ui| {
             let fw = ui.available_width();
             widgets::labeled(ui, tr("Dossiers du projet"), |ui| {

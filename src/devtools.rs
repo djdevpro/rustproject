@@ -81,6 +81,16 @@ pub fn show(ctx: &egui::Context, dev: &mut DevTools, state: &[(String, String)])
 
 /// L'inspecteur : les aides visuelles d'egui, puis son inspection.
 fn inspect(ui: &mut Ui) {
+    debug_options(ui);
+    ui.add_space(6.0);
+    ui.separator();
+    ui.ctx().clone().inspection_ui(ui);
+}
+
+/// Les aides visuelles d'egui (cadres au survol, zones cliquables…) : elles n'existent que
+/// dans la version de développement.
+#[cfg(debug_assertions)]
+fn debug_options(ui: &mut Ui) {
     let t = Tokens::get(ui.ctx());
     ui.label(RichText::new(tr("Survole l'interface : chaque élément montre son cadre, sa taille et son rôle.")).size(12.5).color(t.muted));
     let debug = ui.ctx().global_style().debug;
@@ -105,9 +115,12 @@ fn inspect(ui: &mut Ui) {
             s.debug.show_resize = resize;
         });
     }
-    ui.add_space(6.0);
-    ui.separator();
-    ui.ctx().clone().inspection_ui(ui);
+}
+
+#[cfg(not(debug_assertions))]
+fn debug_options(ui: &mut Ui) {
+    let t = Tokens::get(ui.ctx());
+    ui.label(RichText::new(tr("Les cadres au survol et les zones cliquables n'existent que dans la version de développement.")).size(12.0).color(t.faint));
 }
 
 /// Les performances : images par seconde, temps d'une image, ce qui redemande un rendu.
