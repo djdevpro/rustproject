@@ -885,7 +885,7 @@ const CLAUDE_DESKTOP: &str = "claude://code/new?folder={dossier_url}";
 pub fn gallery() -> Vec<Launcher> {
     use Group as G;
     use LauncherKind as K;
-    vec![
+    let list = vec![
         launcher("Terminal", Icon::SquareTerminal, 0x9aa3ad, K::App, r#"start "Terminal" /D "{dossier}" powershell -NoExit"#, false, G::Terminal, "PowerShell ouvert dans le dossier"),
         launcher("Windows Terminal", Icon::Terminal, 0x5b8def, K::App, r#"wt -d "{dossier}""#, false, G::Terminal, "Windows Terminal (s'il est installé)"),
         launcher("Invite de commandes", Icon::Terminal, 0x8a94a0, K::App, r#"start "cmd" /D "{dossier}" cmd /K"#, false, G::Terminal, "cmd.exe ouvert dans le dossier"),
@@ -903,7 +903,23 @@ pub fn gallery() -> Vec<Launcher> {
         launcher("Docker Compose", Icon::Container, 0x2496ed, K::Command, "docker compose up", true, G::Tools, "Démarre les services du projet"),
         launcher("Obsidian", Icon::NotebookPen, 0x9f7aea, K::Url, "obsidian://open?vault={nom}", false, G::Tools, "Les notes du projet dans Obsidian"),
         launcher("Maquettes", Icon::PenTool, 0xf24e1e, K::Url, "https://www.figma.com/files/project/{nom}", false, G::Web, "Le dossier de maquettes du projet"),
-    ]
+    ];
+    if cfg!(target_os = "macos") { for_mac(list) } else { list }
+}
+
+/// Mac : les lanceurs propres à Windows (PowerShell, cmd, Windows Terminal) deviennent leurs
+/// équivalents ou disparaissent.
+fn for_mac(mut list: Vec<Launcher>) -> Vec<Launcher> {
+    list.retain(|l| l.name != "Windows Terminal" && l.name != "Invite de commandes");
+    for l in &mut list {
+        match l.name.as_str() {
+            "Terminal" => (l.command, l.description) = (r#"open -a Terminal "{dossier}""#.into(), "L'app Terminal ouverte dans le dossier".into()),
+            "Explorateur" => (l.command, l.description) = (r#"open "{dossier}""#.into(), "Le dossier dans le Finder".into()),
+            "JetBrains" => l.command = r#"idea "{dossier}""#.into(),
+            _ => {}
+        }
+    }
+    list
 }
 
 fn from_gallery(name: &str, shortcut: &str) -> Launcher {

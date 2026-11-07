@@ -28,7 +28,14 @@ pub const VERSION: &str = match option_env!("ATELIER_VERSION") {
 };
 
 /// La fin du nom de fichier publié pour cette plateforme.
-pub const PLATFORM: &str = if cfg!(windows) { "windows-x64.exe" } else { "linux-x64" };
+pub const PLATFORM: &str = if cfg!(windows) {
+    "windows-x64.exe"
+} else if cfg!(target_os = "macos") {
+    // Le binaire seul (Apple Silicon et Intel) : il remplace celui de l'app, `Rust Project.app`.
+    "macos-universal"
+} else {
+    "linux-x64"
+};
 
 /// Le nom du fichier d'une version pour cette plateforme, tel que la CI le publie.
 pub fn asset_name(version: &str) -> String {

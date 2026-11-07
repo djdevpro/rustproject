@@ -98,16 +98,24 @@ fn lancement_direct() {
     click_now(&mut h, "Claude Code");
     let line = h.state().launched.last().cloned().unwrap();
     let url = format!("claude://code/new?folder={}", crate::model::url_encode(&dir.display().to_string()));
-    let expected = if cfg!(windows) { format!(r#"start "" "{url}""#) } else { format!(r#"xdg-open "{url}""#) };
+    let expected = if cfg!(windows) {
+        format!(r#"start "" "{url}""#)
+    } else if cfg!(target_os = "macos") {
+        format!(r#"open "{url}""#)
+    } else {
+        format!(r#"xdg-open "{url}""#)
+    };
     assert_eq!(line, expected);
     assert!(!url.contains(['\\', ' ']), "{url}");
 
-    // « Dans un terminal » : une fenêtre PowerShell (Windows) ou le terminal du système (Linux),
+    // « Dans un terminal » : une fenêtre PowerShell (Windows), l'app Terminal (Mac) ou le terminal du système (Linux),
     // placée dans le dossier du projet.
     let reprise = crate::model::gallery().into_iter().find(|l| l.name == "Claude (reprise)").unwrap();
     let line = crate::launch::plan(&reprise, &h.state().data.projects[h.state().st.selected.unwrap()]).unwrap().line;
     if cfg!(windows) {
         assert!(line.starts_with("start \"Claude (reprise)\" /D ") && line.ends_with("powershell -NoExit -Command claude --continue"), "{line}");
+    } else if cfg!(target_os = "macos") {
+        assert!(line.starts_with("osascript -e ") && line.contains("&& claude --continue") && line.contains("Terminal"), "{line}");
     } else {
         assert!(line.starts_with("x-terminal-emulator -e sh -c 'claude --continue;"), "{line}");
     }

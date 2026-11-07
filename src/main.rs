@@ -67,6 +67,8 @@ fn main() -> eframe::Result {
     attach_parent_console();
     #[cfg(target_os = "linux")]
     desktop::install();
+    #[cfg(target_os = "macos")]
+    mac_path();
     // L'icône de la fenêtre (barre des tâches, Alt+Tab) ; sans elle, eframe met la sienne.
     let icon = eframe::icon_data::from_png_bytes(include_bytes!("../assets/icon.png")).expect("icône de la fenêtre");
     let options = eframe::NativeOptions {
@@ -95,6 +97,22 @@ fn main() -> eframe::Result {
 
 /// Lancée depuis un terminal (`cargo run`…), l'application y écrit ses messages ; d'un double-clic,
 /// il n'y a pas de terminal et rien ne s'ouvre.
+/// Mac : une app lancée depuis le Finder n'hérite pas du PATH du terminal ; on y ajoute les
+/// dossiers de Homebrew, pour trouver `gh`, `code`, `claude`, `git`…
+#[cfg(target_os = "macos")]
+fn mac_path() {
+    let path = std::env::var("PATH").unwrap_or_default();
+    let mut dirs: Vec<String> = path.split(':').filter(|d| !d.is_empty()).map(str::to_owned).collect();
+    let home = std::env::var("HOME").unwrap_or_default();
+    for extra in ["/opt/homebrew/bin".to_owned(), "/usr/local/bin".to_owned(), format!("{home}/.local/bin"), format!("{home}/.cargo/bin")] {
+        if !dirs.contains(&extra) {
+            dirs.push(extra);
+        }
+    }
+    // SAFETY : au tout début de `main`, avant le moindre autre fil d'exécution.
+    unsafe { std::env::set_var("PATH", dirs.join(":")) };
+}
+
 #[cfg(windows)]
 fn attach_parent_console() {
     unsafe extern "system" {

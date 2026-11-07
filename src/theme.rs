@@ -350,17 +350,20 @@ pub fn install_fonts(ctx: &egui::Context) {
     ];
     // Chinois, japonais, coréen : la police du système pour ces écritures, en secours derrière
     // les autres (seulement pour la langue choisie : ces polices pèsent lourd).
+    const NOTO_CJK: &str = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc";
     let cjk = match crate::i18n::current() {
-        crate::i18n::Lang::Zh => Some(("msyh.ttc", "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc")),
-        crate::i18n::Lang::Ja => Some(("YuGothM.ttc", "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc")),
-        crate::i18n::Lang::Ko => Some(("malgun.ttf", "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc")),
+        crate::i18n::Lang::Zh => Some(("msyh.ttc", NOTO_CJK, "/System/Library/Fonts/STHeiti Medium.ttc")),
+        crate::i18n::Lang::Ja => Some(("YuGothM.ttc", NOTO_CJK, "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc")),
+        crate::i18n::Lang::Ko => Some(("malgun.ttf", NOTO_CJK, "/System/Library/Fonts/AppleSDGothicNeo.ttc")),
         _ => None,
     }
-    .and_then(|(windows, linux)| system_font(windows).or_else(|| system_font(linux)));
+    .and_then(|(windows, linux, mac)| system_font(windows).or_else(|| system_font(linux)).or_else(|| system_font(mac)));
     if let Some(bytes) = cjk {
         fonts.font_data.insert("CJK".to_owned(), FontData::from_static(bytes).into());
     }
-    let symbols = system_font("seguisym.ttf").or_else(|| system_font("/usr/share/fonts/truetype/noto/NotoSansSymbols2-Regular.ttf"));
+    let symbols = system_font("seguisym.ttf")
+        .or_else(|| system_font("/usr/share/fonts/truetype/noto/NotoSansSymbols2-Regular.ttf"))
+        .or_else(|| system_font("/System/Library/Fonts/Apple Symbols.ttf"));
     if let Some(bytes) = symbols {
         fonts.font_data.insert("Symbols".to_owned(), FontData::from_static(bytes).into());
     }
@@ -371,7 +374,10 @@ pub fn install_fonts(ctx: &egui::Context) {
     for (name, file, coords, family) in faces {
         let fallback = if file == MONO { &monospace } else { &proportional };
         let mut stack = Vec::new();
-        if let Some(bytes) = system_font(file) {
+        // Segoe UI et Cascadia (Windows), sinon San Francisco (Mac) : des polices variables,
+        // réglées en graisse.
+        let mac = if file == MONO { "/System/Library/Fonts/SFNSMono.ttf" } else { "/System/Library/Fonts/SFNS.ttf" };
+        if let Some(bytes) = system_font(file).or_else(|| system_font(mac)) {
             let tweak = FontTweak { coords: VariationCoords::new(coords.iter().copied()), subpixel_binning: Some(false), ..Default::default() };
             fonts.font_data.insert(name.to_owned(), FontData::from_static(bytes).tweak(tweak).into());
             stack.push(name.to_owned());

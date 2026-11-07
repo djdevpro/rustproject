@@ -39,6 +39,15 @@ pub fn plan(l: &Launcher, p: &Project) -> Result<Plan, String> {
             }
             _ => resolved,
         }
+    } else if cfg!(target_os = "macos") {
+        // Mac : `open` pour les adresses et les dossiers (Finder), l'app Terminal pour les
+        // commandes, lancée dans le dossier du projet.
+        match l.kind {
+            LauncherKind::Url => format!(r#"open "{resolved}""#),
+            LauncherKind::Folder => format!(r#"open "{folder}""#),
+            LauncherKind::Command if l.in_terminal => mac_terminal(&folder, &resolved),
+            _ => resolved,
+        }
     } else {
         // Linux : `xdg-open` pour les adresses et les dossiers, le terminal du système pour les
         // commandes (il s'ouvre dans le dossier du projet, qui est le dossier de travail).
@@ -55,8 +64,26 @@ pub fn plan(l: &Launcher, p: &Project) -> Result<Plan, String> {
 /// Ouvre une adresse web dans le navigateur (la page GitHub d'un projet…).
 pub fn open_url(url: &str) -> Plan {
     let url = url.trim().replace('"', "%22");
-    let line = if cfg!(windows) { format!(r#"start "" "{url}""#) } else { format!(r#"xdg-open "{url}""#) };
+    let line = if cfg!(windows) {
+        format!(r#"start "" "{url}""#)
+    } else if cfg!(target_os = "macos") {
+        format!(r#"open "{url}""#)
+    } else {
+        format!(r#"xdg-open "{url}""#)
+    };
     Plan { line, dir: None }
+}
+
+/// Entre apostrophes pour `sh`.
+fn sh_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', r"'\''"))
+}
+
+/// Mac : une fenêtre de l'app Terminal qui va dans `folder` et y lance `command`.
+fn mac_terminal(folder: &str, command: &str) -> String {
+    let script = format!("cd {} && {command}", sh_quote(folder));
+    let apple = format!(r#"tell application "Terminal" to do script "{}""#, script.replace('\\', r"\\").replace('"', r#"\""#));
+    format!("osascript -e {} -e {}", sh_quote(&apple), sh_quote(r#"tell application "Terminal" to activate"#))
 }
 
 #[cfg(windows)]
