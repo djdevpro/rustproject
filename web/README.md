@@ -59,7 +59,7 @@ The demo opens on Library / Map with 152 sample projects (150 non-archived). Nav
 
 The Three.js graph uses the force solver ported from `../src/graph.rs`, with a fixed 60Hz simulation and smoothed rendering. Springs, repulsion, collisions, cooling, shake and pinned-node drag preserve the native behavior. Scene and surviving node positions persist across filters. Camera fit, logarithmic zoom easing, cursor-anchored zoom, fading neighbors, twin link particles and label priority follow `../src/screens/map.rs`. Domain focus keeps the other domains in context. Secondary links remain faintly visible at rest for this larger public demo. Pause and reduced-motion settings are respected; offscreen rendering stops and GPU resources are disposed on unmount. The web demo does not implement dragging a graph node out into the sidebar.
 
-Ollama, Ollaya, MCP, filesystem scans, manifest packages and launchers are simulated. No local service is contacted. The web search does not compute real embeddings. The desktop interface is uniformly reduced with CSS zoom inside the laptop frame. Neutral surfaces match the landing; domain colors and amber accents remain.
+Ollama, Ollaya, MCP, filesystem scans, manifest packages and launchers are simulated. No local service is contacted. The web search does not compute real embeddings. Inside the laptop frame, a CSS transform uniformly scales the desktop interface and its text, with the scaled height reserved in the page layout. This avoids iOS WebKit text inflation caused by CSS zoom. The graph updates its pixel density when the frame resizes. Neutral surfaces match the landing; domain colors and amber accents remain.
 
 ## Stack
 
