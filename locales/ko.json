@@ -983,5 +983,12 @@
   "Passer en global": "전역으로 전환",
   "Pour tous tes projets. Les sessions déjà ouvertes le verront après redémarrage.": "모든 프로젝트용입니다. 이미 열린 세션은 다시 시작한 뒤에 보입니다.",
   "Revérifier": "다시 확인",
-  "Rust Project ajouté à Claude Code": "Rust Project를 Claude Code에 추가했습니다"
+  "Rust Project ajouté à Claude Code": "Rust Project를 Claude Code에 추가했습니다",
+  "Rust Project ajouté à Codex": "Rust Project를 Codex에 추가했습니다",
+  "Ajout à Codex impossible": "Codex에 추가할 수 없습니다",
+  "Dans Codex, pour tous tes projets": "Codex에서, 모든 프로젝트용",
+  "Déclaré dans Codex pour tous tes projets.": "Codex에 모든 프로젝트용으로 등록되어 있습니다.",
+  "Codex lance un autre exécutable (une ancienne version ?) : {0}": "Codex가 다른 실행 파일을 실행합니다 (이전 버전?): {0}",
+  "Pas encore déclaré dans Codex.": "아직 Codex에 등록되지 않았습니다.",
+  "Ajouter à Codex": "Codex에 추가"
 }

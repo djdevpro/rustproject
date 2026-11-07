@@ -396,7 +396,7 @@ pub struct Launcher {
 pub const VARIABLES: [(&str, &str); 6] = [
     ("{dossier}", "Chemin du dossier principal du projet"),
     ("{dossier_url}", "Le même chemin, encodé pour un lien (claude://…)"),
-    ("{etapes_url}", "Les étapes à faire en objectif /goal, encodées pour un lien (le premier message de Claude Code)"),
+    ("{etapes_url}", "Les étapes à faire en objectif /goal, encodées pour un lien (le premier message de Claude Code ou de Codex)"),
     ("{nom}", "Nom du projet"),
     ("{remote}", "URL du dépôt Git distant (détectée)"),
     ("{port}", "Port de dev (3000 par défaut)"),
@@ -406,7 +406,7 @@ impl Launcher {
     /// La commande telle qu'elle partirait pour ce projet.
     pub fn resolve(&self, project: &Project) -> String {
         if self.command.contains("{etapes_url}") {
-            fill(&self.command.replace("{etapes_url}", &url_encode(&project.todo_prompt())), project)
+            fill(&self.command.replace("{etapes_url}", &url_encode(&project.todo_prompt_for(self.tool()))), project)
         } else {
             fill(&self.command, project)
         }
@@ -422,6 +422,19 @@ impl Launcher {
     pub fn preview(&self, project: &Project) -> String {
         fill(&self.command, project)
     }
+
+    /// L'outil de code qu'ouvre le lanceur : Codex pour un lien `codex://`, sinon Claude Code.
+    pub fn tool(&self) -> AiTool {
+        if self.command.trim_start().starts_with("codex://") { AiTool::Codex } else { AiTool::Claude }
+    }
+}
+
+/// L'outil de code qui reçoit le premier message : sa méthode diffère un peu (seul Claude Desktop
+/// sait renommer la conversation).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AiTool {
+    Claude,
+    Codex,
 }
 
 /// Les variables d'une commande remplacées pour ce projet (sauf `{etapes_url}`).
@@ -450,7 +463,14 @@ impl Project {
     /// sinon de sa prochaine action, avec la méthode : nommer la conversation d'après le projet,
     /// lire la fiche, aller jusqu'au bout, et cocher chaque étape finie par le serveur MCP de Rust
     /// Project. Vide s'il n'y a rien à faire.
+    #[cfg(test)]
     pub fn todo_prompt(&self) -> String {
+        self.todo_prompt_for(AiTool::Claude)
+    }
+
+    /// Le même message pour cet outil de code : Codex n'a pas d'outil pour nommer la conversation,
+    /// cette étape de la méthode disparaît.
+    pub fn todo_prompt_for(&self, tool: AiTool) -> String {
         use crate::i18n::{tf, tr};
         let todo: Vec<String> = self.steps.iter().filter(|s| !s.done).map(|s| one_line(&s.text)).filter(|t| !t.is_empty()).collect();
         let action = one_line(&self.next_action);
@@ -466,15 +486,17 @@ impl Project {
         let folder = self.folders.first().cloned().unwrap_or_default();
         let folder_line = if folder.is_empty() { String::new() } else { tf("Dossier du projet : {dossier}", &[("dossier", &folder)]) + "\n\n" };
         let method = |mark: String| {
-            format!(
-                "{folder_line}{}\n1. {}\n2. {}\n3. {}\n4. {mark}\n5. {}\n6. {}",
-                tr("Pour y arriver :"),
-                tf("Nomme d'abord cette conversation « {nom} - [objectif en quelques mots] » avec l'outil `set_session_title` de Claude Desktop (session_id = self).", &[("nom", name)]),
-                tf("Lis la fiche avec l'outil MCP `voir_projet` du serveur `rust-project` (id {id}).", &[("id", id)]),
-                tr("Va jusqu'au bout, une chose à la fois : vérifie chacune (build, tests, résultat visible) avant de passer à la suivante."),
-                tr("Seule exception : ce qui est vraiment impossible sans moi (une décision à prendre, un accès à donner) reste à faire ; explique pourquoi dans le bilan."),
-                tr("Termine par un bilan : ce qui est fait, ce qui reste et pourquoi."),
-            )
+            let mut steps = Vec::new();
+            if tool == AiTool::Claude {
+                steps.push(tf("Nomme d'abord cette conversation « {nom} - [objectif en quelques mots] » avec l'outil `set_session_title` de Claude Desktop (session_id = self).", &[("nom", name)]));
+            }
+            steps.push(tf("Lis la fiche avec l'outil MCP `voir_projet` du serveur `rust-project` (id {id}).", &[("id", id)]));
+            steps.push(tr("Va jusqu'au bout, une chose à la fois : vérifie chacune (build, tests, résultat visible) avant de passer à la suivante.").to_owned());
+            steps.push(mark);
+            steps.push(tr("Seule exception : ce qui est vraiment impossible sans moi (une décision à prendre, un accès à donner) reste à faire ; explique pourquoi dans le bilan.").to_owned());
+            steps.push(tr("Termine par un bilan : ce qui est fait, ce qui reste et pourquoi.").to_owned());
+            let steps: Vec<String> = steps.iter().enumerate().map(|(k, s)| format!("{}. {s}", k + 1)).collect();
+            format!("{folder_line}{}\n{}", tr("Pour y arriver :"), steps.join("\n"))
         };
         if todo.is_empty() {
             let goal = tf("La prochaine action de la fiche « {nom} » dans Rust Project (id {id}) est faite et vérifiée : {action}", &[("nom", name), ("id", id), ("action", &clip(&action, STEP_MAX))]);
@@ -1040,6 +1062,9 @@ fn launcher(name: &str, icon: Icon, color: u32, kind: LauncherKind, command: &st
 const CLAUDE_DESKTOP: &str = "claude://code/new?folder={dossier_url}&q={etapes_url}";
 /// Le lien d'avant, sans les étapes.
 const CLAUDE_DESKTOP_V1: &str = "claude://code/new?folder={dossier_url}";
+/// Une nouvelle conversation dans l'app Codex, sur le dossier du projet (`path`, un chemin
+/// absolu), le message prérempli (`prompt`) : les mêmes étapes en objectif `/goal`.
+const CODEX_DESKTOP: &str = "codex://threads/new?path={dossier_url}&prompt={etapes_url}";
 
 pub fn gallery() -> Vec<Launcher> {
     use Group as G;
@@ -1053,6 +1078,7 @@ pub fn gallery() -> Vec<Launcher> {
         launcher("JetBrains", Icon::Braces, 0xff5c8a, K::App, r#"idea64 "{dossier}""#, false, G::Editor, "IntelliJ, Rider, WebStorm…"),
         launcher("Claude Code", Icon::Sparkles, 0xe07a5f, K::Url, CLAUDE_DESKTOP, false, G::Ai, "Nouvelle conversation dans Claude Desktop, sur le dossier"),
         launcher("Claude (reprise)", Icon::History, 0xe07a5f, K::Command, "claude --continue", true, G::Ai, "Reprend la dernière conversation du projet"),
+        launcher("Codex", Icon::Bot, 0x10a37f, K::Url, CODEX_DESKTOP, false, G::Ai, "Nouvelle conversation dans Codex, sur le dossier"),
         launcher("Explorateur", Icon::FolderOpen, 0xf4c14d, K::Folder, r#"explorer "{dossier}""#, false, G::Tools, "Le dossier dans l'explorateur Windows"),
         launcher("Serveur de dev", Icon::Globe, 0x3fc1b0, K::Url, "http://localhost:{port}", false, G::Web, "Ouvre l'appli locale dans le navigateur"),
         launcher("Dépôt GitHub", Icon::GitBranch, 0xb7b7b7, K::Url, "{remote}", false, G::Git, "La page du dépôt distant"),

@@ -983,5 +983,12 @@
   "Passer en global": "Pasar a global",
   "Pour tous tes projets. Les sessions déjà ouvertes le verront après redémarrage.": "Para todos tus proyectos. Las sesiones ya abiertas lo verán tras reiniciar.",
   "Revérifier": "Volver a comprobar",
-  "Rust Project ajouté à Claude Code": "Rust Project añadido a Claude Code"
+  "Rust Project ajouté à Claude Code": "Rust Project añadido a Claude Code",
+  "Rust Project ajouté à Codex": "Rust Project añadido a Codex",
+  "Ajout à Codex impossible": "No se pudo añadir a Codex",
+  "Dans Codex, pour tous tes projets": "En Codex, para todos tus proyectos",
+  "Déclaré dans Codex pour tous tes projets.": "Declarado en Codex para todos tus proyectos.",
+  "Codex lance un autre exécutable (une ancienne version ?) : {0}": "Codex ejecuta otro ejecutable (¿una versión antigua?): {0}",
+  "Pas encore déclaré dans Codex.": "Aún no declarado en Codex.",
+  "Ajouter à Codex": "Añadir a Codex"
 }

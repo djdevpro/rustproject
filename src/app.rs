@@ -411,6 +411,8 @@ pub enum Action {
     RevealFile(String),
     /// Déclarer Rust Project dans Claude Code, pour tous les projets.
     InstallClaudeMcp,
+    /// Déclarer Rust Project dans Codex, pour tous les projets.
+    InstallCodexMcp,
     /// Ouvrir les outils de développement (comme F12).
     OpenDevTools,
     Deselect,
@@ -607,6 +609,9 @@ pub struct UiState {
     /// Où Claude Code connaît Rust Project (`None` : à relire), et l'ajout en cours.
     pub claude_mcp: Option<crate::mcp_setup::ClaudeSetup>,
     pub claude_mcp_busy: bool,
+    /// La commande avec laquelle Codex lance Rust Project (`None` : à relire), et l'ajout en cours.
+    pub codex_mcp: Option<Option<String>>,
+    pub codex_mcp_busy: bool,
     // ---- recherche
     /// Résultats de la recherche du bureau (`None` : pas de recherche).
     pub search_hits: Option<Vec<Hit>>,
@@ -700,6 +705,8 @@ impl Default for UiState {
             github_accounts_loading: false,
             claude_mcp: None,
             claude_mcp_busy: false,
+            codex_mcp: None,
+            codex_mcp_busy: false,
             search_hits: None,
             lib_hits: None,
             semantic_indexed: 0,
@@ -1049,6 +1056,14 @@ impl AtelierApp {
                 JobMsg::KeywordsDone => {
                     if let Some((done, _)) = self.st.keywords_job.take() {
                         self.toast(Icon::Sparkles, tf("Mots-clés proposés pour {0} projets", &[("0", &done)]), Some(tr("Ils comptent maintenant dans la recherche par le sens.").into()));
+                    }
+                }
+                JobMsg::CodexMcp(result) => {
+                    self.st.codex_mcp_busy = false;
+                    self.st.codex_mcp = None;
+                    match result {
+                        Ok(()) => self.toast(Icon::CircleCheck, tr("Rust Project ajouté à Codex"), Some(tr("Pour tous tes projets. Les sessions déjà ouvertes le verront après redémarrage.").into())),
+                        Err(why) => self.toast(Icon::TriangleAlert, tr("Ajout à Codex impossible"), Some(why)),
                     }
                 }
                 JobMsg::ClaudeMcp(result) => {
@@ -1738,6 +1753,16 @@ impl AtelierApp {
                         if let Err(why) = result {
                             self.toast(Icon::TriangleAlert, tr("Impossible d'ouvrir l'adresse"), Some(why));
                         }
+                    }
+                }
+                Action::InstallCodexMcp => {
+                    let exe = std::env::current_exe().map(|p| p.display().to_string()).unwrap_or_default();
+                    if self.dry_run {
+                        self.launched.push(crate::mcp_setup::codex_command(&exe));
+                    } else if !self.st.codex_mcp_busy {
+                        self.st.codex_mcp_busy = true;
+                        let declared = self.st.codex_mcp.clone().unwrap_or_else(crate::mcp_setup::codex_read).is_some();
+                        jobs::spawn_codex_mcp(self.bus(), exe, declared);
                     }
                 }
                 Action::InstallClaudeMcp => {

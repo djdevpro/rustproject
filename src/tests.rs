@@ -802,6 +802,32 @@ fn message_claude_code_en_objectif() {
     assert!(m.contains("de plus : la liste complète est dans `voir_projet`."), "{m}");
 }
 
+/// Codex : une nouvelle conversation dans l'app Codex, sur le dossier (`path`), le message
+/// prérempli (`prompt`) ; le même objectif `/goal`, sans l'étape propre à Claude Desktop
+/// (nommer la conversation), et la méthode renumérotée.
+#[test]
+fn lanceur_codex_avec_message_prerempli() {
+    use crate::model::{AiTool, Project, Step, gallery, url_encode};
+    let codex = gallery().into_iter().find(|l| l.name == "Codex").expect("Codex dans la galerie");
+    assert_eq!(codex.tool(), AiTool::Codex);
+    assert_eq!(codex.group, crate::model::Group::Ai);
+    let claude = gallery().into_iter().find(|l| l.name == "Claude Code").unwrap();
+    assert_eq!(claude.tool(), AiTool::Claude);
+
+    let dir = r"C:\Projets\Atelier";
+    let mut p = Project { id: 7, name: "Atelier".into(), folders: vec![dir.into()], ..Default::default() };
+    p.steps = vec![Step { text: "Écrire les tests".into(), done: false }];
+    let m = p.todo_prompt_for(AiTool::Codex);
+    assert!(m.starts_with("/goal Les étapes à faire de la fiche « Atelier » dans Rust Project (id 7)"), "{m}");
+    assert!(!m.contains("set_session_title"), "Codex ne sait pas nommer la conversation : {m}");
+    assert!(m.contains("1. Lis la fiche avec l'outil MCP `voir_projet`") && m.contains("3. Dès qu'une étape est faite") && m.contains("5. Termine par un bilan"), "{m}");
+    assert!(!m.contains("6. "), "{m}");
+    assert!(p.todo_prompt().contains("1. Nomme d'abord cette conversation") && p.todo_prompt().contains("6. Termine"), "Claude garde ses six étapes");
+
+    let url = format!("codex://threads/new?path={}&prompt={}", url_encode(dir), url_encode(&m));
+    assert_eq!(codex.resolve(&p), url);
+}
+
 /// La ligne de la liste (ou la carte de la grille) d'un projet : son nom existe aussi dans le
 /// panneau quand il est ouvert ; la ligne est la plus large.
 fn project_row(h: &Harness<'static, AtelierApp>, name: &str) -> egui::Rect {
