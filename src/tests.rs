@@ -434,11 +434,8 @@ fn glisser_pour_faire_defiler() {
     // Glisser n'est pas cliquer : la carte n'a pas été sélectionnée.
     assert_eq!(h.state().st.selected, Some(2));
 
-    // Même chose sur la rangée de lanceurs : elle défile, et rien n'est lancé.
-    let before = h.get_by_label("VS Code").rect().left();
+    // Les lanceurs passent à la ligne (rien à faire défiler) : glisser sur une tuile ne lance rien.
     drag(&mut h, "VS Code", -150.0);
-    let after = h.get_by_label("VS Code").rect().left();
-    assert!(after < before - 60.0, "la rangée de lanceurs doit défiler : {before} → {after}");
     assert!(h.state().launched.is_empty(), "un glisser ne doit rien lancer");
 }
 
