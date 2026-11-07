@@ -188,6 +188,23 @@ body,
   min-width: 1480px;
   height: 900px;
 }
+/* iOS can counter-scale text inside CSS zoom. Transform the complete desktop
+   demo instead, and reserve its scaled height without changing the banner. */
+.mac-screen > .demo-section:not(.expanded) {
+  position: relative;
+  height: calc(900px * var(--screen-scale));
+  overflow: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+.mac-screen > .demo-section:not(.expanded) .app-scroll {
+  position: absolute;
+  top: 0;
+  left: 0;
+  zoom: 1;
+  transform: scale(var(--screen-scale));
+  transform-origin: top left;
+}
 .expanded .app-scroll {
   zoom: 1;
 }

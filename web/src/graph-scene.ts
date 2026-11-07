@@ -478,6 +478,9 @@ export function createGraphScene(
   }
   const observer = new ResizeObserver(resize);
   observer.observe(host);
+  // An ancestor transform changes display density without resizing the host.
+  const scaledScreen = host.closest(".mac-screen");
+  if (scaledScreen) observer.observe(scaledScreen);
   window.addEventListener("resize", resize);
   const intersection = new IntersectionObserver(([entry]) => {
     visible = entry.isIntersecting;
