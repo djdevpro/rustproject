@@ -231,7 +231,7 @@ command = "faux"
 "#;
         assert_eq!(codex_from_config(toml).as_deref(), Some(exe));
         let toml = r#"[mcp_servers."rust-project"]
-command = "C:\Apps\rust-project.exe"
+command = "C:\\Apps\\rust-project.exe"
 "#;
         assert_eq!(codex_from_config(toml).as_deref(), Some(exe), "chaîne de base, échappements");
         assert_eq!(codex_from_config("[mcp_servers.magic]\ncommand = \"npx\"\n"), None);
