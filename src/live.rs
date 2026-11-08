@@ -237,9 +237,6 @@ fn project_header(ui: &mut Ui, project: &crate::model::Project, last: u64, expan
     if resp.clicked() {
         resp.request_focus();
     }
-    let hover = ui.ctx().animate_bool(resp.id.with("hover"), resp.hovered());
-    let highlight = if resp.has_focus() { 1.0 } else { hover };
-    ui.painter().rect_filled(rect, 6, tint(t.ink, 0.07 * highlight));
     let cy = rect.center().y;
     crate::logo::paint(ui, project, pos2(rect.left() + 10.0, cy), 20.0, t.accent_ink);
     icons::paint(ui.painter(), pos2(rect.right() - 10.0, cy), if expanded { Icon::ChevronDown } else { Icon::ChevronRight }, 16.0, t.muted);
